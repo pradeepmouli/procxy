@@ -28,7 +28,7 @@ jobs:
 
     steps:
       - name: Checkout downstream repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Checkout the downstream repo instead of this template
           repository: ${{ matrix.repo }}
