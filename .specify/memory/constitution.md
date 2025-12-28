@@ -158,7 +158,7 @@ Classes extending `EventEmitter` receive automatic event forwarding:
 ### Property Access Decision
 **v1.0 supports methods only**. Property access is not supported in initial release.
 
-**Rationale**: 
+**Rationale**:
 - Methods cover 95% of use cases
 - Property access introduces ambiguity (getters, setters, nested objects)
 - Can be added in future versions if demand exists
