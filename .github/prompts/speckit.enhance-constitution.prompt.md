@@ -18,9 +18,17 @@ You are enhancing the project's constitution file (`.specify/memory/constitution
    - Avoid duplicating content that already exists
    - Ensure smooth integration without jarring transitions
 
-4. **Self-destruct**: After updating the constitution, DELETE both files
-   - Prompt: `.github/prompts/speckit.enhance-constitution.prompt.md`
-   - Agent: `.github/agents/speckit.enhance-constitution.md`
+4. **Self-destruct**: After updating the constitution, DELETE all enhance-constitution files
+   - Delete `.github/prompts/speckit.enhance-constitution.prompt.md` (if exists)
+   - Delete `.github/agents/speckit.enhance-constitution.md` (if exists)
+   - Delete any `speckit.enhance-constitution.*` files in agent command directories:
+     * `.claude/commands/speckit.enhance-constitution.md`
+     * `.cursor/commands/speckit.enhance-constitution.md`
+     * `.windsurf/workflows/speckit.enhance-constitution.md`
+     * `.opencode/prompts/speckit.enhance-constitution.md`
+     * `.amazon-q/commands/speckit.enhance-constitution.md`
+     * `.codex/commands/speckit.enhance-constitution.md`
+     * Or any other agent directories in use
    - This prevents accidental re-use
 
 ## Template Content to Integrate
@@ -29,35 +37,34 @@ You are enhancing the project's constitution file (`.specify/memory/constitution
 ## Development Workflow
 
 ### Core Workflow (Feature Development)
-1. Feature request initiates with `/specify <description>`
-2. Clarification via `/clarify` to resolve ambiguities
-3. Technical planning with `/plan` to create implementation design
-4. Task breakdown using `/tasks` for execution roadmap
-5. Implementation via `/implement` following task order
-
+1. Feature request initiates with `/speckit.specify <description>`
+2. Clarification via `/speckit.clarify` to resolve ambiguities
+3. Technical planning with `/speckit.plan` to create implementation design
+4. Task breakdown using `/speckit.tasks` for execution roadmap
+5. Implementation via `/speckit.implement` following task order
 ### Extension Workflows
-- **Baseline**: `/baseline` → baseline-spec.md + current-state.md establishing project context
-- **Bugfix**: `/bugfix "<description>"` → bug-report.md + tasks.md with regression test requirement
-- **Enhancement**: `/enhance "<description>"` → enhancement.md (condensed single-doc with spec + plan + tasks)
-- **Modification**: `/modify <feature_num> "<description>"` → modification.md + impact analysis + tasks.md
-- **Refactor**: `/refactor "<description>"` → refactor.md + baseline metrics + incremental tasks.md
-- **Hotfix**: `/hotfix "<incident>"` → hotfix.md + expedited tasks.md + post-mortem.md (within 48 hours)
-- **Deprecation**: `/deprecate <feature_num> "<reason>"` → deprecation.md + dependency scan + phased tasks.md
-- **Review**: `/review <task_id>` → review implementation against spec + update tasks.md + generate report
-- **Cleanup**: `/cleanup` → organize specs/ directory + archive old branches + update documentation
+- **Baseline**: `/speckit.baseline` → baseline-spec.md + current-state.md establishing project context
+- **Bugfix**: `/speckit.bugfix "<description>"` → bug-report.md + tasks.md with regression test requirement
+- **Enhancement**: `/speckit.enhance "<description>"` → enhancement.md (condensed single-doc with spec + plan + tasks)
+- **Modification**: `/speckit.modify <feature_num> "<description>"` → modification.md + impact analysis + tasks.md
+- **Refactor**: `/speckit.refactor "<description>"` → refactor.md + baseline metrics + incremental tasks.md
+- **Hotfix**: `/speckit.hotfix "<incident>"` → hotfix.md + expedited tasks.md + post-mortem.md (within 48 hours)
+- **Deprecation**: `/speckit.deprecate <feature_num> "<reason>"` → deprecation.md + dependency scan + phased tasks.md
+- **Review**: `/speckit.review <task_id>` → review implementation against spec + update tasks.md + generate report
+- **Cleanup**: `/speckit.cleanup` → organize specs/ directory + archive old branches + update documentation
 
 
 ### Workflow Selection
 Development activities SHALL use the appropriate workflow type based on the nature of the work. Each workflow enforces specific quality gates and documentation requirements tailored to its purpose:
 
-- **Baseline** (`/baseline`): Project context establishment - requires comprehensive documentation of existing architecture and change tracking
-- **Feature Development** (`/specify`): New functionality - requires full specification, planning, and TDD approach
-- **Bug Fixes** (`/bugfix`): Defect remediation - requires regression test BEFORE applying fix
-- **Enhancements** (`/enhance`): Minor improvements to existing features - streamlined single-document workflow with simple single-phase plan (max 7 tasks)
-- **Modifications** (`/modify`): Changes to existing features - requires impact analysis and backward compatibility assessment
-- **Refactoring** (`/refactor`): Code quality improvements - requires baseline metrics, behavior preservation guarantee, and incremental validation
-- **Hotfixes** (`/hotfix`): Emergency production issues - expedited process with deferred testing and mandatory post-mortem
-- **Deprecation** (`/deprecate`): Feature sunset - requires phased rollout (warnings → disabled → removed), migration guide, and stakeholder approvals
+- **Baseline** (`/speckit.baseline`): Project context establishment - requires comprehensive documentation of existing architecture and change tracking
+- **Feature Development** (`/speckit.specify`): New functionality - requires full specification, planning, and TDD approach
+- **Bug Fixes** (`/speckit.bugfix`): Defect remediation - requires regression test BEFORE applying fix
+- **Enhancements** (`/speckit.enhance`): Minor improvements to existing features - streamlined single-document workflow with simple single-phase plan (max 7 tasks)
+- **Modifications** (`/speckit.modify`): Changes to existing features - requires impact analysis and backward compatibility assessment
+- **Refactoring** (`/speckit.refactor`): Code quality improvements - requires baseline metrics, behavior preservation guarantee, and incremental validation
+- **Hotfixes** (`/speckit.hotfix`): Emergency production issues - expedited process with deferred testing and mandatory post-mortem
+- **Deprecation** (`/speckit.deprecate`): Feature sunset - requires phased rollout (warnings → disabled → removed), migration guide, and stakeholder approvals
 
 The wrong workflow SHALL NOT be used - features must not bypass specification, bugs must not skip regression tests, refactorings must not alter behavior, and enhancements requiring complex multi-phase plans must use full feature development workflow.
 
@@ -119,7 +126,10 @@ The wrong workflow SHALL NOT be used - features must not bypass specification, b
 - **Section numbering**: Continue existing numbering scheme (Roman numerals, numeric, or none)
 - **No duplication**: If workflow guidance already exists, enhance rather than duplicate
 - **One-time only**: This prompt deletes itself after use to prevent confusion
+- **Multi-agent setups**: If you have multiple agents configured, delete enhance-constitution files from all agent directories
 
 ---
 
-**After completion**: Verify that `.specify/memory/constitution.md` contains both the original content and the new workflow quality gates, properly integrated.
+**After completion**: 
+1. Verify that `.specify/memory/constitution.md` contains both the original content and the new workflow quality gates, properly integrated
+2. Delete ALL enhance-constitution files from all agent/prompt directories
