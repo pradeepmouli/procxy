@@ -53,10 +53,12 @@ The library must handle edge cases, timeouts, and errors gracefully. It should n
 Start simple. Follow YAGNI principles. Avoid premature optimization or feature creep.
 
 **In Practice**:
-- Core API consists of two functions: `procxy()` and `expose()`
+- Core API is a single function: `procxy(Constructor, ...args)` or `procxy(Constructor, options, ...args)`
 - Minimal configuration options, smart defaults
 - No complex DSL or configuration files required
 - Clear separation between parent and child process concerns
+- Automatic module path detection eliminates boilerplate in 90% of use cases
+- Explicit fallback (`modulePath` option) covers edge cases without complexity
 
 ## Scope and Limitations
 
@@ -65,19 +67,27 @@ Start simple. Follow YAGNI principles. Avoid premature optimization or feature c
 - Isolating untrusted code in sandboxed processes
 - Parallelizing work across multiple processes
 - Creating resilient services that can restart on failure
+- Working with EventEmitter-based classes for progress tracking and event streaming
+- Automatic module path detection for ergonomic API usage
 
 ### Explicit Non-Goals
 - **Complex Object Graphs**: Passing deeply nested objects with circular references is not supported
 - **Function Arguments**: Functions cannot be serialized and passed as arguments
 - **Streaming Data**: Large data transfers should use alternative mechanisms (streams, shared memory)
 - **Browser Support**: This is Node.js only; no Web Workers support
-- **Bidirectional Communication**: Only parent → child method calls are supported; callbacks from child to parent are not in scope for v1
+- **Bidirectional Callbacks**: General parent-to-child callbacks are not supported (EventEmitter pattern is the exception)
+- **Property Setters**: Write access to remote properties is not supported in v1 (read-only property access may be considered for future versions)
+- **Source Map Support**: Module path detection from bundled/transpiled code requires explicit `modulePath` option
 
 ### Technical Constraints
-- **Serialization**: Arguments and return values must be JSON-serializable or compatible with structured clone algorithm
+- **Serialization**: Arguments and return values must be JSON-serializable (constructor arguments included)
+- **Constructor Arguments**: All constructor arguments must be serializable; non-serializable dependencies must be initialized separately in the child process
 - **Node.js Version**: Requires Node.js >= 18.0.0 for modern child_process APIs
-- **Module System**: Supports ES modules (type: "module")
+- **Module System**: Supports ES modules (ESM) and CommonJS; auto-detection works for both
 - **IPC Transport**: Uses Node.js built-in IPC channel (child_process.fork)
+- **Module Path Detection**: Automatic via Error stack trace inspection; explicit override available via `modulePath` option
+- **Named Classes Required**: Constructors must be named classes (not anonymous) for automatic module resolution
+- **EventEmitter Support**: When a class extends EventEmitter, events are automatically forwarded from child to parent with type preservation
 
 ## Development Standards
 
@@ -118,6 +128,51 @@ Start simple. Follow YAGNI principles. Avoid premature optimization or feature c
 - Error messages should not leak sensitive information
 - Consider security implications when exposing services
 
+## Architecture Decisions
+
+### Module Resolution Strategy
+The library uses **Error stack trace inspection** as the primary mechanism for automatic module path detection:
+
+- Captures stack trace at `procxy()` call site
+- Parses caller file path from stack frames
+- Handles both ESM (`file://`) and CommonJS paths
+- Falls back to explicit `modulePath` option when auto-detection fails
+
+**Rationale**: Provides ergonomic API for 90% of cases while maintaining reliability through explicit override.
+
+**Known Limitations**:
+- Bundled/minified code may require explicit `modulePath`
+- REPL/eval environments require explicit `modulePath`
+- Decorator wrappers may add stack frames (handled via frame filtering)
+
+### EventEmitter Integration
+Classes extending `EventEmitter` receive automatic event forwarding:
+
+- Runtime prototype chain inspection detects EventEmitter inheritance
+- Events emitted in child process are forwarded to parent via IPC
+- Parent proxy implements EventEmitter interface with type preservation
+- Event listeners registered on parent proxy receive child events transparently
+
+**Rationale**: Many Node.js patterns use EventEmitter for async notifications. Supporting this makes procxy work seamlessly with existing codebases.
+
+### Property Access Decision
+**v1.0 supports methods only**. Property access is not supported in initial release.
+
+**Rationale**: 
+- Methods cover 95% of use cases
+- Property access introduces ambiguity (getters, setters, nested objects)
+- Can be added in future versions if demand exists
+
+**Future Consideration**: Read-only property access via Promise-based getters may be added if there's a clear, ergonomic approach.
+
+### Timeout and Retry Mechanism
+- Default timeout: 30 seconds per method call
+- Retry attempts: 3 before rejection
+- Timeout rejection does not kill child process (method continues in background)
+- Child process crash causes immediate rejection of all pending promises (fail-fast)
+
+**Rationale**: Balances responsiveness with tolerance for transient issues. Fail-fast on crashes prevents cascading failures.
+
 ## Governance
 
 This constitution supersedes all other practices and guidelines. All PRs, code reviews, and design decisions must verify compliance with these principles.
@@ -136,4 +191,4 @@ Amendments to this constitution require:
 - Migration plan for breaking changes
 - Update to version number
 
-**Version**: 1.0.0 | **Ratified**: 2025-12-27 | **Last Amended**: 2025-12-27
+**Version**: 1.1.0 | **Ratified**: 2025-12-27 | **Last Amended**: 2025-12-28
