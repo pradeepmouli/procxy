@@ -1,7 +1,7 @@
 # Module Path Detection Research
 
-**Feature**: 001-procxy-core-library  
-**Research Date**: 2025-12-27  
+**Feature**: 001-procxy-core-library
+**Research Date**: 2025-12-27
 **Topic**: Feasibility of automatic module path detection from constructor
 
 ## Problem Statement
@@ -27,7 +27,7 @@ function getCallerModulePath(): string {
   // Stack frame 2: procxy
   // Stack frame 3: user's call site <-- we want this
   const callerFrame = stack?.[3];
-  
+
   // Parse: "at Object.<anonymous> (/path/to/user/file.ts:10:20)"
   const match = callerFrame?.match(/\((.+):(\d+):(\d+)\)/);
   return match?.[1]; // /path/to/user/file.ts
@@ -58,7 +58,7 @@ function getModulePathFromCache(constructor: Function): string | undefined {
   // Iterate through require.cache
   for (const [path, mod] of Object.entries(require.cache)) {
     // Check if this module exports our constructor
-    if (mod.exports === constructor || 
+    if (mod.exports === constructor ||
         mod.exports?.default === constructor ||
         Object.values(mod.exports).includes(constructor)) {
       return path;
@@ -108,8 +108,8 @@ const calculatorPath = require.resolve('./calculator.js');
 **How it works**: Require user to provide module path explicitly
 
 ```typescript
-await procxy(Calculator, { 
-  modulePath: './calculator.js' 
+await procxy(Calculator, {
+  modulePath: './calculator.js'
 }, arg1, arg2);
 ```
 
@@ -164,10 +164,10 @@ export function resolveConstructorModule(constructor: Function): {
   const err = new Error();
   Error.captureStackTrace(err, resolveConstructorModule);
   const stack = err.stack?.split('\n');
-  
+
   // Find the frame that called procxy()
   // Typically stack[2] or stack[3] depending on call depth
-  const callerFrame = stack?.find(line => 
+  const callerFrame = stack?.find(line =>
     !line.includes('node_modules/procxy') &&
     !line.includes('module-resolver') &&
     line.includes('at ')
@@ -201,16 +201,16 @@ export function resolveConstructorModule(constructor: Function): {
 
 1. **Bundled code**: Stack traces may point to bundle, not source
    - **Solution**: Allow explicit modulePath override
-   
+
 2. **Transpiled code**: TypeScript → JavaScript path mismatch
    - **Solution**: Source maps (future enhancement)
-   
+
 3. **Anonymous classes**: `class extends Foo {}`
    - **Solution**: Throw error, require named class
-   
+
 4. **Decorated constructors**: Decorators add stack frames
    - **Solution**: Skip frames from known decorator patterns
-   
+
 5. **REPL/eval**: No file path available
    - **Solution**: Require explicit modulePath
 
