@@ -1,10 +1,11 @@
 {
-  "name": "template-ts",
+  "name": "procxy",
   "version": "0.1.0",
-  "description": "TypeScript project template with modern tooling and best practices",
+  "description": "An ergonomic way to access an object instantiated in a node.js child process by way of a proxy",
   "keywords": [
-    "boilerplate",
-    "template",
+    "proxy",
+    "ipc",
+    "child_process",
     "typescript"
   ],
   "license": "MIT",
