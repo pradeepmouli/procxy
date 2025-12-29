@@ -1,70 +1,58 @@
 import { EventEmitter } from 'events';
 
 /**
- * Test fixture: Worker that extends EventEmitter.
+ * Test fixture: Worker that extends EventEmitter and emits events during operations.
  * Used for US6 (EventEmitter Integration) tests.
  */
 export class EventWorker extends EventEmitter {
-  private taskInProgress: boolean = false;
+  private value: number = 0;
 
   /**
-   * Simulate long-running work that emits progress events.
+   * Start a task that emits progress events.
    */
-  async doWorkWithProgress(stepCount: number): Promise<string> {
-    if (this.taskInProgress) {
-      throw new Error('Task already in progress');
+  async startTask(duration: number): Promise<string> {
+    const steps = 5;
+    const interval = duration / steps;
+
+    for (let i = 1; i <= steps; i++) {
+      await new Promise((resolve) => setTimeout(resolve, interval));
+      const percent = (i / steps) * 100;
+      this.emit('progress', percent);
     }
 
-    this.taskInProgress = true;
-
-    try {
-      for (let i = 1; i <= stepCount; i++) {
-        // Emit progress event
-        this.emit('progress', {
-          step: i,
-          total: stepCount,
-          percent: Math.round((i / stepCount) * 100),
-        });
-
-        // Simulate work
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-
-      this.emit('complete', { stepCount, success: true });
-      return `Completed ${stepCount} steps`;
-    } catch (error) {
-      this.emit('error', error instanceof Error ? error.message : String(error));
-      throw error;
-    } finally {
-      this.taskInProgress = false;
-    }
+    this.emit('complete', { duration, steps });
+    return 'Task completed';
   }
 
   /**
-   * Emit custom event with data.
+   * Increment internal counter and emit event.
    */
-  async emitCustomEvent(eventName: string, data: unknown): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, 10));
-    this.emit(eventName, data);
+  increment(): number {
+    this.value++;
+    this.emit('changed', this.value);
+    return this.value;
   }
 
   /**
-   * Get current task status.
+   * Get current value without emitting.
    */
-  isWorking(): boolean {
-    return this.taskInProgress;
+  getValue(): number {
+    return this.value;
   }
-}
 
-// Type for progress event
-export interface ProgressEvent {
-  step: number;
-  total: number;
-  percent: number;
-}
+  /**
+   * Emit multiple event types at once.
+   */
+  multiEmit(data: string): void {
+    this.emit('event1', data);
+    this.emit('event2', data.toUpperCase());
+    this.emit('event3', data.length);
+  }
 
-// Type for complete event
-export interface CompleteEvent {
-  stepCount: number;
-  success: boolean;
+  /**
+   * Emit event with multiple arguments.
+   */
+  emitMultiArgs(a: number, b: string, c: boolean): void {
+    this.emit('multi', a, b, c);
+  }
 }

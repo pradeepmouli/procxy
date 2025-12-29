@@ -1,130 +1,62 @@
-import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
+import { EventEmitter } from 'node:events';
+import { describe, it, expect, vi } from 'vitest';
 import type { Jsonifiable } from 'type-fest';
+import { createParentProxy } from '../../src/parent/parent-proxy.js';
+import { ProcxyError } from '../../src/shared/errors.js';
+import type { IPCClient } from '../../src/parent/ipc-client.js';
 
-/**
- * Unit tests for parent-side Proxy handler
- *
- * Tests the handler that intercepts method calls on the parent-side proxy
- * and sends Request messages to the child process.
- */
-describe('ParentProxyHandler', () => {
-  let mockSendRequest: Mock<(method: string, args: [...Jsonifiable[]]) => Promise<Jsonifiable>>;
-  let proxy: any;
+class FakeIPCClient extends EventEmitter {
+  process = { pid: 1234 } as any;
+  sendRequest = vi.fn(async (_method: string, _args: [...Jsonifiable[]]): Promise<any> => 'ok');
+  terminate = vi.fn(async () => {});
+}
 
-  beforeEach(() => {
-    // Mock IPC client sendRequest function
-    mockSendRequest = vi.fn();
+describe('Parent proxy', () => {
+  it('forwards method calls to IPC client', async () => {
+    const ipc = new FakeIPCClient();
+    const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
 
-    // TODO: Replace with actual ParentProxyHandler once implemented
-    // For now, create a basic Proxy to test the expected behavior
-    proxy = new Proxy(
-      {},
-      {
-        get: (_target, prop) => {
-          if (typeof prop === 'string' && !prop.startsWith('$')) {
-            return (...args: Jsonifiable[]) => mockSendRequest(prop, args);
-          }
-          return undefined;
-        }
-      }
-    );
+    ipc.sendRequest.mockResolvedValueOnce(42);
+    const result = await proxy.add(10, 32);
+
+    expect(ipc.sendRequest).toHaveBeenCalledWith('add', [10, 32]);
+    expect(result).toBe(42);
   });
 
-  describe('method interception', () => {
-    it('should intercept method calls and send Request messages', async () => {
-      mockSendRequest.mockResolvedValue(42);
+  it('validates method names and rejects reserved ones', async () => {
+    const ipc = new FakeIPCClient();
+    const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
 
-      const result = await proxy.add(10, 32);
-
-      expect(mockSendRequest).toHaveBeenCalledWith('add', [10, 32]);
-      expect(result).toBe(42);
-    });
-
-    it('should handle methods with no arguments', async () => {
-      mockSendRequest.mockResolvedValue(true);
-
-      const result = await proxy.isReady();
-
-      expect(mockSendRequest).toHaveBeenCalledWith('isReady', []);
-      expect(result).toBe(true);
-    });
-
-    it('should handle methods with complex arguments', async () => {
-      const complexArg = { name: 'test', values: [1, 2, 3] };
-      mockSendRequest.mockResolvedValue({ status: 'success' });
-
-      const result = await proxy.process(complexArg, 'option');
-
-      expect(mockSendRequest).toHaveBeenCalledWith('process', [complexArg, 'option']);
-      expect(result).toEqual({ status: 'success' });
-    });
-
-    it('should validate method names (FR-014)', async () => {
-      // Method names starting with $ should not be intercepted
-      const $terminate = proxy.$terminate;
-      expect($terminate).toBeUndefined();
-      expect(mockSendRequest).not.toHaveBeenCalled();
-    });
-
-    it('should handle concurrent method calls independently', async () => {
-      mockSendRequest
-        .mockResolvedValueOnce('result1')
-        .mockResolvedValueOnce('result2')
-        .mockResolvedValueOnce('result3');
-
-      const [r1, r2, r3] = await Promise.all([proxy.method1(), proxy.method2(), proxy.method3()]);
-
-      expect(r1).toBe('result1');
-      expect(r2).toBe('result2');
-      expect(r3).toBe('result3');
-      expect(mockSendRequest).toHaveBeenCalledTimes(3);
-    });
+    expect(() => (proxy as any)['invalid-name']()).toThrow(ProcxyError);
+    expect(() => (proxy as any).$private()).toThrow(ProcxyError);
   });
 
-  describe('error handling', () => {
-    it('should propagate errors from child process', async () => {
-      const error = new Error('Child process error');
-      mockSendRequest.mockRejectedValue(error);
+  it('exposes $terminate and $process lifecycle helpers', async () => {
+    const ipc = new FakeIPCClient();
+    const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
 
-      await expect(proxy.failingMethod()).rejects.toThrow('Child process error');
-    });
-
-    it('should handle timeout errors', async () => {
-      mockSendRequest.mockRejectedValue(new Error('Request timeout'));
-
-      await expect(proxy.slowMethod()).rejects.toThrow('Request timeout');
-    });
+    await proxy.$terminate();
+    expect(ipc.terminate).toHaveBeenCalled();
+    expect(proxy.$process.pid).toBe(1234);
   });
 
-  describe('return value handling', () => {
-    it('should handle primitive return values', async () => {
-      mockSendRequest.mockResolvedValue(123);
-      expect(await proxy.getNumber()).toBe(123);
+  it('forwards event listeners to IPC client EventEmitter', async () => {
+    const ipc = new FakeIPCClient();
+    const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
 
-      mockSendRequest.mockResolvedValue('hello');
-      expect(await proxy.getString()).toBe('hello');
+    const handler = vi.fn();
+    proxy.on('done', handler);
 
-      mockSendRequest.mockResolvedValue(true);
-      expect(await proxy.getBoolean()).toBe(true);
+    ipc.emit('done', 'payload');
+    expect(handler).toHaveBeenCalledWith('payload');
+  });
 
-      mockSendRequest.mockResolvedValue(null);
-      expect(await proxy.getNull()).toBe(null);
-    });
+  it('supports complex argument forwarding', async () => {
+    const ipc = new FakeIPCClient();
+    const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
+    const payload = { nested: ['a', 'b'] };
 
-    it('should handle object return values', async () => {
-      const obj = { id: 1, name: 'test', nested: { value: 42 } };
-      mockSendRequest.mockResolvedValue(obj);
-
-      const result = await proxy.getObject();
-      expect(result).toEqual(obj);
-    });
-
-    it('should handle array return values', async () => {
-      const arr = [1, 2, 3, 'four', { five: 5 }];
-      mockSendRequest.mockResolvedValue(arr);
-
-      const result = await proxy.getArray();
-      expect(result).toEqual(arr);
-    });
+    await proxy.process(payload, 5);
+    expect(ipc.sendRequest).toHaveBeenCalledWith('process', [payload, 5]);
   });
 });

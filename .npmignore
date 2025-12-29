@@ -1,0 +1,12 @@
+node_modules/
+coverage/
+.github/
+.vscode/
+.husky/
+.changeset/
+.specify/
+specs/
+tests/
+src/
+*.log
+.DS_Store

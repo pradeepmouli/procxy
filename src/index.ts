@@ -3,8 +3,7 @@
  * Includes the main procxy function and all public types.
  */
 
-// Main function (will be implemented in Phase 3 - US1)
-// export { procxy } from './parent/procxy.js';
+export { procxy } from './parent/procxy.js';
 
 // Types
 export type { Procxy } from './types/procxy.js';

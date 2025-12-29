@@ -60,6 +60,21 @@ export interface EventMessage {
 }
 
 /**
+ * Initialization success message sent from child to parent after instance is created.
+ */
+export interface InitSuccess {
+  type: 'INIT_SUCCESS';
+}
+
+/**
+ * Initialization failure message sent from child to parent when instantiation fails.
+ */
+export interface InitFailure {
+  type: 'INIT_FAILURE';
+  error: ErrorInfo;
+}
+
+/**
  * Union type of all IPC messages sent from parent to child.
  */
 export type ParentToChildMessage = InitMessage | Request;
@@ -67,4 +82,4 @@ export type ParentToChildMessage = InitMessage | Request;
 /**
  * Union type of all IPC messages sent from child to parent.
  */
-export type ChildToParentMessage = Response | EventMessage;
+export type ChildToParentMessage = Response | EventMessage | InitSuccess | InitFailure;

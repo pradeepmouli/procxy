@@ -1,7 +1,7 @@
 import type { ChildProcess } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import type { Jsonifiable } from 'type-fest';
-import type { Request, Response, EventMessage, ChildToParentMessage } from '../shared/protocol.js';
+import type { Request, Response, EventMessage, ChildToParentMessage, ErrorInfo } from '../shared/protocol.js';
 import { TimeoutError, ChildCrashedError } from '../shared/errors.js';
 import { EventEmitter } from 'node:events';
 
@@ -45,6 +45,10 @@ export class IPCClient extends EventEmitter {
 
     // Set up exit handler
     this.childProcess.on('exit', this.handleExit.bind(this));
+  }
+
+  get process(): ChildProcess {
+    return this.childProcess;
   }
 
   /**
@@ -108,8 +112,22 @@ export class IPCClient extends EventEmitter {
   private handleMessage(message: ChildToParentMessage): void {
     if (message.type === 'RESULT' || message.type === 'ERROR') {
       this.handleResponse(message);
-    } else if (message.type === 'EVENT') {
+      return;
+    }
+
+    if (message.type === 'EVENT') {
       this.handleEvent(message);
+      return;
+    }
+
+    if (message.type === 'INIT_SUCCESS') {
+      this.emit('init_success');
+      return;
+    }
+
+    if (message.type === 'INIT_FAILURE') {
+      this.emit('init_failure', this.toError(message.error));
+      return;
     }
   }
 
@@ -137,12 +155,7 @@ export class IPCClient extends EventEmitter {
       pending.resolve(response.value ?? null);
     } else {
       // Reconstruct error from ErrorInfo
-      const error = new Error(response.error?.message ?? 'Unknown error');
-      error.name = response.error?.name ?? 'Error';
-      error.stack = response.error?.stack;
-      (error as any).code = response.error?.code;
-
-      pending.reject(error);
+      pending.reject(this.toError(response.error));
     }
   }
 
@@ -171,12 +184,17 @@ export class IPCClient extends EventEmitter {
     }
 
     this.pendingRequests.clear();
+
+    this.emit('child_exit', code, signal);
   }
 
   /**
    * Terminate the IPC client and child process.
    */
   async terminate(): Promise<void> {
+      // Remove message listener to prevent memory leaks
+      this.childProcess.off('message', this.handleMessage);
+
     if (this.isTerminated) {
       return;
     }
@@ -212,5 +230,13 @@ export class IPCClient extends EventEmitter {
         resolve();
       }, 5000);
     });
+  }
+
+  private toError(info?: ErrorInfo): Error {
+    const error = new Error(info?.message ?? 'Unknown error');
+    error.name = info?.name ?? 'Error';
+    error.stack = info?.stack;
+    (error as any).code = info?.code;
+    return error;
   }
 }

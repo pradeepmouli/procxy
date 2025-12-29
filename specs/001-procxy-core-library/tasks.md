@@ -24,11 +24,11 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create project directory structure: src/, src/parent/, src/child/, src/shared/, src/types/, tests/, tests/unit/, tests/integration/, tests/fixtures/
-- [ ] T002 Initialize TypeScript configuration in tsconfig.json with strict mode, ES2022 target, and Node18+ lib
-- [ ] T003 [P] Configure package.json with type: "module", exports for ESM, TypeScript and vitest dependencies
-- [ ] T004 [P] Configure vitest in vitest.config.ts with coverage target >90%
-- [ ] T005 [P] Add development dependencies: pino for logging, @types/node, tsx for script execution
+- [x] T001 Create project directory structure: src/, src/parent/, src/child/, src/shared/, src/types/, tests/, tests/unit/, tests/integration/, tests/fixtures/
+- [x] T002 Initialize TypeScript configuration in tsconfig.json with strict mode, ES2022 target, and Node18+ lib
+- [x] T003 [P] Configure package.json with type: "module", exports for ESM, TypeScript and vitest dependencies
+- [x] T004 [P] Configure vitest in vitest.config.ts with coverage target >90%
+- [x] T005 [P] Add development dependencies: pino for logging, @types/node, tsx for script execution
 
 ---
 
@@ -38,13 +38,13 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 [P] Define IPC protocol message types in src/shared/protocol.ts (InitMessage, Request, Response, EventMessage)
-- [ ] T007 [P] Implement custom error classes in src/shared/errors.ts (ProcxyError, TimeoutError, ModuleResolutionError, ChildCrashedError)
-- [ ] T008 [P] Implement module path resolver in src/shared/module-resolver.ts using Error stack trace inspection per research findings; fallback order: (1) stack trace detection, (2) use `options.modulePath` override if provided, (3) throw ModuleResolutionError with clear guidance
-- [ ] T009 [P] Implement JSON serialization validation utilities in src/shared/serialization.ts
-- [ ] T010 Define Procxy<T> mapped type in src/types/procxy.ts that converts all methods to Promise-returning
-- [ ] T011 Define ProcxyOptions interface in src/types/options.ts with timeout, retries, modulePath, env, cwd, args fields
-- [ ] T012 Create test fixture classes in tests/fixtures/: calculator.ts (basic synchronous methods), async-worker.ts (async methods), event-worker.ts (EventEmitter-based), broken-worker.ts (throws errors)
+- [x] T006 [P] Define IPC protocol message types in src/shared/protocol.ts (InitMessage, Request, Response, EventMessage)
+- [x] T007 [P] Implement custom error classes in src/shared/errors.ts (ProcxyError, TimeoutError, ModuleResolutionError, ChildCrashedError)
+- [x] T008 [P] Implement module path resolver in src/shared/module-resolver.ts using Error stack trace inspection per research findings; fallback order: (1) stack trace detection, (2) use `options.modulePath` override if provided, (3) throw ModuleResolutionError with clear guidance
+- [x] T009 [P] Implement JSON serialization validation utilities in src/shared/serialization.ts
+- [x] T010 Define Procxy<T> mapped type in src/types/procxy.ts that converts all methods to Promise-returning
+- [x] T011 Define ProcxyOptions interface in src/types/options.ts with timeout, retries, modulePath, env, cwd, args fields
+- [x] T012 Create test fixture classes in tests/fixtures/: calculator.ts (basic synchronous methods), async-worker.ts (async methods), event-worker.ts (EventEmitter-based), broken-worker.ts (throws errors)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -62,21 +62,21 @@
 
 Dependency note: T012 (fixtures) must be created before T013–T017 so tests can import the fixture classes.
 
-- [ ] T013 [P] [US1] Write unit test for parent Proxy handler in tests/unit/parent-proxy.test.ts
-- [ ] T014 [P] [US1] Write unit test for child Proxy handler in tests/unit/child-proxy.test.ts
-- [ ] T015 [P] [US1] Write integration test for basic method invocation in tests/integration/basic-invocation.test.ts using calculator fixture
-- [ ] T016 [P] [US1] Write integration test for async method handling in tests/integration/basic-invocation.test.ts using async-worker fixture
-- [ ] T017 [P] [US1] Write integration test for error propagation in tests/integration/error-handling.test.ts using broken-worker fixture
+- [x] T013 [P] [US1] Write unit test for parent Proxy handler in tests/unit/parent-proxy.test.ts
+- [x] T014 [P] [US1] Write unit test for child Proxy handler in tests/unit/child-proxy.test.ts
+- [x] T015 [P] [US1] Write integration test for basic method invocation in tests/integration/basic-invocation.test.ts using calculator fixture
+- [x] T016 [P] [US1] Write integration test for async method handling in tests/integration/basic-invocation.test.ts using async-worker fixture
+- [x] T017 [P] [US1] Write integration test for error propagation in tests/integration/error-handling.test.ts using broken-worker fixture
 
 ### Implementation for User Story 1
 
-- [ ] T018 [P] [US1] Implement child agent entry point in src/child/agent.ts that listens for InitMessage, imports module, and instantiates class
-- [ ] T019 [P] [US1] Implement child Proxy handler in src/child/child-proxy.ts that receives Request messages and invokes methods on instance
-- [ ] T020 [US1] Implement IPC client in src/parent/ipc-client.ts with message correlation using UUID v4 (crypto.randomUUID), request/response mapping, and Promise handling
-- [ ] T021 [US1] Implement parent Proxy handler in src/parent/parent-proxy.ts that intercepts method calls, validates method names are valid identifiers (FR-014), and sends Request messages via IPC client
-- [ ] T022 [US1] Implement main procxy() function in src/parent/procxy.ts that validates constructor arguments are JSON-serializable (FR-019, FR-022), resolves module path, spawns child with agent, sends InitMessage, returns parent Proxy
-- [ ] T023 [US1] Update src/index.ts to export procxy function and Procxy<T>, ProcxyOptions types
-- [ ] T024 [US1] Verify all US1 tests pass and error messages include stack traces from child
+- [x] T018 [P] [US1] Implement child agent entry point in src/child/agent.ts that listens for InitMessage, imports module, and instantiates class
+- [x] T019 [P] [US1] Implement child Proxy handler in src/child/child-proxy.ts that receives Request messages and invokes methods on instance
+- [x] T020 [US1] Implement IPC client in src/parent/ipc-client.ts with message correlation using UUID v4 (crypto.randomUUID), request/response mapping, and Promise handling
+- [x] T021 [US1] Implement parent Proxy handler in src/parent/parent-proxy.ts that intercepts method calls, validates method names are valid identifiers (FR-014), and sends Request messages via IPC client
+- [x] T022 [US1] Implement main procxy() function in src/parent/procxy.ts that validates constructor arguments are JSON-serializable (FR-019, FR-022), resolves module path, spawns child with agent, sends InitMessage, returns parent Proxy
+- [x] T023 [US1] Update src/index.ts to export procxy function and Procxy<T>, ProcxyOptions types
+- [x] T024 [US1] Verify all US1 tests pass and error messages include stack traces from child
    - Include explicit concurrency verification: multiple simultaneous calls resolve with correct correlation IDs and without cross-talk (FR-006)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - basic method calls, async methods, and error propagation all work
@@ -93,15 +93,15 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 
 ### Tests for User Story 4
 
-- [ ] T025 [P] [US4] Create TypeScript type tests in tests/unit/types.test.ts that verify Procxy<T> correctly maps method signatures
-- [ ] T026 [P] [US4] Add type tests for method argument type checking (should fail compilation with wrong types)
-- [ ] T027 [P] [US4] Add type tests for return type inference (verify async Promise<T> return types)
+- [x] T025 [P] [US4] Create TypeScript type tests in tests/unit/types.test.ts that verify Procxy<T> correctly maps method signatures
+- [x] T026 [P] [US4] Add type tests for method argument type checking (should fail compilation with wrong types)
+- [x] T027 [P] [US4] Add type tests for return type inference (verify async Promise<T> return types)
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Refine Procxy<T> mapped type in src/types/procxy.ts to handle complex class hierarchies and inherited methods
-- [ ] T029 [US4] Add TypeDoc comments to all public APIs in src/index.ts for better IDE experience
-- [ ] T030 [US4] Verify TypeScript compiler catches type errors in test files
+- [x] T028 [US4] Refine Procxy<T> mapped type in src/types/procxy.ts to handle complex class hierarchies and inherited methods
+- [x] T029 [US4] Add TypeDoc comments to all public APIs in src/index.ts for better IDE experience
+- [x] T030 [US4] Verify TypeScript compiler catches type errors in test files
 
 **Checkpoint**: At this point, type safety should be fully functional - IDE autocomplete works, type errors are caught at compile time
 
@@ -115,24 +115,24 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 
 ### Tests for User Story 2
 
-- [ ] T031 [P] [US2] Write integration test for $terminate() in tests/integration/lifecycle.test.ts
-- [ ] T032 [P] [US2] Write integration test for automatic cleanup on parent exit in tests/integration/lifecycle.test.ts
-- [ ] T033 [P] [US2] Write integration test for handling child process crashes in tests/integration/lifecycle.test.ts
+- [x] T031 [P] [US2] Write integration test for $terminate() in tests/integration/lifecycle.test.ts
+- [x] T032 [P] [US2] Write integration test for automatic cleanup on parent exit in tests/integration/lifecycle.test.ts
+- [x] T033 [P] [US2] Write integration test for handling child process crashes in tests/integration/lifecycle.test.ts
 
 ### Implementation for User Story 2
 
-- [ ] T034 [P] [US2] Implement lifecycle management in src/parent/lifecycle.ts with process tracking registry
-- [ ] T035 [US2] Add $terminate() method to parent Proxy in src/parent/parent-proxy.ts that kills child and rejects pending promises
-- [ ] T036 [US2] Add $process property to parent Proxy in src/parent/parent-proxy.ts that exposes ChildProcess instance
-- [ ] T037 [US2] Add automatic cleanup handlers in src/parent/lifecycle.ts for SIGTERM, SIGINT, and beforeExit events
-- [ ] T038 [US2] Add child crash detection in src/parent/ipc-client.ts that rejects pending promises with ChildCrashedError
-- [ ] T039 [US2] Verify all US2 tests pass and processes are cleaned up 100% of the time
+- [x] T034 [P] [US2] Implement lifecycle management in src/parent/lifecycle.ts with process tracking registry
+- [x] T035 [US2] Add $terminate() method to parent Proxy in src/parent/parent-proxy.ts that kills child and rejects pending promises
+- [x] T036 [US2] Add $process property to parent Proxy in src/parent/parent-proxy.ts that exposes ChildProcess instance
+- [x] T037 [US2] Add automatic cleanup handlers in src/parent/lifecycle.ts for SIGTERM, SIGINT, and beforeExit events
+- [x] T038 [US2] Add child crash detection in src/parent/ipc-client.ts that rejects pending promises with ChildCrashedError
+- [x] T039 [US2] Verify all US2 tests pass and processes are cleaned up 100% of the time
 
 #### Cleanup tasks (Memory and listeners)
 
-- [ ] T083 [US2] Ensure IPC client cleans up request/response maps after RESULT/ERROR to prevent memory growth (NFR-002)
-- [ ] T084 [US2] Ensure `$terminate()` removes all event listeners on parent proxy and detaches child IPC handlers
-- [ ] T085 [US2] Ensure automatic cleanup on child exit removes parent-side listeners and rejects any remaining promises
+- [x] T083 [US2] Ensure IPC client cleans up request/response maps after RESULT/ERROR to prevent memory growth (NFR-002)
+- [x] T084 [US2] Ensure `$terminate()` removes all event listeners on parent proxy and detaches child IPC handlers
+- [x] T085 [US2] Ensure automatic cleanup on child exit removes parent-side listeners and rejects any remaining promises
 
 **Checkpoint**: At this point, lifecycle management should be fully functional - explicit termination works, automatic cleanup works, crash detection works
 
@@ -146,18 +146,18 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 
 ### Tests for User Story 6
 
-- [ ] T040 [P] [US6] Write unit test for EventEmitter detection in tests/unit/event-bridge.test.ts
-- [ ] T041 [P] [US6] Write integration test for event forwarding in tests/integration/event-emitter.test.ts using event-worker fixture
-- [ ] T042 [P] [US6] Write integration test for multiple event listeners in tests/integration/event-emitter.test.ts
+- [x] T040 [P] [US6] Write unit test for EventEmitter detection in tests/unit/event-bridge.test.ts
+- [x] T041 [P] [US6] Write integration test for event forwarding in tests/integration/event-emitter.test.ts using event-worker fixture
+- [x] T042 [P] [US6] Write integration test for multiple event listeners in tests/integration/event-emitter.test.ts
 
 ### Implementation for User Story 6
 
-- [ ] T043 [P] [US6] Implement EventEmitter detection via prototype chain check in src/shared/module-resolver.ts
-- [ ] T044 [US6] Implement event bridge in src/child/event-bridge.ts that forwards events from child instance to parent via EventMessage
-- [ ] T045 [US6] Extend child Proxy in src/child/child-proxy.ts to setup event forwarding on initialization for EventEmitter instances
-- [ ] T046 [US6] Extend parent Proxy in src/parent/parent-proxy.ts to handle EventMessage and emit on parent-side proxy
-- [ ] T047 [US6] Update Procxy<T> type in src/types/procxy.ts to conditionally preserve EventEmitter interface using conditional types
-- [ ] T048 [US6] Verify all US6 tests pass and events are received with correct data and timing
+- [x] T043 [P] [US6] Implement EventEmitter detection via prototype chain check in src/shared/module-resolver.ts
+- [x] T044 [US6] Implement event bridge in src/child/event-bridge.ts that forwards events from child instance to parent via EventMessage
+- [x] T045 [US6] Extend child Proxy in src/child/child-proxy.ts to setup event forwarding on initialization for EventEmitter instances
+- [x] T046 [US6] Extend parent Proxy in src/parent/parent-proxy.ts to handle EventMessage and emit on parent-side proxy
+- [x] T047 [US6] Update Procxy<T> type in src/types/procxy.ts to conditionally preserve EventEmitter interface using conditional types
+- [x] T048 [US6] Verify all US6 tests pass and events are received with correct data and timing
 
 **Checkpoint**: At this point, EventEmitter integration should be fully functional - events flow transparently from child to parent
 
@@ -170,18 +170,16 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 **Independent Test**: Create a method that sleeps, set a short timeout, verify promise rejects with TimeoutError after timeout expires.
 
 ### Tests for User Story 3
-
-- [ ] T049 [P] [US3] Write integration test for timeout behavior in tests/integration/timeouts.test.ts with short timeout and slow method
-- [ ] T050 [P] [US3] Write integration test for retry mechanism in tests/integration/timeouts.test.ts
-- [ ] T051 [P] [US3] Write integration test for successful calls within timeout in tests/integration/timeouts.test.ts
+- [x] T049 [P] [US3] Write integration test for timeout behavior in tests/integration/timeouts.test.ts with short timeout and slow method
+- [x] T050 [P] [US3] Write integration test for retry mechanism in tests/integration/timeouts.test.ts
+- [x] T051 [P] [US3] Write integration test for successful calls within timeout in tests/integration/timeouts.test.ts
 
 ### Implementation for User Story 3
-
-- [ ] T052 [US3] Implement timeout mechanism in src/parent/ipc-client.ts with configurable duration and retry logic
-- [ ] T053 [US3] Add timeout option to ProcxyOptions in src/types/options.ts with default value 30000ms
-- [ ] T054 [US3] Add retries option to ProcxyOptions in src/types/options.ts with default value 3
-- [ ] T055 [US3] Update procxy() function in src/parent/procxy.ts to pass timeout and retries to IPC client
-- [ ] T056 [US3] Verify all US3 tests pass and timeouts work correctly with retries
+- [x] T052 [US3] Implement timeout mechanism in src/parent/ipc-client.ts with configurable duration and retry logic
+- [x] T053 [US3] Add timeout option to ProcxyOptions in src/types/options.ts with default value 30000ms
+- [x] T054 [US3] Add retries option to ProcxyOptions in src/types/options.ts with default value 3
+- [x] T055 [US3] Update procxy() function in src/parent/procxy.ts to pass timeout and retries to IPC client
+- [x] T056 [US3] Verify all US3 tests pass and timeouts work correctly with retries
 
 **Checkpoint**: At this point, timeout configuration should be fully functional - timeouts prevent hanging, retries work as expected
 
@@ -194,17 +192,15 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 **Independent Test**: Spawn child with custom env vars, verify they are accessible in child. Test custom cwd and args.
 
 ### Tests for User Story 5
-
-- [ ] T057 [P] [US5] Write integration test for custom environment variables in tests/integration/process-options.test.ts
-- [ ] T058 [P] [US5] Write integration test for custom working directory in tests/integration/process-options.test.ts
-- [ ] T059 [P] [US5] Write integration test for custom command line arguments in tests/integration/process-options.test.ts
+- [x] T057 [P] [US5] Write integration test for custom environment variables in tests/integration/process-options.test.ts
+- [x] T058 [P] [US5] Write integration test for custom working directory in tests/integration/process-options.test.ts
+- [x] T059 [P] [US5] Write integration test for custom command line arguments in tests/integration/process-options.test.ts
 
 ### Implementation for User Story 5
-
-- [ ] T060 [US5] Add env, cwd, and args options to ProcxyOptions in src/types/options.ts
-- [ ] T061 [US5] Update procxy() function in src/parent/procxy.ts to pass env, cwd, and args to child_process.fork()
-- [ ] T062 [US5] Add validation for process options in src/parent/procxy.ts to ensure valid values
-- [ ] T063 [US5] Verify all US5 tests pass and child process receives correct options
+- [x] T060 [US5] Add env, cwd, and args options to ProcxyOptions in src/types/options.ts
+- [x] T061 [US5] Update procxy() function in src/parent/procxy.ts to pass env, cwd, and args to child_process.fork()
+- [x] T062 [US5] Add validation for process options in src/parent/procxy.ts to ensure valid values
+- [x] T063 [US5] Verify all US5 tests pass and child process receives correct options
 
 **Checkpoint**: At this point, custom process options should be fully functional - env, cwd, and args are configurable
 
@@ -214,12 +210,12 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 
 **Purpose**: Comprehensive test coverage for edge cases and concurrent scenarios
 
-- [ ] T064 [P] Write unit tests for module resolver in tests/unit/module-resolver.test.ts with various stack trace formats
-- [ ] T065 [P] Write unit tests for protocol message types in tests/unit/protocol.test.ts
-- [ ] T066 [P] Write unit tests for serialization validation in tests/unit/serialization.test.ts
-- [ ] T067 [P] Write integration test for concurrent method calls in tests/integration/concurrent-calls.test.ts
+- [x] T064 [P] Write unit tests for module resolver in tests/unit/module-resolver.test.ts with various stack trace formats
+- [x] T065 [P] Write unit tests for protocol message types in tests/unit/protocol.test.ts
+- [x] T066 [P] Write unit tests for serialization validation in tests/unit/serialization.test.ts
+- [x] T067 [P] Write integration test for concurrent method calls in tests/integration/concurrent-calls.test.ts
 - [ ] T068 [P] Write integration test for explicit modulePath override in tests/integration/module-resolution.test.ts
-- [ ] T069 [P] Write integration test for constructor arguments in tests/integration/constructor-args.test.ts
+- [X] T069 [P] Write integration test for constructor arguments in tests/integration/constructor-args.test.ts
 - [ ] T070 [P] Write performance benchmarks in tests/integration/performance.test.ts to verify <10ms overhead goal
 
 ---

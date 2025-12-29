@@ -77,16 +77,23 @@ function detectModulePathFromStackTrace(): string | undefined {
 
   // Find the first frame that is not from procxy internals
   for (const frame of stack) {
-    const pathMatch = frame.match(
-      /\((.+?):(\d+):(\d+)\)|at\s+(.+?):(\d+):(\d+)|at\s+(.+)/,
-    );
+    // Match stack frames in format:
+    // - at Object.<anonymous> (/path/to/file.ts:10:15)
+    // - at /path/to/file.ts:10:15
+    // - at ClassName.methodName (/path/to/file.ts:10:15)
+    const pathMatch = frame.match(/\(([^)]+?):(\d+):(\d+)\)|at\s+([^:(\s]+?):(\d+):(\d+)/);
 
     if (!pathMatch) continue;
 
-    let filePath = pathMatch[1] || pathMatch[4] || pathMatch[7];
+    let filePath = pathMatch[1] || pathMatch[4];
 
     // Skip if no path found
     if (!filePath) continue;
+
+    // Skip internal Node.js frames (like "new Promise (<anonymous>)")
+    if (filePath.includes('<anonymous>') || filePath.includes('node:internal')) {
+      continue;
+    }
 
     // Skip procxy internal frames
     if (
