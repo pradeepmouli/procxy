@@ -102,7 +102,7 @@ describe('Constructor Arguments (T069)', () => {
       // undefined becomes null when deserialized, so Calculator gets null as precision
       // @ts-expect-error - intentionally passing function
       proxy = await procxy(Calculator, { modulePath: calculatorPath }, fn);
-      
+
       // Function -> undefined (JSON) -> null (IPC), so precision = null
       const precision = await proxy.getPrecision();
       expect(precision).toBe(null);
@@ -115,7 +115,7 @@ describe('Constructor Arguments (T069)', () => {
       // undefined becomes null when deserialized, so Calculator gets null as precision
       // @ts-expect-error - intentionally passing symbol
       proxy = await procxy(Calculator, { modulePath: calculatorPath }, sym);
-      
+
       // Symbol -> undefined (JSON) -> null (IPC), so precision = null
       const precision = await proxy.getPrecision();
       expect(precision).toBe(null);
