@@ -8,7 +8,7 @@ import type { Jsonifiable } from 'type-fest';
  * and sends Request messages to the child process.
  */
 describe('ParentProxyHandler', () => {
-  let mockSendRequest: Mock<(method: string, args: Jsonifiable[]) => Promise<Jsonifiable>>;
+  let mockSendRequest: Mock<(method: string, args: [...Jsonifiable[]]) => Promise<Jsonifiable>>;
   let proxy: any;
 
   beforeEach(() => {
@@ -17,14 +17,17 @@ describe('ParentProxyHandler', () => {
 
     // TODO: Replace with actual ParentProxyHandler once implemented
     // For now, create a basic Proxy to test the expected behavior
-    proxy = new Proxy({}, {
-      get: (_target, prop) => {
-        if (typeof prop === 'string' && !prop.startsWith('$')) {
-          return (...args: Jsonifiable[]) => mockSendRequest(prop, args);
+    proxy = new Proxy(
+      {},
+      {
+        get: (_target, prop) => {
+          if (typeof prop === 'string' && !prop.startsWith('$')) {
+            return (...args: Jsonifiable[]) => mockSendRequest(prop, args);
+          }
+          return undefined;
         }
-        return undefined;
       }
-    });
+    );
   });
 
   describe('method interception', () => {
@@ -69,11 +72,7 @@ describe('ParentProxyHandler', () => {
         .mockResolvedValueOnce('result2')
         .mockResolvedValueOnce('result3');
 
-      const [r1, r2, r3] = await Promise.all([
-        proxy.method1(),
-        proxy.method2(),
-        proxy.method3()
-      ]);
+      const [r1, r2, r3] = await Promise.all([proxy.method1(), proxy.method2(), proxy.method3()]);
 
       expect(r1).toBe('result1');
       expect(r2).toBe('result2');
