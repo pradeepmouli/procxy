@@ -118,14 +118,14 @@ A developer has a class that extends EventEmitter and emits events during long-r
 
 - **FR-001**: System MUST provide a `procxy<T>(constructor: new (...args: any[]) => T, options?: ProcxyOptions): Promise<Procxy<T>>` function that spawns a child process with a generic agent module
 - **FR-002**: System MUST create Proxy objects on both parent (for IPC message sending) and child (for method invocation) sides
-- **FR-003**: System MUST serialize method arguments using JSON or structured clone
+- **FR-003**: System MUST serialize method arguments using JSON.stringify and deserialize using JSON.parse (structured clone not supported)
 - **FR-004**: System MUST deserialize return values and resolve the Promise with the result
 - **FR-005**: System MUST propagate errors from child to parent, preserving error message, name, and stack trace
 - **FR-006**: System MUST support concurrent method calls with correct response correlation
 - **FR-007**: System MUST provide a `$terminate()` method to explicitly kill the child process
 - **FR-008**: System MUST provide a `$process` property to access the underlying ChildProcess instance
 - **FR-009**: System MUST determine the module path from the constructor and send it to the child for dynamic import and instantiation
-- **FR-010**: System MUST handle child process crashes by rejecting pending promises
+- **FR-010**: System MUST handle child process crashes by failing fast: detect crash immediately, terminate processing, and reject all pending promises with a clear error
 - **FR-011**: System MUST implement timeout mechanism with configurable duration (default: 30000ms)
 - **FR-012**: System MUST clean up child processes when parent process exits
 - **FR-013**: System MUST generate TypeScript type definitions that map `T` methods to `Promise<T>`
@@ -136,7 +136,8 @@ A developer has a class that extends EventEmitter and emits events during long-r
 - **FR-018**: System MUST use stack trace inspection to automatically detect module path from constructor
 - **FR-019**: System MUST validate that constructor arguments are JSON-serializable before sending to child
 - **FR-020**: System MUST implement retry logic (default: 3 attempts) before rejecting timeout promises
-- **FR-021**: System MUST terminate and reject all pending promises when child process crashes (fail fast)
+- **FR-022**: System MUST pass constructor arguments from parent to child for class instantiation, validating they are JSON-serializable
+ - **FR-023**: System MUST validate `ProcxyOptions` values: `args` must conform to `type-fest`'s `Jsonifiable` type, `env` must be string values, and `cwd` must point to an existing directory
 
 ### Non-Functional Requirements
 
@@ -167,13 +168,15 @@ A developer has a class that extends EventEmitter and emits events during long-r
 
 ```typescript
 // Parent API
+import type { Jsonifiable } from 'type-fest';
+
 export interface ProcxyOptions {
-  args?: string[];           // Arguments to child process
-  env?: NodeJS.ProcessEnv;   // Environment variables
-  cwd?: string;              // Working directory
-  timeout?: number;          // Method call timeout (ms, default: 30000)
-  retries?: number;          // Retry attempts before failing (default: 3)
-  modulePath?: string;       // Explicit module path (overrides auto-detection)
+  args?: Jsonifiable[];      // Arguments to pass to child process (must be JSON-serializable via type-fest's Jsonifiable). Accessible via process.argv in child.
+  env?: NodeJS.ProcessEnv;   // Environment variables for child process (must be string values)
+  cwd?: string;              // Working directory for child process (must exist and be a directory)
+  timeout?: number;          // Method call timeout in milliseconds (default: 30000). On timeout, the Promise is rejected but the child process continues running.
+  retries?: number;          // Retry attempts before failing (default: 3). Retries are per-call and represent additional attempts (e.g., 3 retries = 4 total attempts).
+  modulePath?: string;       // Explicit module path (overrides stack trace auto-detection)
 }
 
 export type Procxy<T> = {
@@ -186,16 +189,19 @@ export type Procxy<T> = {
 };
 
 export function procxy<T>(
-  constructor: new (...args: any[]) => T,
-  ...constructorArgs: any[]
+  constructor: new (...args: Jsonifiable[]) => T,
+  ...constructorArgs: Jsonifiable[]
 ): Promise<Procxy<T>>;
 
 export function procxy<T>(
-  constructor: new (...args: any[]) => T,
+  constructor: new (...args: Jsonifiable[]) => T,
   options: ProcxyOptions,
-  ...constructorArgs: any[]
+  ...constructorArgs: Jsonifiable[]
 ): Promise<Procxy<T>>;
 ```
+
+Note on EventEmitter integration:
+- When `T` extends EventEmitter, the parent-side proxy exposes `.on(event, handler)`, `.once(event, handler)`, and `.off(event, handler)` for registering and removing listeners. The parent does not expose `.emit()`; events originate from the child and are forwarded to the parent.
 
 ### Communication Protocol
 
@@ -214,17 +220,17 @@ interface InitMessage {
 interface EventMessage {
   type: 'EVENT';
   eventName: string;       // Name of the event
-  args: any[];             // Event arguments
+  args: [...Jsonifiable[]]; // Event arguments (rest parameter style, must be JSON-serializable via type-fest's Jsonifiable)
 }
 ```
 
 **Message Format (Parent → Child)**
 ```typescript
 interface Request {
-  id: string;          // UUID v4
-  type: 'CALL';        // Only CALL supported in v1
-  prop: string;        // Method name
-  args: any[];         // Arguments array
+  id: string;            // UUID v4
+  type: 'CALL';          // Only CALL supported in v1
+  prop: string;          // Method name
+  args: [...Jsonifiable[]]; // Arguments array (rest parameter style, must be JSON-serializable via type-fest's Jsonifiable)
 }
 ```
 
@@ -251,7 +257,7 @@ interface Response {
 │    Process      │                       │     Process     │
 ├─────────────────┤                       ├─────────────────┤
 │                 │                       │                 │
-│ procxy(Calc)    │──fork(agent.js)──────▶│  Agent Module   │
+│ procxy(Calc)    │──fork(agent.js)──────▶│   Child Agent   │
 │      ↓          │                       │       ↓         │
 │ Extract module  │──{INIT,modulePath}──▶│ import(module)  │
 │  path & class   │                       │       ↓         │
@@ -270,20 +276,31 @@ interface Response {
 
 ```
 src/
-  index.ts           # Public exports
-  parent.ts          # procxy() implementation - parent proxy
-  agent.ts           # Child agent module - receives init, imports and instantiates
-  child-proxy.ts     # Child proxy implementation
-  protocol.ts        # Message type definitions
-  errors.ts          # Custom error classes
-  module-resolver.ts # Extract module path from constructor
+├── index.ts                   # Public exports (procxy function, types)
+├── parent/
+│   ├── procxy.ts              # Main procxy() implementation
+│   ├── parent-proxy.ts        # Parent-side Proxy handler
+│   ├── ipc-client.ts          # IPC message sending/correlation
+│   └── lifecycle.ts           # Process lifecycle & cleanup
+├── child/
+│   ├── agent.ts               # Child process entry point
+│   ├── child-proxy.ts         # Child-side Proxy handler
+│   └── event-bridge.ts        # EventEmitter forwarding
+├── shared/
+│   ├── protocol.ts            # Message type definitions
+│   ├── errors.ts              # Custom error classes
+│   ├── module-resolver.ts     # Stack trace → module path
+│   └── serialization.ts       # JSON serialization validation
+└── types/
+    ├── procxy.ts              # Procxy<T> mapped type
+    └── options.ts             # ProcxyOptions interface
 ```
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: Developers can set up and use procxy with less than 10 lines of code (parent + child)
+- **SC-001**: Developers can set up and use procxy with less than 10 lines of parent-side code
 - **SC-002**: TypeScript autocomplete works correctly in VS Code for remote method calls
 - **SC-003**: Method call overhead is measurable at under 10ms for simple methods
 - **SC-004**: Zero memory leaks after 1000 sequential method calls in a long-running process

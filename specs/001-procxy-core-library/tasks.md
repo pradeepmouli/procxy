@@ -40,7 +40,7 @@
 
 - [ ] T006 [P] Define IPC protocol message types in src/shared/protocol.ts (InitMessage, Request, Response, EventMessage)
 - [ ] T007 [P] Implement custom error classes in src/shared/errors.ts (ProcxyError, TimeoutError, ModuleResolutionError, ChildCrashedError)
-- [ ] T008 [P] Implement module path resolver in src/shared/module-resolver.ts using Error stack trace inspection per research findings
+- [ ] T008 [P] Implement module path resolver in src/shared/module-resolver.ts using Error stack trace inspection per research findings; fallback order: (1) stack trace detection, (2) use `options.modulePath` override if provided, (3) throw ModuleResolutionError with clear guidance
 - [ ] T009 [P] Implement JSON serialization validation utilities in src/shared/serialization.ts
 - [ ] T010 Define Procxy<T> mapped type in src/types/procxy.ts that converts all methods to Promise-returning
 - [ ] T011 Define ProcxyOptions interface in src/types/options.ts with timeout, retries, modulePath, env, cwd, args fields
@@ -60,6 +60,8 @@
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
+Dependency note: T012 (fixtures) must be created before T013–T017 so tests can import the fixture classes.
+
 - [ ] T013 [P] [US1] Write unit test for parent Proxy handler in tests/unit/parent-proxy.test.ts
 - [ ] T014 [P] [US1] Write unit test for child Proxy handler in tests/unit/child-proxy.test.ts
 - [ ] T015 [P] [US1] Write integration test for basic method invocation in tests/integration/basic-invocation.test.ts using calculator fixture
@@ -70,11 +72,12 @@
 
 - [ ] T018 [P] [US1] Implement child agent entry point in src/child/agent.ts that listens for InitMessage, imports module, and instantiates class
 - [ ] T019 [P] [US1] Implement child Proxy handler in src/child/child-proxy.ts that receives Request messages and invokes methods on instance
-- [ ] T020 [US1] Implement IPC client in src/parent/ipc-client.ts with message correlation using UUID, request/response mapping, and Promise handling
-- [ ] T021 [US1] Implement parent Proxy handler in src/parent/parent-proxy.ts that intercepts method calls and sends Request messages via IPC client
-- [ ] T022 [US1] Implement main procxy() function in src/parent/procxy.ts that resolves module path, spawns child with agent, sends InitMessage, returns parent Proxy
+- [ ] T020 [US1] Implement IPC client in src/parent/ipc-client.ts with message correlation using UUID v4 (crypto.randomUUID), request/response mapping, and Promise handling
+- [ ] T021 [US1] Implement parent Proxy handler in src/parent/parent-proxy.ts that intercepts method calls, validates method names are valid identifiers (FR-014), and sends Request messages via IPC client
+- [ ] T022 [US1] Implement main procxy() function in src/parent/procxy.ts that validates constructor arguments are JSON-serializable (FR-019, FR-022), resolves module path, spawns child with agent, sends InitMessage, returns parent Proxy
 - [ ] T023 [US1] Update src/index.ts to export procxy function and Procxy<T>, ProcxyOptions types
 - [ ] T024 [US1] Verify all US1 tests pass and error messages include stack traces from child
+   - Include explicit concurrency verification: multiple simultaneous calls resolve with correct correlation IDs and without cross-talk (FR-006)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional - basic method calls, async methods, and error propagation all work
 
@@ -83,6 +86,8 @@
 ## Phase 4: User Story 4 - Type-Safe Method Calls (Priority: P1)
 
 **Goal**: Ensure TypeScript provides full type safety with autocomplete, argument type checking, and return type inference
+
+Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is complete.
 
 **Independent Test**: This is validated at compile time. Create a Service class with typed methods, verify TypeScript catches wrong argument types and provides autocomplete.
 
@@ -122,6 +127,12 @@
 - [ ] T037 [US2] Add automatic cleanup handlers in src/parent/lifecycle.ts for SIGTERM, SIGINT, and beforeExit events
 - [ ] T038 [US2] Add child crash detection in src/parent/ipc-client.ts that rejects pending promises with ChildCrashedError
 - [ ] T039 [US2] Verify all US2 tests pass and processes are cleaned up 100% of the time
+
+#### Cleanup tasks (Memory and listeners)
+
+- [ ] T083 [US2] Ensure IPC client cleans up request/response maps after RESULT/ERROR to prevent memory growth (NFR-002)
+- [ ] T084 [US2] Ensure `$terminate()` removes all event listeners on parent proxy and detaches child IPC handlers
+- [ ] T085 [US2] Ensure automatic cleanup on child exit removes parent-side listeners and rejects any remaining promises
 
 **Checkpoint**: At this point, lifecycle management should be fully functional - explicit termination works, automatic cleanup works, crash detection works
 

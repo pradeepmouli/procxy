@@ -9,14 +9,14 @@ Procxy provides an ergonomic TypeScript library for instantiating objects in Nod
 
 ## Technical Context
 
-**Language/Version**: TypeScript 5.3+, targeting Node.js >= 18.0.0  
-**Primary Dependencies**: Zero runtime dependencies (pino for development logging, vitest for testing)  
-**Storage**: N/A (in-memory IPC only)  
-**Testing**: vitest (unit + integration), with test coverage target >90%  
-**Target Platform**: Node.js (Linux, macOS, Windows) - both ESM and CommonJS support  
-**Project Type**: Single library project (npm package)  
-**Performance Goals**: <10ms IPC overhead per method call, <50KB bundle size (minified)  
-**Constraints**: Zero external runtime dependencies, JSON-serializable arguments only, Node.js built-in IPC only  
+**Language/Version**: TypeScript 5.3+, targeting Node.js >= 18.0.0
+**Primary Dependencies**: Zero runtime dependencies (pino for development logging, vitest for testing)
+**Storage**: N/A (in-memory IPC only)
+**Testing**: vitest (unit + integration), with test coverage target >90%
+**Target Platform**: Node.js (Linux, macOS, Windows) - both ESM and CommonJS support
+**Project Type**: Single library project (npm package)
+**Performance Goals**: <10ms IPC overhead per method call, <50KB bundle size (minified)
+**Constraints**: Zero external runtime dependencies, JSON-serializable arguments only, Node.js built-in IPC only
 **Scale/Scope**: Single library with 6 core modules, ~2000 LOC, 15 public APIs
 
 ## Constitution Check
@@ -25,7 +25,7 @@ Procxy provides an ergonomic TypeScript library for instantiating objects in Nod
 
 ### Core Principles Alignment
 
-✅ **I. Ergonomics First**: 
+✅ **I. Ergonomics First**:
 - API signature: `procxy(Constructor, ...args)` - minimal boilerplate
 - Auto-detection of module paths via stack traces
 - Standard async/await patterns throughout
@@ -180,6 +180,13 @@ tests/
    - `procxy<T>(constructor, options, ...args)` signature
    - `Procxy<T>` type definition
    - `ProcxyOptions` interface
+       - Fields:
+          - `args?: Jsonifiable[]` (from type-fest) — JSON-serializable arguments to pass to child process (accessible via process.argv)
+          - `env?: NodeJS.ProcessEnv` — environment variables for child process (must be string values)
+          - `cwd?: string` — working directory for child process (must exist and be a directory)
+          - `timeout?: number` — per-call timeout in milliseconds (default: 30000). On timeout, Promise rejects but child continues.
+          - `retries?: number` — additional attempts per call (default: 3), e.g., 3 retries = 4 total attempts.
+          - `modulePath?: string` — explicit module path, overrides stack-trace auto-detection
    - Error types thrown
    - Lifecycle guarantees
 

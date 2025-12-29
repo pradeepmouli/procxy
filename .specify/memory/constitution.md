@@ -43,7 +43,7 @@ Due to the inherent nature of IPC, all interactions are asynchronous. The librar
 The library must handle edge cases, timeouts, and errors gracefully. It should not leave orphaned processes or unresolved promises.
 
 **In Practice**:
-- Configurable timeouts for method calls (default: 30 seconds)
+- Configurable timeouts for method calls (default: 30000 ms)
 - Automatic cleanup of child processes when parent exits
 - Clear error messages with actionable information
 - Request/response correlation to support concurrent operations
@@ -53,7 +53,7 @@ The library must handle edge cases, timeouts, and errors gracefully. It should n
 Start simple. Follow YAGNI principles. Avoid premature optimization or feature creep.
 
 **In Practice**:
-- Core API consists of two functions: `procxy()` and `expose()`
+- Core API consists of one function: `procxy()`
 - Minimal configuration options, smart defaults
 - No complex DSL or configuration files required
 - Clear separation between parent and child process concerns
