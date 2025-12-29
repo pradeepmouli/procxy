@@ -57,7 +57,7 @@ export class IPCClient extends EventEmitter {
    */
   async sendRequest(
     method: string,
-    args: Jsonifiable[],
+    args: [...Jsonifiable[]],
     attemptNumber: number = 0
   ): Promise<Jsonifiable> {
     if (this.isTerminated) {
