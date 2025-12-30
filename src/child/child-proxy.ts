@@ -247,20 +247,6 @@ export class ChildProxy {
     pending.resolve(message.value);
   }
 
-  /**
-   * Handle property set from parent.
-   */
-  handlePropertySet(message: PropertySet): void {
-    try {
-      // Update the property on the target instance directly
-      // This bypasses the proxy, so we don't re-send to parent
-      this.target[message.prop] = message.value;
-    } catch (error) {
-      // Log error but don't send back (parent initiated this set)
-      console.error(`Failed to set property '${message.prop}':`, error);
-    }
-  }
-
   private sendSuccess(id: string, value: unknown): void {
     try {
       // Handle void/undefined return values - send null instead

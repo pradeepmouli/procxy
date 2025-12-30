@@ -8,8 +8,7 @@ import type {
   ErrorInfo,
   InitFailure,
   InitSuccess,
-  DisposeResponse,
-  PropertySet
+  DisposeResponse
 } from '../shared/protocol.js';
 import { ModuleResolutionError } from '../shared/errors.js';
 import { validateJsonifiableArray } from '../shared/serialization.js';
@@ -131,13 +130,6 @@ async function handleParentMessage(message: ParentToChildMessage): Promise<void>
   if (message.type === 'PROPERTY_RESULT') {
     if (childProxy) {
       childProxy.handlePropertyResult(message);
-    }
-    return;
-  }
-
-  if ((message as { type?: string }).type === 'PROPERTY_SET') {
-    if (childProxy) {
-      childProxy.handlePropertySet(message as unknown as PropertySet);
     }
     return;
   }

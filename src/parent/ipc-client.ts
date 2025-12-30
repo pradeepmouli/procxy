@@ -407,10 +407,10 @@ export class IPCClient extends EventEmitter {
   }
 
   /**
-   * Handle property set request from child.
+   * Handle property set message from child.
+   * Updates the parent's property store with the new value.
    */
   private handlePropertySet(message: PropertySet): void {
-    // Store value in property store
     this.propertyStore.set(message.prop, message.value);
   }
 
@@ -426,26 +426,6 @@ export class IPCClient extends EventEmitter {
    */
   getPropertySync(prop: string): Jsonifiable {
     return this.propertyStore.get(prop) ?? null;
-  }
-
-  /**
-   * Set a property value in the child process (fire-and-forget).
-   */
-  setProperty(prop: string, value: Jsonifiable): void {
-    if (this.isTerminated) {
-      return;
-    }
-
-    // Also update local property store
-    this.propertyStore.set(prop, value);
-
-    const message: PropertySet = {
-      type: 'PROPERTY_SET',
-      prop,
-      value
-    };
-
-    this.childProcess.send(message);
   }
 
   /**
