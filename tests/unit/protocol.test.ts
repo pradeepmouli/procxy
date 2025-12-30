@@ -8,7 +8,7 @@ import type {
   InitSuccess,
   InitFailure,
   ParentToChildMessage,
-  ChildToParentMessage,
+  ChildToParentMessage
 } from '../../src/shared/protocol.js';
 
 describe('Protocol Message Types', () => {
@@ -18,7 +18,7 @@ describe('Protocol Message Types', () => {
         type: 'INIT',
         modulePath: '/path/to/module.ts',
         className: 'Worker',
-        constructorArgs: [1, 'test', { key: 'value' }],
+        constructorArgs: [1, 'test', { key: 'value' }]
       };
 
       expect(msg.type).toBe('INIT');
@@ -32,7 +32,7 @@ describe('Protocol Message Types', () => {
         type: 'INIT',
         modulePath: '/path/to/module.ts',
         className: 'Worker',
-        constructorArgs: [],
+        constructorArgs: []
       };
 
       expect(msg.constructorArgs).toEqual([]);
@@ -43,14 +43,7 @@ describe('Protocol Message Types', () => {
         type: 'INIT',
         modulePath: '/path/to/module.ts',
         className: 'Worker',
-        constructorArgs: [
-          null,
-          42,
-          'string',
-          true,
-          { nested: { deeply: [1, 2, 3] } },
-          [1, 2, 3],
-        ],
+        constructorArgs: [null, 42, 'string', true, { nested: { deeply: [1, 2, 3] } }, [1, 2, 3]]
       };
 
       expect(JSON.stringify(msg.constructorArgs)).toBeTruthy();
@@ -63,7 +56,7 @@ describe('Protocol Message Types', () => {
         id: 'uuid-1234',
         type: 'CALL',
         prop: 'calculateSum',
-        args: [10, 20],
+        args: [10, 20]
       };
 
       expect(msg.id).toBe('uuid-1234');
@@ -77,7 +70,7 @@ describe('Protocol Message Types', () => {
         id: 'uuid-5678',
         type: 'CALL',
         prop: 'getValue',
-        args: [],
+        args: []
       };
 
       expect(msg.args).toEqual([]);
@@ -88,7 +81,7 @@ describe('Protocol Message Types', () => {
         id: 'uuid-abcd',
         type: 'CALL',
         prop: 'method',
-        args: [],
+        args: []
       };
 
       expectTypeOf(msg.type).toEqualTypeOf<'CALL'>();
@@ -100,7 +93,7 @@ describe('Protocol Message Types', () => {
       const msg: Response = {
         id: 'uuid-1234',
         type: 'RESULT',
-        value: { result: 42 },
+        value: { result: 42 }
       };
 
       expect(msg.type).toBe('RESULT');
@@ -116,8 +109,8 @@ describe('Protocol Message Types', () => {
           message: 'Something went wrong',
           name: 'Error',
           stack: 'Error: Something went wrong\n    at ...',
-          code: 'ERR_CUSTOM',
-        },
+          code: 'ERR_CUSTOM'
+        }
       };
 
       expect(msg.type).toBe('ERROR');
@@ -130,7 +123,7 @@ describe('Protocol Message Types', () => {
       const msg: Response = {
         id: 'uuid-null',
         type: 'RESULT',
-        value: null,
+        value: null
       };
 
       expect(msg.value).toBeNull();
@@ -140,7 +133,7 @@ describe('Protocol Message Types', () => {
       const msg: Response = {
         id: 'uuid-undef',
         type: 'RESULT',
-        value: undefined,
+        value: undefined
       };
 
       expect(msg.value).toBeUndefined();
@@ -151,7 +144,7 @@ describe('Protocol Message Types', () => {
     it('should have required fields', () => {
       const error: ErrorInfo = {
         message: 'Test error',
-        name: 'TestError',
+        name: 'TestError'
       };
 
       expect(error.message).toBe('Test error');
@@ -163,7 +156,7 @@ describe('Protocol Message Types', () => {
         message: 'Test error',
         name: 'TestError',
         stack: 'Error stack trace...',
-        code: 'E_TEST',
+        code: 'E_TEST'
       };
 
       expect(error.stack).toBe('Error stack trace...');
@@ -175,10 +168,10 @@ describe('Protocol Message Types', () => {
         { message: 'Type error', name: 'TypeError' },
         { message: 'Range error', name: 'RangeError' },
         { message: 'Reference error', name: 'ReferenceError' },
-        { message: 'Custom error', name: 'CustomError' },
+        { message: 'Custom error', name: 'CustomError' }
       ];
 
-      errors.forEach(err => {
+      errors.forEach((err) => {
         expect(err.name).toBeTruthy();
         expect(err.message).toBeTruthy();
       });
@@ -190,7 +183,7 @@ describe('Protocol Message Types', () => {
       const msg: EventMessage = {
         type: 'EVENT',
         eventName: 'data',
-        args: [{ value: 42 }],
+        args: [{ value: 42 }]
       };
 
       expect(msg.type).toBe('EVENT');
@@ -202,7 +195,7 @@ describe('Protocol Message Types', () => {
       const msg: EventMessage = {
         type: 'EVENT',
         eventName: 'ready',
-        args: [],
+        args: []
       };
 
       expect(msg.args).toEqual([]);
@@ -212,7 +205,7 @@ describe('Protocol Message Types', () => {
       const msg: EventMessage = {
         type: 'EVENT',
         eventName: 'progress',
-        args: [50, 100, 'Processing...'],
+        args: [50, 100, 'Processing...']
       };
 
       expect(msg.args).toEqual([50, 100, 'Processing...']);
@@ -222,7 +215,7 @@ describe('Protocol Message Types', () => {
   describe('InitSuccess', () => {
     it('should have correct structure', () => {
       const msg: InitSuccess = {
-        type: 'INIT_SUCCESS',
+        type: 'INIT_SUCCESS'
       };
 
       expect(msg.type).toBe('INIT_SUCCESS');
@@ -235,8 +228,8 @@ describe('Protocol Message Types', () => {
         type: 'INIT_FAILURE',
         error: {
           message: 'Failed to initialize',
-          name: 'InitError',
-        },
+          name: 'InitError'
+        }
       };
 
       expect(msg.type).toBe('INIT_FAILURE');
@@ -251,14 +244,14 @@ describe('Protocol Message Types', () => {
           type: 'INIT',
           modulePath: '/path',
           className: 'Worker',
-          constructorArgs: [],
+          constructorArgs: []
         },
         {
           id: 'uuid',
           type: 'CALL',
           prop: 'method',
-          args: [],
-        },
+          args: []
+        }
       ];
 
       expect(messages).toHaveLength(2);
@@ -269,25 +262,25 @@ describe('Protocol Message Types', () => {
         {
           id: 'uuid',
           type: 'RESULT',
-          value: 42,
+          value: 42
         },
         {
           id: 'uuid',
           type: 'ERROR',
-          error: { message: 'error', name: 'Error' },
+          error: { message: 'error', name: 'Error' }
         },
         {
           type: 'EVENT',
           eventName: 'data',
-          args: [],
+          args: []
         },
         {
-          type: 'INIT_SUCCESS',
+          type: 'INIT_SUCCESS'
         },
         {
           type: 'INIT_FAILURE',
-          error: { message: 'error', name: 'Error' },
-        },
+          error: { message: 'error', name: 'Error' }
+        }
       ];
 
       expect(messages).toHaveLength(5);
@@ -300,7 +293,7 @@ describe('Protocol Message Types', () => {
         type: 'INIT',
         modulePath: '/path/to/module.ts',
         className: 'Worker',
-        constructorArgs: [1, 'test'],
+        constructorArgs: [1, 'test']
       };
 
       const json = JSON.stringify(msg);
@@ -314,7 +307,7 @@ describe('Protocol Message Types', () => {
         id: 'uuid-1234',
         type: 'CALL',
         prop: 'method',
-        args: [{ key: 'value' }],
+        args: [{ key: 'value' }]
       };
 
       const json = JSON.stringify(msg);
@@ -327,7 +320,7 @@ describe('Protocol Message Types', () => {
       const msg: Response = {
         id: 'uuid-5678',
         type: 'RESULT',
-        value: { result: [1, 2, 3] },
+        value: { result: [1, 2, 3] }
       };
 
       const json = JSON.stringify(msg);
@@ -340,7 +333,7 @@ describe('Protocol Message Types', () => {
       const msg: EventMessage = {
         type: 'EVENT',
         eventName: 'data',
-        args: [1, 'two', { three: 3 }],
+        args: [1, 'two', { three: 3 }]
       };
 
       const json = JSON.stringify(msg);

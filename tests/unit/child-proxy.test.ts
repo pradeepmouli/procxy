@@ -18,7 +18,7 @@ describe('ChildProxy', () => {
       asyncValue: async (value: string) => value.toUpperCase(),
       throwSync: () => {
         throw new Error('boom');
-      },
+      }
     };
   });
 

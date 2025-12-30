@@ -21,10 +21,7 @@ export class BrokenWorker {
   /**
    * Throw specific error type.
    */
-  throwErrorType(
-    errorType: 'TypeError' | 'RangeError' | 'ReferenceError',
-    message: string,
-  ): never {
+  throwErrorType(errorType: 'TypeError' | 'RangeError' | 'ReferenceError', message: string): never {
     switch (errorType) {
       case 'TypeError':
         throw new TypeError(message);

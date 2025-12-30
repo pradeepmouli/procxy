@@ -17,7 +17,7 @@ jobs:
       contents: write
       pull-requests: write
       id-token: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -65,7 +65,7 @@ jobs:
           release_name: v${{ fromJson(steps.changesets.outputs.publishedPackages)[0].version }}
           body: |
             Release ${{ fromJson(steps.changesets.outputs.publishedPackages)[0].version }}
-            
+
             See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
           draft: false
           prerelease: ${{ contains(fromJson(steps.changesets.outputs.publishedPackages)[0].version, '-') }}

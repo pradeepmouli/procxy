@@ -15,7 +15,7 @@ describe('Module Resolver', () => {
 
       expect(result).toEqual({
         modulePath: '/explicit/path/to/module.ts',
-        className: 'TestClass',
+        className: 'TestClass'
       });
     });
 
@@ -54,7 +54,9 @@ describe('Module Resolver', () => {
       } catch (error) {
         // If stack trace detection fails in test environment, that's acceptable
         expect(error).toBeInstanceOf(ModuleResolutionError);
-        expect((error as ModuleResolutionError).message).toContain('Could not determine module path');
+        expect((error as ModuleResolutionError).message).toContain(
+          'Could not determine module path'
+        );
       }
     });
 
