@@ -8,7 +8,8 @@ import type {
   ErrorInfo,
   InitFailure,
   InitSuccess,
-  DisposeResponse
+  DisposeResponse,
+  PropertySet
 } from '../shared/protocol.js';
 import { ModuleResolutionError } from '../shared/errors.js';
 import { validateJsonifiableArray } from '../shared/serialization.js';
@@ -134,22 +135,20 @@ async function handleParentMessage(message: ParentToChildMessage): Promise<void>
     return;
   }
 
-  if ((message as any).type === 'PROPERTY_SET') {
+  if ((message as { type?: string }).type === 'PROPERTY_SET') {
     if (childProxy) {
-      childProxy.handlePropertySet(message as any);
+      childProxy.handlePropertySet(message as unknown as PropertySet);
     }
     return;
   }
 
-  if (message.type === 'CALL') {
-    if (!childProxy) {
-      const errorInfo = toErrorInfo(new Error('Child agent not initialized'));
-      sendToParent({ type: 'ERROR', id: message.id, error: errorInfo });
-      return;
-    }
-
-    await childProxy.handleRequest(message);
+  if (!childProxy) {
+    const errorInfo = toErrorInfo(new Error('Child agent not initialized'));
+    sendToParent({ type: 'ERROR', id: message.id, error: errorInfo });
+    return;
   }
+
+  await childProxy.handleRequest(message);
 }
 
 function setupIpcListener(): void {

@@ -88,9 +88,6 @@ async function main() {
   await errorHandling();
 }
 
-// Run examples
-if (require.main === module) {
-  main().catch(console.error);
-}
+await main();
 
 export { Calculator };

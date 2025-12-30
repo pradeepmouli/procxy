@@ -158,7 +158,18 @@ export class ChildProxy {
   private deserializeArg(arg: any): any {
     if (isSerializedCallback(arg)) {
       // Create a proxy function that invokes the callback on the parent
-      return (...args: any[]) => this.invokeCallback(arg.__callbackId, args);
+      return async (...args: any[]) => {
+        try {
+          return await this.invokeCallback(arg.__callbackId, args);
+        } catch (error: unknown) {
+          const callbackId = arg.__callbackId;
+          if (error instanceof Error) {
+            error.message = `Error invoking callback ${callbackId}: ${error.message}`;
+            throw error;
+          }
+          throw new Error(`Error invoking callback ${callbackId}: ${String(error)}`);
+        }
+      };
     }
 
     if (Array.isArray(arg)) {

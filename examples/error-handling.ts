@@ -255,10 +255,6 @@ async function main() {
   await customErrorHandling();
   await multipleErrorsHandling();
 }
-
-// Run examples
-if (require.main === module) {
-  main().catch(console.error);
-}
+await main();
 
 export { ErrorProneWorker };

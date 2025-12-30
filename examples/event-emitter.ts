@@ -171,9 +171,6 @@ async function main() {
   await errorEventsExample();
 }
 
-// Run examples
-if (require.main === module) {
-  main().catch(console.error);
-}
+await main();
 
 export { ProgressWorker, DataStream };

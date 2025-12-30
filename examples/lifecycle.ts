@@ -253,9 +253,6 @@ async function main() {
   await gracefulShutdown();
 }
 
-// Run examples
-if (require.main === module) {
-  main().catch(console.error);
-}
+await main();
 
 export { LifecycleWorker };
