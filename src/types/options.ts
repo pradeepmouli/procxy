@@ -47,16 +47,4 @@ export interface ProcxyOptions {
    * @default 3
    */
   retries?: number;
-
-  /**
-   * Explicit module path override.
-   * If provided, this path is used to import the class in the child process.
-   * This overrides automatic stack trace detection.
-   *
-   * Should be the absolute path to a JavaScript/TypeScript module
-   * that exports the constructor class.
-   *
-   * @default undefined (auto-detect via stack trace)
-   */
-  modulePath?: string;
 }

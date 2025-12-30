@@ -8,7 +8,10 @@
  * Extends Error and adds context information.
  */
 export class ProcxyError extends Error {
-  constructor(message: string, public readonly context?: Record<string, unknown>) {
+  constructor(
+    message: string,
+    public readonly context?: Record<string, unknown>
+  ) {
     super(message);
     this.name = 'ProcxyError';
     Error.captureStackTrace(this, this.constructor);
@@ -23,11 +26,11 @@ export class TimeoutError extends ProcxyError {
   constructor(
     public readonly methodName: string,
     public readonly timeoutMs: number,
-    context?: Record<string, unknown>,
+    context?: Record<string, unknown>
   ) {
     super(
       `Method '${methodName}' timed out after ${timeoutMs}ms. The child process continues running.`,
-      context,
+      context
     );
     this.name = 'TimeoutError';
   }
@@ -41,12 +44,12 @@ export class ModuleResolutionError extends ProcxyError {
   constructor(
     public readonly className: string,
     public readonly reason: string,
-    context?: Record<string, unknown>,
+    context?: Record<string, unknown>
   ) {
     super(
       `Failed to resolve module path for class '${className}': ${reason}. ` +
-      `Provide 'modulePath' explicitly in ProcxyOptions.`,
-      context,
+        `Provide 'modulePath' explicitly in ProcxyOptions.`,
+      context
     );
     this.name = 'ModuleResolutionError';
   }
@@ -60,15 +63,14 @@ export class ChildCrashedError extends ProcxyError {
   constructor(
     public readonly exitCode?: number | null,
     public readonly signal?: string | null,
-    context?: Record<string, unknown>,
+    context?: Record<string, unknown>
   ) {
-    const reason =
-      signal
-        ? `received signal ${signal}`
-        : `exited with code ${exitCode ?? 'unknown'}`;
+    const reason = signal
+      ? `received signal ${signal}`
+      : `exited with code ${exitCode ?? 'unknown'}`;
     super(
       `Child process crashed: ${reason}. All pending method calls have been rejected.`,
-      context,
+      context
     );
     this.name = 'ChildCrashedError';
   }
@@ -82,12 +84,12 @@ export class SerializationError extends ProcxyError {
   constructor(
     public readonly value: unknown,
     public readonly context_: string, // renamed to avoid shadowing
-    context?: Record<string, unknown>,
+    context?: Record<string, unknown>
   ) {
     super(
       `Cannot serialize ${context_}: ${formatValue(value)}. ` +
-      `Only JSON-serializable values (Jsonifiable) are supported.`,
-      context,
+        `Only JSON-serializable values (Jsonifiable) are supported.`,
+      context
     );
     this.name = 'SerializationError';
   }
@@ -102,12 +104,12 @@ export class OptionsValidationError extends ProcxyError {
     public readonly optionName: string,
     public readonly optionValue: unknown,
     public readonly reason: string,
-    context?: Record<string, unknown>,
+    context?: Record<string, unknown>
   ) {
     super(
       `ProcxyOptions.${optionName} is invalid: ${reason}. ` +
-      `Received: ${formatValue(optionValue)}`,
-      context,
+        `Received: ${formatValue(optionValue)}`,
+      context
     );
     this.name = 'OptionsValidationError';
   }

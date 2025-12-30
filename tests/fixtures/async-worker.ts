@@ -2,6 +2,8 @@
  * Test fixture: Worker with async methods.
  * Used for US1 (Async Method Handling) tests.
  */
+import type { Jsonifiable } from 'type-fest';
+
 export class AsyncWorker {
   /**
    * Simulate async work (sleep for duration ms, then return result).
@@ -17,22 +19,23 @@ export class AsyncWorker {
    */
   async doParallelWork(
     durationMs: number,
-    taskCount: number,
+    taskCount: number
   ): Promise<{ completed: number; totalTime: number }> {
     const startTime = Date.now();
     const tasks = Array(taskCount)
       .fill(null)
-      .map(() =>
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, durationMs);
-        }),
+      .map(
+        () =>
+          new Promise<void>((resolve) => {
+            setTimeout(resolve, durationMs);
+          })
       );
 
     await Promise.all(tasks);
 
     return {
       completed: taskCount,
-      totalTime: Date.now() - startTime,
+      totalTime: Date.now() - startTime
     };
   }
 
@@ -50,7 +53,7 @@ export class AsyncWorker {
   /**
    * Echo input after delay.
    */
-  async echo<T>(value: T, delayMs: number = 0): Promise<T> {
+  async echo(value: Jsonifiable, delayMs: number = 0): Promise<Jsonifiable> {
     if (delayMs > 0) {
       await new Promise((resolve) => setTimeout(resolve, delayMs));
     }

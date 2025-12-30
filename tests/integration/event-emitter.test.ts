@@ -1,10 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
-import { resolve } from 'path';
 import { procxy } from '../../src/index.js';
 import { EventWorker } from '../fixtures/event-worker.js';
-
-// Use absolute paths for module resolution
-const EVENT_WORKER_PATH = resolve(process.cwd(), 'tests/fixtures/event-worker.ts');
 
 describe('EventEmitter Integration', () => {
   const activeProxies: Array<{ $terminate: () => Promise<void> }> = [];
@@ -17,9 +13,7 @@ describe('EventEmitter Integration', () => {
 
   describe('event forwarding', () => {
     it('should forward events from child to parent', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const events: number[] = [];
@@ -36,9 +30,7 @@ describe('EventEmitter Integration', () => {
     });
 
     it('should forward complete event with object payload', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const completeData = await new Promise((resolve) => {
@@ -54,9 +46,7 @@ describe('EventEmitter Integration', () => {
     });
 
     it('should forward events with multiple arguments', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const received = await new Promise((resolve) => {
@@ -74,9 +64,7 @@ describe('EventEmitter Integration', () => {
 
   describe('multiple listeners', () => {
     it('should support multiple listeners on same event', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const listener1Values: number[] = [];
@@ -101,9 +89,7 @@ describe('EventEmitter Integration', () => {
     });
 
     it('should support .once() for one-time listeners', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const values: number[] = [];
@@ -122,9 +108,7 @@ describe('EventEmitter Integration', () => {
     });
 
     it('should support .off() to remove listeners', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const values: number[] = [];
@@ -149,9 +133,7 @@ describe('EventEmitter Integration', () => {
 
   describe('multiple event types', () => {
     it('should handle multiple different event types', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const event1Data: string[] = [];
@@ -175,9 +157,7 @@ describe('EventEmitter Integration', () => {
 
   describe('method calls and events', () => {
     it('should handle concurrent method calls and events', async () => {
-      const worker = await procxy(EventWorker, {
-        modulePath: EVENT_WORKER_PATH,
-      });
+      const worker = await procxy(EventWorker);
       activeProxies.push(worker);
 
       const progressEvents: number[] = [];
@@ -185,14 +165,56 @@ describe('EventEmitter Integration', () => {
         progressEvents.push(percent);
       });
 
-      const [result, value] = await Promise.all([
-        worker.startTask(150),
-        worker.getValue(),
-      ]);
+      const [result, value] = await Promise.all([worker.startTask(150), worker.getValue()]);
 
       expect(result).toBe('Task completed');
       expect(value).toBe(0);
       expect(progressEvents.length).toBeGreaterThan(0);
+
+      await worker.$terminate();
+    });
+
+    it('should handle listeners added after instantiation', async () => {
+      const worker = await procxy(EventWorker);
+      activeProxies.push(worker);
+
+      // Call a method first without any listeners
+      await worker.increment(); // value = 1
+
+      // Now add a listener AFTER some method calls
+      const events: number[] = [];
+      worker.on('changed', (value: number) => {
+        events.push(value);
+      });
+
+      // These events should be captured
+      await worker.increment(); // value = 2
+      await worker.increment(); // value = 3
+
+      expect(events).toEqual([2, 3]);
+
+      await worker.$terminate();
+    });
+
+    it('should not forward events when no listeners are attached', async () => {
+      const worker = await procxy(EventWorker);
+      activeProxies.push(worker);
+
+      // Call methods that emit events, but don't add any listeners
+      // This tests the optimization - events should not be forwarded over IPC
+      await worker.increment(); // emits 'changed'
+      await worker.increment(); // emits 'changed'
+      await worker.increment(); // emits 'changed'
+
+      // Now add a listener to verify future events work
+      const events: number[] = [];
+      worker.on('changed', (value: number) => {
+        events.push(value);
+      });
+
+      await worker.increment(); // value = 4, should be captured
+
+      expect(events).toEqual([4]);
 
       await worker.$terminate();
     });

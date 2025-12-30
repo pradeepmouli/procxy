@@ -9,6 +9,9 @@ class FakeIPCClient extends EventEmitter {
   process = { pid: 1234 } as any;
   sendRequest = vi.fn(async (_method: string, _args: [...Jsonifiable[]]): Promise<any> => 'ok');
   terminate = vi.fn(async () => {});
+  hasProperty = vi.fn((_prop: string) => false);
+  getPropertySync = vi.fn((_prop: string) => null);
+  setProperty = vi.fn((_prop: string, _value: Jsonifiable) => {});
 }
 
 describe('Parent proxy', () => {
@@ -17,7 +20,7 @@ describe('Parent proxy', () => {
     const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
 
     ipc.sendRequest.mockResolvedValueOnce(42);
-    const result = await proxy.add(10, 32);
+    const result = await (proxy as any).add(10, 32);
 
     expect(ipc.sendRequest).toHaveBeenCalledWith('add', [10, 32]);
     expect(result).toBe(42);
@@ -45,7 +48,7 @@ describe('Parent proxy', () => {
     const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
 
     const handler = vi.fn();
-    proxy.on('done', handler);
+    (proxy as any).on('done', handler);
 
     ipc.emit('done', 'payload');
     expect(handler).toHaveBeenCalledWith('payload');
@@ -56,7 +59,7 @@ describe('Parent proxy', () => {
     const proxy = createParentProxy<any>(ipc as unknown as IPCClient);
     const payload = { nested: ['a', 'b'] };
 
-    await proxy.process(payload, 5);
+    await (proxy as any).process(payload, 5);
     expect(ipc.sendRequest).toHaveBeenCalledWith('process', [payload, 5]);
   });
 });

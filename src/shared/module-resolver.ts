@@ -1,4 +1,6 @@
 import { fileURLToPath } from 'url';
+import { readFileSync } from 'fs';
+import { dirname, resolve } from 'path';
 import { ModuleResolutionError } from './errors.js';
 
 /**
@@ -24,7 +26,7 @@ import { ModuleResolutionError } from './errors.js';
 export function resolveConstructorModule(
   _constructor: Function,
   className: string,
-  explicitModulePath?: string,
+  explicitModulePath?: string
 ): {
   modulePath: string;
   className: string;
@@ -33,7 +35,7 @@ export function resolveConstructorModule(
   if (explicitModulePath) {
     return {
       modulePath: explicitModulePath,
-      className,
+      className
     };
   }
 
@@ -42,36 +44,40 @@ export function resolveConstructorModule(
     throw new ModuleResolutionError(
       className,
       'Constructor must be a named class (not an anonymous function)',
-      { receivedName: className },
+      { receivedName: className }
     );
   }
 
-  // Attempt stack trace inspection
-  const modulePath = detectModulePathFromStackTrace();
+  // Attempt stack trace inspection to get caller file
+  const callerPath = detectCallerPathFromStackTrace(_constructor);
 
-  if (modulePath) {
-    return { modulePath, className };
+  if (callerPath) {
+    // Try to parse the caller file to find where the class is imported from
+    const detectedPath = parseCallerFileForClassPath(callerPath, className);
+    if (detectedPath) {
+      return { modulePath: detectedPath, className };
+    }
   }
 
   // All strategies failed
   throw new ModuleResolutionError(
     className,
-    'Could not determine module path from stack trace. Provide explicit modulePath in ProcxyOptions.',
+    'Could not determine module path from stack trace or source parsing. Provide explicit modulePath in ProcxyOptions.'
   );
 }
 
 /**
- * Detects module path from Error stack trace.
- * Parses the stack to find the caller's file path.
+ * Detects the caller's file path from Error stack trace.
+ * Parses the stack to find the file that called procxy().
  *
  * Handles both ESM (file://) and CommonJS (/path/to) formats.
  * Skips frames from procxy library itself and internal utilities.
  *
- * @returns Module path if detected, undefined otherwise
+ * @returns Caller file path if detected, undefined otherwise
  */
-function detectModulePathFromStackTrace(): string | undefined {
-  const err = new Error();
-  Error.captureStackTrace(err, detectModulePathFromStackTrace);
+function detectCallerPathFromStackTrace(_constructor?: Function): string | undefined {
+  const err = new Error('resolveModulePath', { cause: _constructor });
+  Error.captureStackTrace(err, detectCallerPathFromStackTrace);
 
   const stack = err.stack?.split('\n') ?? [];
 
@@ -95,11 +101,14 @@ function detectModulePathFromStackTrace(): string | undefined {
       continue;
     }
 
-    // Skip procxy internal frames
+    // Skip procxy library internal frames (src/ directory only)
+    // Be precise to avoid skipping user files in projects named "procxy"
     if (
-      filePath.includes('procxy') ||
-      filePath.includes('module-resolver') ||
-      filePath.includes('shared')
+      filePath.includes('/src/parent/') ||
+      filePath.includes('/src/child/') ||
+      filePath.includes('/src/shared/') ||
+      filePath.includes('/src/types/') ||
+      filePath.includes('module-resolver')
     ) {
       continue;
     }
@@ -117,6 +126,81 @@ function detectModulePathFromStackTrace(): string | undefined {
   }
 
   return undefined;
+}
+
+/**
+ * Parses the caller's source file to find where a class is imported from or defined.
+ *
+ * Looks for:
+ * 1. ESM import statements: `import { ClassName } from './path'`
+ * 2. CommonJS require: `const { ClassName } = require('./path')`
+ * 3. Default imports: `import ClassName from './path'`
+ * 4. Class declarations in the same file
+ *
+ * @param callerPath - Path to the file that called procxy()
+ * @param className - Name of the class to find
+ * @returns Resolved absolute path to the module, or undefined if not found
+ */
+function parseCallerFileForClassPath(callerPath: string, className: string): string | undefined {
+  try {
+    const source = readFileSync(callerPath, 'utf-8');
+    const callerDir = dirname(callerPath);
+
+    // Patterns to match import/require statements
+    const patterns = [
+      // ESM named import: import { ClassName } from './path'
+      new RegExp(`import\\s+{[^}]*\\b${className}\\b[^}]*}\\s+from\\s+['"]([^'"]+)['"]`, 'g'),
+
+      // ESM default import: import ClassName from './path'
+      new RegExp(`import\\s+${className}\\s+from\\s+['"]([^'"]+)['"]`, 'g'),
+
+      // ESM namespace import as: import * as name from './path' (less common for classes)
+      new RegExp(
+        `import\\s+\\*\\s+as\\s+\\w+\\s+from\\s+['"]([^'"]+)['"].*\\b${className}\\b`,
+        'g'
+      ),
+
+      // CommonJS require: const { ClassName } = require('./path')
+      new RegExp(
+        `(?:const|let|var)\\s+{[^}]*\\b${className}\\b[^}]*}\\s*=\\s*require\\(['"]([^'"]+)['"]\\)`,
+        'g'
+      ),
+
+      // CommonJS require default: const ClassName = require('./path')
+      new RegExp(`(?:const|let|var)\\s+${className}\\s*=\\s*require\\(['"]([^'"]+)['"]\\)`, 'g')
+    ];
+
+    for (const pattern of patterns) {
+      const matches = [...source.matchAll(pattern)];
+      for (const match of matches) {
+        const importPath = match[1];
+        if (importPath) {
+          // Resolve relative to caller's directory
+          const resolvedPath = resolve(callerDir, importPath);
+
+          // Add .ts/.js extension if not present
+          if (!importPath.match(/\.(ts|js|mts|cts|mjs|cjs)$/)) {
+            // Try .ts first (TypeScript), then .js
+            return resolvedPath + '.ts';
+          }
+
+          return resolvedPath;
+        }
+      }
+    }
+
+    // Check if class is defined in the same file
+    const classDefPattern = new RegExp(`(?:export\\s+)?class\\s+${className}\\b`);
+    if (classDefPattern.test(source)) {
+      // Class is defined in the caller file itself
+      return callerPath;
+    }
+
+    return undefined;
+  } catch {
+    // File read or parse error - fall back to undefined
+    return undefined;
+  }
 }
 
 /**

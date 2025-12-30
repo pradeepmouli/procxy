@@ -17,17 +17,17 @@ describe('Error Propagation (US1)', () => {
   });
 
   it('propagates synchronous errors', async () => {
-    proxy = await procxy(BrokenWorker, { modulePath: brokenPath });
+    proxy = await procxy(BrokenWorker, brokenPath);
     await expect(proxy.throwSync('Sync error')).rejects.toThrow('Sync error');
   });
 
   it('propagates async errors', async () => {
-    proxy = await procxy(BrokenWorker, { modulePath: brokenPath });
+    proxy = await procxy(BrokenWorker, brokenPath);
     await expect(proxy.throwAsync('Async error')).rejects.toThrow('Async error');
   });
 
   it('preserves error types', async () => {
-    proxy = await procxy(BrokenWorker, { modulePath: brokenPath });
+    proxy = await procxy(BrokenWorker, brokenPath);
 
     try {
       await proxy.throwErrorType('TypeError', 'Type problem');
@@ -55,23 +55,25 @@ describe('Error Propagation (US1)', () => {
   });
 
   it('keeps stack traces', async () => {
-    proxy = await procxy(BrokenWorker, { modulePath: brokenPath });
+    proxy = await procxy(BrokenWorker, brokenPath);
     await expect(proxy.throwWithStack('Error with custom stack')).rejects.toThrow(/custom stack/);
   });
 
   it('handles delayed errors', async () => {
-    proxy = await procxy(BrokenWorker, { modulePath: brokenPath });
-    await expect(proxy.throwAfterDelay(10, 'Error after delay')).rejects.toThrow('Error after delay');
+    proxy = await procxy(BrokenWorker, brokenPath);
+    await expect(proxy.throwAfterDelay(10, 'Error after delay')).rejects.toThrow(
+      'Error after delay'
+    );
   });
 
   it('handles conditional errors independently', async () => {
-    proxy = await procxy(BrokenWorker, { modulePath: brokenPath });
+    proxy = await procxy(BrokenWorker, brokenPath);
 
     const results = await Promise.allSettled([
       proxy.conditionalThrow(false, 'ok1'),
       proxy.throwSync('fail'),
       proxy.conditionalThrow(false, 'ok2'),
-      proxy.throwAsync('async fail'),
+      proxy.throwAsync('async fail')
     ]);
 
     expect(results[0].status).toBe('fulfilled');

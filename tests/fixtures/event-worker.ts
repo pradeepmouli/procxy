@@ -1,10 +1,23 @@
 import { EventEmitter } from 'events';
 
 /**
+ * Event map for EventWorker
+ */
+interface EventWorkerEvents {
+  progress: [percent: number];
+  complete: [data: { duration: number; steps: number }];
+  multi: [a: number, b: string, c: boolean];
+  changed: [value: number];
+  event1: [data: string];
+  event2: [data: string];
+  event3: [data: number];
+}
+
+/**
  * Test fixture: Worker that extends EventEmitter and emits events during operations.
  * Used for US6 (EventEmitter Integration) tests.
  */
-export class EventWorker extends EventEmitter {
+export class EventWorker extends EventEmitter<EventWorkerEvents> {
   private value: number = 0;
 
   /**

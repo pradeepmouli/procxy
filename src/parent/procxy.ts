@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Jsonifiable } from 'type-fest';
+import type { Constructor, Jsonifiable } from 'type-fest';
 import type { Procxy } from '../types/procxy.js';
 import type { ProcxyOptions } from '../types/options.js';
 import { resolveConstructorModule } from '../shared/module-resolver.js';
@@ -16,29 +16,30 @@ import type { InitMessage } from '../shared/protocol.js';
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
 const MIN_INIT_TIMEOUT_MS = 1000;
-const optionKeys = new Set(['args', 'env', 'cwd', 'timeout', 'retries', 'modulePath']);
-
-function isOptions(value: unknown): value is ProcxyOptions {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return false;
-  }
-
-  return Object.keys(value as Record<string, unknown>).some((key) => optionKeys.has(key));
-}
 
 function validateOptions(options: ProcxyOptions): void {
-  if (options.timeout !== undefined && (typeof options.timeout !== 'number' || options.timeout <= 0)) {
+  if (
+    options.timeout !== undefined &&
+    (typeof options.timeout !== 'number' || options.timeout <= 0)
+  ) {
     throw new OptionsValidationError('timeout', options.timeout, 'must be a positive number');
   }
 
-  if (options.retries !== undefined && (typeof options.retries !== 'number' || options.retries < 0)) {
+  if (
+    options.retries !== undefined &&
+    (typeof options.retries !== 'number' || options.retries < 0)
+  ) {
     throw new OptionsValidationError('retries', options.retries, 'must be a non-negative number');
   }
 
   if (options.env) {
     for (const [key, value] of Object.entries(options.env)) {
       if (typeof value !== 'string') {
-        throw new OptionsValidationError(`env.${key}`, value, 'environment variables must be strings');
+        throw new OptionsValidationError(
+          `env.${key}`,
+          value,
+          'environment variables must be strings'
+        );
       }
     }
   }
@@ -123,8 +124,10 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * over IPC. All methods become async and return Promises.
  *
  * @template T - The type of the class to instantiate remotely
- * @param constructor - The class constructor to instantiate in the child process
- * @param rest - Optional {@link ProcxyOptions} followed by constructor arguments (must be JSON-serializable)
+ * @param classOrClassName - The class constructor or class name to instantiate in the child process
+ * @param modulePath - Path to the module containing the class (required)
+ * @param options - Optional {@link ProcxyOptions} for process configuration
+ * @param constructorArgs - Constructor arguments (must be JSON-serializable)
  * @returns A Promise that resolves to a {@link Procxy}<T> proxy object
  *
  * @throws {OptionsValidationError} If ProcxyOptions contain invalid values
@@ -144,7 +147,7 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  *   }
  * }
  *
- * const calc = await procxy(Calculator);
+ * const calc = await procxy(Calculator, './calculator.js');
  * const result = await calc.add(5, 7); // 12
  * await calc.$terminate(); // Clean up
  * ```
@@ -161,7 +164,7 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  *   }
  * }
  *
- * const worker = await procxy(Worker, 'MyWorker', 4);
+ * const worker = await procxy(Worker, './worker.js', undefined, 'MyWorker', 4);
  * const result = await worker.process(['hello', 'world']);
  * await worker.$terminate();
  * ```
@@ -171,6 +174,7 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * // With options (timeout, retries, custom env)
  * const worker = await procxy(
  *   Worker,
+ *   './worker.js',       // Module path is required
  *   {
  *     timeout: 60000,      // 60s timeout per method call
  *     retries: 5,          // Retry failed calls 5 times
@@ -188,7 +192,7 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * @example
  * ```typescript
  * // Lifecycle management
- * const worker = await procxy(Worker);
+ * const worker = await procxy(Worker, './worker.js');
  *
  * // Access underlying child process
  * console.log('Child PID:', worker.$process.pid);
@@ -199,42 +203,60 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  *
  * @see {@link Procxy} for the proxy type definition
  * @see {@link ProcxyOptions} for available configuration options
- * @see {@link https://github.com/yourusername/procxy#readme | Procxy Documentation}
+ * @see {@link https://github.com/pradeepmouli/procxy#readme | Procxy Documentation}
  */
+export async function procxy<T extends Record<string, typeof Object>, C extends keyof T>(
+  className: keyof T,
+  modulePath?: string,
+  options?: ProcxyOptions,
+  ...constructorArgs: T[keyof T] extends Constructor<any>
+    ? ConstructorParameters<T[keyof T]>
+    : never
+): Promise<T[C] extends Constructor<infer U> ? Procxy<U> : never>;
 export async function procxy<T extends object>(
-  constructor: new (...args: any[]) => T,
-  ...rest: Jsonifiable[]
-): Promise<Procxy<T>> {
-  const maybeOptions = rest[0];
-  const options: ProcxyOptions = isOptions(maybeOptions) ? (maybeOptions as ProcxyOptions) : {};
-  const constructorArgs: Jsonifiable[] = isOptions(maybeOptions) ? rest.slice(1) : rest;
-
-  validateOptions(options);
+  Class: Constructor<T>,
+  modulePath?: string,
+  options?: ProcxyOptions,
+  ...constructorArgs: ConstructorParameters<Constructor<T>>
+): Promise<Procxy<T>>;
+export async function procxy<T extends object | Record<string, typeof Object>, C extends keyof T>(
+  classOrClassName: T extends object ? Constructor<T> : C,
+  modulePath?: string,
+  options?: ProcxyOptions,
+  ...constructorArgs: T extends object
+    ? ConstructorParameters<Constructor<T>>
+    : T[C] extends Constructor<any>
+      ? ConstructorParameters<T[C]>
+      : never
+): Promise<T extends object ? Procxy<T> : T[C] extends Constructor<infer U> ? Procxy<U> : never> {
+  validateOptions(options ?? {});
   validateJsonifiableArray(constructorArgs, 'constructor arguments');
 
   const moduleResolution = resolveConstructorModule(
-    constructor as unknown as Function,
-    constructor.name,
-    options.modulePath,
+    classOrClassName as unknown as Function,
+    typeof classOrClassName === 'string'
+      ? classOrClassName
+      : (classOrClassName as Constructor<T>).name,
+    modulePath
   );
 
   const resolvedModulePath = moduleResolution.modulePath.startsWith('file://')
     ? fileURLToPath(moduleResolution.modulePath)
     : resolve(moduleResolution.modulePath);
-  const timeout = options.timeout ?? DEFAULT_TIMEOUT_MS;
-  const retries = options.retries ?? DEFAULT_RETRIES;
+  const timeout = options?.timeout ?? DEFAULT_TIMEOUT_MS;
+  const retries = options?.retries ?? DEFAULT_RETRIES;
 
   const agentPath = pickAgentPath();
   const execArgv = pickExecArgv(agentPath);
 
   const forkOptions: ForkOptions = {
     stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-    cwd: options.cwd ?? process.cwd(),
-    env: { ...process.env, ...options.env },
-    execArgv,
+    cwd: options?.cwd ?? process.cwd(),
+    env: { ...process.env, ...options?.env },
+    execArgv
   };
 
-  const child = fork(agentPath, toArgStrings(options.args), forkOptions);
+  const child = fork(agentPath, toArgStrings(options?.args), forkOptions);
 
   const ipcClient = new IPCClient(child, timeout, retries);
 
@@ -242,11 +264,13 @@ export async function procxy<T extends object>(
     type: 'INIT',
     modulePath: resolvedModulePath,
     className: moduleResolution.className,
-    constructorArgs: [...constructorArgs],
+    constructorArgs: [...constructorArgs]
   };
 
   child.send(initMessage);
   await waitForInitialization(ipcClient, timeout);
 
-  return createParentProxy<T>(ipcClient);
+  return createParentProxy<T>(ipcClient) as unknown as Promise<
+    T extends object ? Procxy<T> : T[C] extends Constructor<infer U> ? Procxy<U> : never
+  >;
 }

@@ -19,10 +19,9 @@ describe('Configurable Timeouts', () => {
   describe('timeout behavior', () => {
     it('should timeout when method takes longer than configured timeout', async () => {
       // Create worker with 500ms timeout
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 500,
-        retries: 0, // Disable retries for this test
+        retries: 0 // Disable retries for this test
       });
       activeProxies.push(worker);
 
@@ -31,10 +30,9 @@ describe('Configurable Timeouts', () => {
     });
 
     it('should include method name and timeout duration in TimeoutError', async () => {
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 300,
-        retries: 0,
+        retries: 0
       });
       activeProxies.push(worker);
 
@@ -52,10 +50,7 @@ describe('Configurable Timeouts', () => {
 
     it('should use default timeout if not specified', async () => {
       // Default timeout is 30000ms (30 seconds)
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
-        // No timeout specified
-      });
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH);
       activeProxies.push(worker);
 
       // Method that takes 100ms should succeed with default timeout
@@ -68,10 +63,9 @@ describe('Configurable Timeouts', () => {
 
   describe('retry mechanism', () => {
     it('should retry failed calls up to configured retry count', async () => {
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 200,
-        retries: 3, // 1 initial attempt + 3 retries = 4 total attempts
+        retries: 3 // 1 initial attempt + 3 retries = 4 total attempts
       });
       activeProxies.push(worker);
 
@@ -89,10 +83,9 @@ describe('Configurable Timeouts', () => {
     });
 
     it('should succeed if retry succeeds before max retries', async () => {
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 5000, // Long timeout
-        retries: 2,
+        retries: 2
       });
       activeProxies.push(worker);
 
@@ -105,9 +98,8 @@ describe('Configurable Timeouts', () => {
 
     it('should use default retry count if not specified', async () => {
       // Default retries is 3
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
-        timeout: 150, // Slightly longer to avoid init timeout
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
+        timeout: 150 // Slightly longer to avoid init timeout
         // No retries specified - should default to 3
       });
       activeProxies.push(worker);
@@ -126,9 +118,8 @@ describe('Configurable Timeouts', () => {
 
   describe('successful calls within timeout', () => {
     it('should succeed when method completes before timeout', async () => {
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
-        timeout: 1000,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
+        timeout: 1000
       });
       activeProxies.push(worker);
 
@@ -140,9 +131,8 @@ describe('Configurable Timeouts', () => {
     });
 
     it('should handle multiple concurrent calls with timeouts', async () => {
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
-        timeout: 1000,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
+        timeout: 1000
       });
       activeProxies.push(worker);
 
@@ -150,32 +140,27 @@ describe('Configurable Timeouts', () => {
       const results = await Promise.all([
         worker.doWork(50, 'fast1'),
         worker.doWork(100, 'fast2'),
-        worker.doWork(150, 'fast3'),
+        worker.doWork(150, 'fast3')
       ]);
 
-      expect(results).toEqual([
-        'Completed: fast1',
-        'Completed: fast2',
-        'Completed: fast3',
-      ]);
+      expect(results).toEqual(['Completed: fast1', 'Completed: fast2', 'Completed: fast3']);
 
       await worker.$terminate();
     });
 
     it('should handle mix of successful and timeout calls', async () => {
-      const worker = await procxy(AsyncWorker, {
-        modulePath: ASYNC_WORKER_PATH,
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 200,
-        retries: 0,
+        retries: 0
       });
       activeProxies.push(worker);
 
       // Make concurrent calls - some fast, some slow
       const results = await Promise.allSettled([
-        worker.doWork(50, 'fast'),    // Should succeed
-        worker.doWork(500, 'slow1'),  // Should timeout
+        worker.doWork(50, 'fast'), // Should succeed
+        worker.doWork(500, 'slow1'), // Should timeout
         worker.doWork(100, 'medium'), // Should succeed
-        worker.doWork(600, 'slow2'),  // Should timeout
+        worker.doWork(600, 'slow2') // Should timeout
       ]);
 
       expect(results[0].status).toBe('fulfilled');

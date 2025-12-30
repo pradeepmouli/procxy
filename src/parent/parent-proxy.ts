@@ -1,6 +1,5 @@
 import type { Jsonifiable } from 'type-fest';
 import type { Procxy } from '../types/procxy.js';
-import { validateJsonifiableArray } from '../shared/serialization.js';
 import { ProcxyError } from '../shared/errors.js';
 import { IPCClient } from './ipc-client.js';
 
@@ -41,6 +40,18 @@ export function createParentProxy<T extends object>(ipcClient: IPCClient): Procx
         return ipcClient.process;
       }
 
+      // Disposable protocol support
+      if (prop === Symbol.dispose) {
+        return () => {
+          // Synchronous dispose - initiate termination but don't await
+          void ipcClient.terminate();
+        };
+      }
+
+      if (prop === Symbol.asyncDispose) {
+        return () => ipcClient.terminate();
+      }
+
       if (typeof prop === 'symbol') {
         return undefined;
       }
@@ -62,11 +73,35 @@ export function createParentProxy<T extends object>(ipcClient: IPCClient): Procx
         throw new ProcxyError(`Invalid method name '${prop}' (FR-014)`);
       }
 
+      // Check if this property exists in the property store (it's a property, not a method)
+      if (ipcClient.hasProperty(prop)) {
+        return ipcClient.getPropertySync(prop);
+      }
+
       return (...args: Jsonifiable[]) => {
-        validateJsonifiableArray(args as unknown[], `method '${prop}' arguments`);
+        // Note: Validation and callback serialization happens in IPCClient.sendRequest
         return ipcClient.sendRequest(prop, args);
       };
     },
+
+    set: (_target, prop, _value) => {
+      if (typeof prop !== 'string') {
+        return false;
+      }
+
+      if (prop.startsWith('$')) {
+        throw new ProcxyError(`Property '${prop}' is reserved and cannot be set`);
+      }
+
+      if (!isValidIdentifier(prop)) {
+        throw new ProcxyError(`Invalid property name '${prop}'`);
+      }
+
+      // Parent cannot set properties - only child can set, parent reads from store
+      throw new ProcxyError(
+        `Cannot set property '${prop}' from parent. Properties are read-only on parent and can only be modified by child.`
+      );
+    }
   });
 
   return proxy as unknown as Procxy<T>;

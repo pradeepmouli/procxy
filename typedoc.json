@@ -1,0 +1,33 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./src/index.ts"],
+  "out": "./docs",
+  "plugin": [],
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "readme": "README.md",
+  "name": "Procxy API Documentation",
+  "navigationLinks": {
+    "GitHub": "https://github.com/pradeepmouli/procxy"
+  },
+  "sidebarLinks": {
+    "Examples": "https://github.com/pradeepmouli/procxy/tree/main/examples",
+    "Contributing": "https://github.com/pradeepmouli/procxy/blob/main/CONTRIBUTING.md"
+  },
+  "hideGenerator": false,
+  "sort": ["source-order"],
+  "categorizeByGroup": false,
+  "defaultCategory": "API",
+  "includeVersion": true,
+  "searchInComments": true,
+  "searchInDocuments": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "commentStyle": "jsdoc",
+  "treatWarningsAsErrors": false,
+  "gitRevision": "main"
+}

@@ -3,7 +3,7 @@ import {
   validateJsonifiable,
   validateJsonifiableArray,
   serializeToJson,
-  deserializeFromJson,
+  deserializeFromJson
 } from '../../src/shared/serialization.js';
 import { SerializationError } from '../../src/shared/errors.js';
 
@@ -27,9 +27,7 @@ describe('Serialization Utilities', () => {
     it('should accept valid JSON arrays', () => {
       expect(() => validateJsonifiable([1, 2, 3], 'test')).not.toThrow();
       expect(() => validateJsonifiable(['a', 'b', 'c'], 'test')).not.toThrow();
-      expect(() =>
-        validateJsonifiable([{ nested: [1, 2, 3] }], 'test')
-      ).not.toThrow();
+      expect(() => validateJsonifiable([{ nested: [1, 2, 3] }], 'test')).not.toThrow();
     });
 
     it('should accept functions (JSON.stringify converts to undefined)', () => {
@@ -53,16 +51,12 @@ describe('Serialization Utilities', () => {
       const obj: any = { a: 1 };
       obj.self = obj;
 
-      expect(() => validateJsonifiable(obj, 'circular object')).toThrow(
-        SerializationError
-      );
+      expect(() => validateJsonifiable(obj, 'circular object')).toThrow(SerializationError);
     });
 
     it('should reject BigInt values', () => {
       const bigInt = BigInt(123);
-      expect(() => validateJsonifiable(bigInt, 'test bigint')).toThrow(
-        SerializationError
-      );
+      expect(() => validateJsonifiable(bigInt, 'test bigint')).toThrow(SerializationError);
     });
 
     it('should include context in error message', () => {
@@ -90,10 +84,11 @@ describe('Serialization Utilities', () => {
       ).not.toThrow();
     });
 
-    it('should accept array with function (JSON.stringify omits them)', () => {
-      // Note: JSON.stringify converts functions to null in arrays
+    it('should reject array with function (unless callback registry provided)', () => {
+      // Functions are not JSON-serializable and should be rejected
+      // unless a callback registry is provided (for callback proxying)
       const arr = [1, 2, () => {}];
-      expect(() => validateJsonifiableArray(arr, 'test array')).not.toThrow();
+      expect(() => validateJsonifiableArray(arr, 'test array')).toThrow(SerializationError);
     });
 
     it('should accept array with undefined (JSON.stringify converts to null)', () => {
@@ -164,9 +159,9 @@ describe('Serialization Utilities', () => {
       const data = {
         users: [
           { id: 1, name: 'Alice' },
-          { id: 2, name: 'Bob' },
+          { id: 2, name: 'Bob' }
         ],
-        count: 2,
+        count: 2
       };
       const json = serializeToJson(data, 'test');
       expect(JSON.parse(json)).toEqual(data);
@@ -216,9 +211,9 @@ describe('Serialization Utilities', () => {
       const data = {
         users: [
           { id: 1, name: 'Alice' },
-          { id: 2, name: 'Bob' },
+          { id: 2, name: 'Bob' }
         ],
-        count: 2,
+        count: 2
       };
       const json = JSON.stringify(data);
       const parsed = deserializeFromJson(json, 'test');
@@ -226,12 +221,8 @@ describe('Serialization Utilities', () => {
     });
 
     it('should throw SerializationError for malformed JSON', () => {
-      expect(() => deserializeFromJson('{invalid json', 'test')).toThrow(
-        SerializationError
-      );
-      expect(() => deserializeFromJson('{"key": undefined}', 'test')).toThrow(
-        SerializationError
-      );
+      expect(() => deserializeFromJson('{invalid json', 'test')).toThrow(SerializationError);
+      expect(() => deserializeFromJson('{"key": undefined}', 'test')).toThrow(SerializationError);
     });
 
     it('should include context in error message', () => {
@@ -257,8 +248,8 @@ describe('Serialization Utilities', () => {
         nested: {
           array: [1, 2, 3],
           boolean: true,
-          nullable: null,
-        },
+          nullable: null
+        }
       };
 
       const json = serializeToJson(data, 'test');
@@ -268,7 +259,11 @@ describe('Serialization Utilities', () => {
     });
 
     it('should handle complex nested arrays', () => {
-      const data = [[1, 2], [3, 4], [5, 6]];
+      const data = [
+        [1, 2],
+        [3, 4],
+        [5, 6]
+      ];
 
       const json = serializeToJson(data, 'test');
       const parsed = deserializeFromJson(json, 'test');

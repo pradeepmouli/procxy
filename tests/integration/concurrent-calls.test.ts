@@ -14,7 +14,7 @@ describe('Concurrent Method Calls', () => {
   let proxy: Procxy<Calculator>;
 
   beforeEach(async () => {
-    proxy = await procxy(Calculator, { modulePath: calculatorPath }, 2);
+    proxy = await procxy(Calculator, calculatorPath, undefined, 2);
   });
 
   afterEach(async () => {
@@ -29,7 +29,7 @@ describe('Concurrent Method Calls', () => {
       proxy.add(3, 4),
       proxy.add(5, 6),
       proxy.multiply(2, 3),
-      proxy.subtract(10, 5),
+      proxy.subtract(10, 5)
     ];
 
     const results = await Promise.all(promises);
@@ -56,7 +56,7 @@ describe('Concurrent Method Calls', () => {
       proxy.multiply(2, 2), // fast
       proxy.add(3, 3), // fast
       proxy.divide(10, 2), // fast
-      proxy.subtract(20, 10), // fast
+      proxy.subtract(20, 10) // fast
     ];
 
     const results = await Promise.all(promises);
@@ -70,7 +70,7 @@ describe('Concurrent Method Calls', () => {
     const results = await Promise.all(promises);
 
     // All should return 2
-    expect(results.every(r => r === 2)).toBe(true);
+    expect(results.every((r) => r === 2)).toBe(true);
     expect(results).toHaveLength(50);
   });
 
@@ -80,7 +80,7 @@ describe('Concurrent Method Calls', () => {
       proxy.divide(10, 0), // error
       proxy.multiply(3, 4), // success
       proxy.divide(20, 0), // error
-      proxy.subtract(5, 3), // success
+      proxy.subtract(5, 3) // success
     ];
 
     const results = await Promise.allSettled(promises);
@@ -109,7 +109,7 @@ describe('Concurrent Method Calls', () => {
       proxy.add(2, 0),
       proxy.add(3, 0),
       proxy.add(4, 0),
-      proxy.add(5, 0),
+      proxy.add(5, 0)
     ];
 
     const results = await Promise.all(promises);
@@ -119,17 +119,11 @@ describe('Concurrent Method Calls', () => {
 
   it('should handle rapid sequential batches of concurrent calls', async () => {
     // Fire 3 batches of 10 concurrent calls each
-    const batch1 = await Promise.all(
-      Array.from({ length: 10 }, (_, i) => proxy.add(i, 10))
-    );
+    const batch1 = await Promise.all(Array.from({ length: 10 }, (_, i) => proxy.add(i, 10)));
 
-    const batch2 = await Promise.all(
-      Array.from({ length: 10 }, (_, i) => proxy.multiply(i, 2))
-    );
+    const batch2 = await Promise.all(Array.from({ length: 10 }, (_, i) => proxy.multiply(i, 2)));
 
-    const batch3 = await Promise.all(
-      Array.from({ length: 10 }, (_, i) => proxy.subtract(i, 1))
-    );
+    const batch3 = await Promise.all(Array.from({ length: 10 }, (_, i) => proxy.subtract(i, 1)));
 
     expect(batch1).toEqual([10, 11, 12, 13, 14, 15, 16, 17, 18, 19]);
     expect(batch2).toEqual([0, 2, 4, 6, 8, 10, 12, 14, 16, 18]);
@@ -139,9 +133,9 @@ describe('Concurrent Method Calls', () => {
   it('should handle concurrent calls during initialization window', async () => {
     // Start multiple proxies and immediately call methods
     const proxies = await Promise.all([
-      procxy(Calculator, { modulePath: calculatorPath }, 2),
-      procxy(Calculator, { modulePath: calculatorPath }, 2),
-      procxy(Calculator, { modulePath: calculatorPath }, 2),
+      procxy(Calculator, calculatorPath, undefined, 2),
+      procxy(Calculator, calculatorPath, undefined, 2),
+      procxy(Calculator, calculatorPath, undefined, 2)
     ]);
 
     try {
@@ -152,12 +146,12 @@ describe('Concurrent Method Calls', () => {
         proxies[2].add(3, 3),
         proxies[0].multiply(2, 3),
         proxies[1].multiply(4, 5),
-        proxies[2].multiply(6, 7),
+        proxies[2].multiply(6, 7)
       ]);
 
       expect(results).toEqual([2, 4, 6, 6, 20, 42]);
     } finally {
-      await Promise.all(proxies.map(p => p.$terminate()));
+      await Promise.all(proxies.map((p) => p.$terminate()));
     }
   });
 
@@ -165,9 +159,7 @@ describe('Concurrent Method Calls', () => {
     const iterations = 200;
     const startTime = Date.now();
 
-    const promises = Array.from({ length: iterations }, (_, i) =>
-      proxy.add(i, i + 1)
-    );
+    const promises = Array.from({ length: iterations }, (_, i) => proxy.add(i, i + 1));
 
     const results = await Promise.all(promises);
 

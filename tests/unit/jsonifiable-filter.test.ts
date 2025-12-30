@@ -34,13 +34,13 @@ describe('Procxy Type - Jsonifiable Filter', () => {
       }
 
       // Invalid: Function parameter (should be excluded)
-      invalidFunctionParam(_fn: () => void): number {
+      invalidMapParam(_fn: Map<string, number>): number {
         return 0;
       }
 
       // Invalid: Function return (should be excluded)
-      invalidFunctionReturn(): () => void {
-        return () => {};
+      invalidMapReturn(): Map<string, number> {
+        return new Map<string, number>();
       }
 
       // Invalid: Symbol parameter (should be excluded)
@@ -60,8 +60,8 @@ describe('Procxy Type - Jsonifiable Filter', () => {
     expectTypeOf<ProxyType>().toHaveProperty('validAsync');
 
     // Check that the type doesn't have these properties (they should be filtered out)
-    type HasInvalidMethod = 'invalidFunctionParam' extends keyof ProxyType ? true : false;
-    type HasInvalidReturn = 'invalidFunctionReturn' extends keyof ProxyType ? true : false;
+    type HasInvalidMethod = 'invalidMapParam' extends keyof ProxyType ? true : false;
+    type HasInvalidReturn = 'invalidMapReturn' extends keyof ProxyType ? true : false;
     type HasInvalidSymbol = 'invalidSymbol' extends keyof ProxyType ? true : false;
 
     expectTypeOf<HasInvalidMethod>().toEqualTypeOf<false>();
@@ -69,7 +69,9 @@ describe('Procxy Type - Jsonifiable Filter', () => {
     expectTypeOf<HasInvalidSymbol>().toEqualTypeOf<false>();
 
     // All valid methods should return Promises
-    expectTypeOf<ProxyType['validMethod']>().toMatchTypeOf<(a: number, _b: string) => Promise<number>>();
+    expectTypeOf<ProxyType['validMethod']>().toMatchTypeOf<
+      (a: number, _b: string) => Promise<number>
+    >();
     expectTypeOf<ProxyType['validAsync']>().toMatchTypeOf<(_x: string) => Promise<number>>();
   });
 

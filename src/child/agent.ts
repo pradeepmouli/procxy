@@ -8,6 +8,7 @@ import type {
   ErrorInfo,
   InitFailure,
   InitSuccess,
+  DisposeResponse
 } from '../shared/protocol.js';
 import { ModuleResolutionError } from '../shared/errors.js';
 import { validateJsonifiableArray } from '../shared/serialization.js';
@@ -27,13 +28,13 @@ function toErrorInfo(error: unknown): ErrorInfo {
       name: error.name,
       message: error.message,
       stack: error.stack,
-      code: (error as any).code,
+      code: (error as any).code
     };
   }
 
   return {
     name: 'Error',
-    message: typeof error === 'string' ? error : 'Unknown error',
+    message: typeof error === 'string' ? error : 'Unknown error'
   };
 }
 
@@ -52,14 +53,14 @@ async function handleInit(message: InitMessage): Promise<void> {
     if (!TargetClass) {
       throw new ModuleResolutionError(
         message.className,
-        `Class not found in module '${message.modulePath}'`,
+        `Class not found in module '${message.modulePath}'`
       );
     }
 
     if (typeof TargetClass !== 'function') {
       throw new ModuleResolutionError(
         message.className,
-        `'${message.className}' is not a constructor`,
+        `'${message.className}' is not a constructor`
       );
     }
 
@@ -71,7 +72,7 @@ async function handleInit(message: InitMessage): Promise<void> {
   } catch (error) {
     const failure: InitFailure = {
       type: 'INIT_FAILURE',
-      error: toErrorInfo(error),
+      error: toErrorInfo(error)
     };
     sendToParent(failure);
     process.exit(1);
@@ -81,6 +82,62 @@ async function handleInit(message: InitMessage): Promise<void> {
 async function handleParentMessage(message: ParentToChildMessage): Promise<void> {
   if (message.type === 'INIT') {
     await handleInit(message);
+    return;
+  }
+
+  if (message.type === 'DISPOSE') {
+    if (!childProxy) {
+      const response: DisposeResponse = { type: 'DISPOSE_COMPLETE' };
+      sendToParent(response);
+      return;
+    }
+
+    try {
+      await childProxy.dispose();
+      const response: DisposeResponse = { type: 'DISPOSE_COMPLETE' };
+      sendToParent(response);
+    } catch (error) {
+      const response: DisposeResponse = {
+        type: 'DISPOSE_COMPLETE',
+        error: toErrorInfo(error)
+      };
+      sendToParent(response);
+    }
+    return;
+  }
+
+  if (message.type === 'EVENT_SUBSCRIBE') {
+    if (childProxy) {
+      childProxy.subscribeEvent(message.eventName);
+    }
+    return;
+  }
+
+  if (message.type === 'EVENT_UNSUBSCRIBE') {
+    if (childProxy) {
+      childProxy.unsubscribeEvent(message.eventName);
+    }
+    return;
+  }
+
+  if (message.type === 'CALLBACK_RESULT' || message.type === 'CALLBACK_ERROR') {
+    if (childProxy) {
+      childProxy.handleCallbackResponse(message);
+    }
+    return;
+  }
+
+  if (message.type === 'PROPERTY_RESULT') {
+    if (childProxy) {
+      childProxy.handlePropertyResult(message);
+    }
+    return;
+  }
+
+  if ((message as any).type === 'PROPERTY_SET') {
+    if (childProxy) {
+      childProxy.handlePropertySet(message as any);
+    }
     return;
   }
 

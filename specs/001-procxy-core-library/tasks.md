@@ -214,9 +214,9 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 - [x] T065 [P] Write unit tests for protocol message types in tests/unit/protocol.test.ts
 - [x] T066 [P] Write unit tests for serialization validation in tests/unit/serialization.test.ts
 - [x] T067 [P] Write integration test for concurrent method calls in tests/integration/concurrent-calls.test.ts
-- [ ] T068 [P] Write integration test for explicit modulePath override in tests/integration/module-resolution.test.ts
+- [x] T068 [P] Write integration test for explicit modulePath override in tests/integration/module-resolution.test.ts
 - [X] T069 [P] Write integration test for constructor arguments in tests/integration/constructor-args.test.ts
-- [ ] T070 [P] Write performance benchmarks in tests/integration/performance.test.ts to verify <10ms overhead goal
+- [X] T070 [P] Write performance benchmarks in tests/integration/performance.test.ts to verify <10ms overhead goal
 
 ---
 
@@ -224,18 +224,18 @@ Note: US4 can proceed in parallel with US1 once Foundational (Phase 2) is comple
 
 **Purpose**: Documentation, optimization, and final validation
 
-- [ ] T071 [P] Add comprehensive JSDoc comments to all public APIs in src/index.ts, src/types/procxy.ts, src/types/options.ts
-- [ ] T072 [P] Create README.md with installation, usage examples, API reference, and troubleshooting guide
-- [ ] T073 [P] Create CONTRIBUTING.md with development setup, testing, and contribution guidelines
-- [ ] T074 [P] Add example files in examples/ directory: basic-usage.ts, event-emitter.ts, error-handling.ts, lifecycle.ts
-- [ ] T075 [P] Generate TypeDoc documentation in docs/ directory
-- [ ] T076 Verify all success criteria from spec.md are met (SC-001 through SC-008)
-- [ ] T077 Run full test suite with coverage report and verify >90% coverage
-- [ ] T078 [P] Performance profiling to confirm <10ms overhead per method call (NFR-001)
-- [ ] T079 [P] Memory leak testing with 1000 sequential calls (NFR-004, SC-004)
-- [ ] T080 [P] Test bundle size is <50KB minified (NFR-005)
-- [ ] T081 Create CHANGELOG.md documenting v1.0.0 features
-- [ ] T082 Prepare package.json for npm publishing with correct metadata, keywords, and license
+- [x] T071 [P] Add comprehensive JSDoc comments to all public APIs in src/index.ts, src/types/procxy.ts, src/types/options.ts
+- [x] T072 [P] Create README.md with installation, usage examples, API reference, and troubleshooting guide
+- [x] T073 [P] Create CONTRIBUTING.md with development setup, testing, and contribution guidelines
+- [x] T074 [P] Add example files in examples/ directory: basic-usage.ts, event-emitter.ts, error-handling.ts, lifecycle.ts
+- [x] T075 [P] Generate TypeDoc documentation in docs/ directory
+- [x] T076 Verify all success criteria from spec.md are met (SC-001 through SC-008)
+- [x] T077 Run full test suite with coverage report and verify >90% coverage
+- [x] T078 [P] Performance profiling to confirm <10ms overhead per method call (NFR-001)
+- [x] T079 [P] Memory leak testing with 1000 sequential calls (NFR-004, SC-004)
+- [x] T080 [P] Test bundle size is <50KB minified (NFR-005)
+- [x] T081 Create CHANGELOG.md documenting v1.0.0 features
+- [x] T082 Prepare package.json for npm publishing with correct metadata, keywords, and license
 
 ---
 

@@ -19,7 +19,7 @@ describe('Lifecycle Management', () => {
 
   describe('$terminate() method', () => {
     it('should terminate the child process', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Verify child is running
@@ -38,7 +38,7 @@ describe('Lifecycle Management', () => {
     });
 
     it('should reject pending promises when terminated', async () => {
-      const worker = await procxy(AsyncWorker, { modulePath: ASYNC_WORKER_PATH });
+      const worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH);
       activeProxies.push(worker);
 
       // Start a slow operation (1000ms delay) and catch rejection to prevent unhandled rejection
@@ -54,7 +54,7 @@ describe('Lifecycle Management', () => {
     });
 
     it('should reject subsequent method calls after termination', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Terminate the child
@@ -65,7 +65,7 @@ describe('Lifecycle Management', () => {
     });
 
     it('should be idempotent (safe to call multiple times)', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // First termination
@@ -78,7 +78,7 @@ describe('Lifecycle Management', () => {
 
   describe('$process property', () => {
     it('should expose the ChildProcess instance', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Verify $process is accessible
@@ -88,7 +88,7 @@ describe('Lifecycle Management', () => {
     });
 
     it('should provide access to child process properties', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH, env: { TEST_VAR: 'test123' } });
+      const calc = await procxy(Calculator, CALCULATOR_PATH, { env: { TEST_VAR: 'test123' } });
       activeProxies.push(calc);
 
       // Verify we can access process properties
@@ -105,7 +105,7 @@ describe('Lifecycle Management', () => {
 
   describe('Child process crash detection', () => {
     it('should reject pending promises when child crashes', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Start a slow operation
@@ -119,7 +119,7 @@ describe('Lifecycle Management', () => {
     });
 
     it('should reject subsequent calls after child crash', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Kill the child process
@@ -135,7 +135,7 @@ describe('Lifecycle Management', () => {
 
   describe('Memory and resource cleanup', () => {
     it('should clean up IPC client request maps after responses', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Make multiple calls
@@ -144,7 +144,7 @@ describe('Lifecycle Management', () => {
         calc.add(3, 4),
         calc.add(5, 6),
         calc.multiply(2, 3),
-        calc.divide(10, 2),
+        calc.divide(10, 2)
       ]);
 
       // The internal pending requests map should be empty after all responses
@@ -163,7 +163,7 @@ describe('Lifecycle Management', () => {
     });
 
     it('should remove all event listeners on termination', async () => {
-      const calc = await procxy(Calculator, { modulePath: CALCULATOR_PATH });
+      const calc = await procxy(Calculator, CALCULATOR_PATH);
       activeProxies.push(calc);
 
       // Call a few methods to establish IPC
