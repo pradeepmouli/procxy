@@ -138,11 +138,9 @@ async function main() {
   // Test 1: Buffer processing (Advanced mode only)
   console.log('Running: Buffer processing (Advanced mode)...');
   {
-    const proxy = await procxy<BinaryProcessor, 'advanced'>(
-      BinaryProcessor,
-      undefined,
-      { serialization: 'advanced' as const }
-    );
+    const proxy = await procxy<BinaryProcessor, 'advanced'>(BinaryProcessor, undefined, {
+      serialization: 'advanced' as const
+    });
     const buffer = Buffer.from([0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]);
     const result = await benchmark(
       'Buffer processing (8 bytes)',
