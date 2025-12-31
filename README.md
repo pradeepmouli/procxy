@@ -17,7 +17,7 @@ Run class instances in isolated child processes while interacting with them as i
 ## ✨ Features
 
 - **🎯 Type-Safe** - Full TypeScript support with IntelliSense autocomplete
-- **🪄 Automagic Module Resolution** - Zero-config import path detection from your source code
+- **🪄 Automatic Module Resolution** - Zero-config import path detection from your source code
 - **⚡ Fast** - <10ms overhead per method call
 - **🔄 Events & Callbacks** - Transparent EventEmitter forwarding and bidirectional callback support
 - **🏠 Properties** - Read-only properties on parent, full read/write on child
@@ -103,9 +103,9 @@ const result = await worker.process(['hello', 'world']);
 await worker.$terminate();
 ```
 
-## 🪄 Automagic Module Resolution
+## 🪄 Automatic Module Resolution
 
-One of procxy's most convenient features is **automatic module path detection**. You don't need to manually specify where your class is located—procxy figures it out by parsing your import statements at runtime.
+One of procxy's most convenient features is **automatic module path detection**. You don't need to manually specify where your class is located - procxy will figure it out by parsing your import statements at runtime.
 
 ### How It Works
 
@@ -195,36 +195,7 @@ Creates a process-based proxy for a class instance.
 
 **Module Path Auto-Detection:**
 
-procxy can automatically detect the module path by parsing your source file's import statements:
-
-```typescript
-import { Worker } from './worker.js';  // procxy detects this!
-
-// No modulePath needed
-const worker = await procxy(Worker);
-```
-
-The module path is auto-detected from:
-- ESM named imports: `import { Class } from './path'`
-- ESM default imports: `import Class from './path'`
-- CommonJS imports: `const { Class } = require('./path')`
-- Class definitions in the same file
-
-**When to provide explicit modulePath:**
-- Dynamic imports: `const { Worker } = await import('./worker')`
-- Ambiguous import scenarios
-- When importing from multiple locations
-
-**Example:**
-
-```typescript
-const worker = await procxy(Worker, './worker.js', {
-  timeout: 60000,  // 60s per method call
-  retries: 3,      // Retry 3 times on failure
-  env: { NODE_ENV: 'production' },
-  cwd: '/tmp'
-});
-```
+see above. 
 
 ### `Procxy<T>` Type
 
