@@ -96,13 +96,10 @@ async function main() {
     console.log(`\n🔗 New connection: ${id}`);
 
     try {
-      // Transfer socket to child process
+      // Transfer socket to child process and register it there
       console.log(`  [Parent] Transferring ${id} to child process...`);
-      await handler.$sendHandle(socket, id);
-      console.log(`  [Parent] Handle transferred successfully`);
-
-      // Register the socket in child
       await handler.registerConnection(id, socket);
+      console.log(`  [Parent] Connection registered in child`);
     } catch (error) {
       console.error(`  [Parent] Failed to transfer ${id}:`, error);
       socket.end();
