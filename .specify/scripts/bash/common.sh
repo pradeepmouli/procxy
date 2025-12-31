@@ -154,6 +154,39 @@ EOF
 check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
 check_dir() { [[ -d "$1" && -n $(ls -A "$1" 2>/dev/null) ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
 
+# Generate branch name from description by filtering and formatting words
+generate_branch_name() {
+    local description="$*"
+    
+    # Convert to lowercase and replace special chars with spaces
+    local words=$(echo "$description" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9 ]/ /g')
+    
+    # Common words to filter out
+    local stop_words=" a an and are as at be by for from in is it of on or that the this to was will with "
+    
+    # Filter and join words
+    local result=""
+    for word in $words; do
+        # Skip if empty or is a stop word
+        if [[ -n "$word" && ! "$stop_words" =~ " $word " ]]; then
+            if [[ -z "$result" ]]; then
+                result="$word"
+            else
+                result="$result-$word"
+            fi
+        fi
+    done
+    
+    # Limit length to reasonable size (max ~50 chars)
+    if [[ ${#result} -gt 50 ]]; then
+        result="${result:0:50}"
+        # Trim to last complete word
+        result="${result%-*}"
+    fi
+    
+    echo "$result"
+}
+
 
 # Extended branch validation supporting spec-kit-extensions
 check_feature_branch() {
