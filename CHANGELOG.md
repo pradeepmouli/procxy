@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.2
+
+### Patch Changes
+
+- advanced serialization support
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
@@ -10,23 +16,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Core Features**
+
   - Process-based proxying for TypeScript/JavaScript classes
   - Type-safe method invocation with full IntelliSense support
   - Transparent IPC communication between parent and child processes
   - Constructor arguments support for remote class instantiation
 
 - **EventEmitter Support**
+
   - Automatic event forwarding from child to parent process
   - Full EventEmitter API compatibility
   - Support for custom events and event listeners
 
 - **Lifecycle Management**
+
   - Manual termination via `$terminate()` method
   - Automatic cleanup with ES2024 disposables (`using`/`await using`)
   - Graceful process termination and resource cleanup
   - Access to underlying child process via `$process` property
 
 - **Configuration Options**
+
   - Configurable timeouts per method call
   - Automatic retry logic for failed operations
   - Custom environment variables for child processes
@@ -34,6 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Command line arguments support
 
 - **Error Handling**
+
   - Complete error propagation from child to parent
   - Stack trace preservation across process boundaries
   - Specialized error types:
@@ -44,18 +55,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `OptionsValidationError` for invalid configuration
 
 - **Type Safety**
+
   - Advanced mapped types with `Procxy<T>`
   - Automatic filtering of non-serializable methods
   - Support for optional parameters
   - Full TypeScript 5.0+ compatibility
 
 - **Performance**
+
   - Method call overhead <10ms (average 0.04-0.06ms)
   - No memory leaks after 1000+ sequential calls
   - Efficient IPC message handling
   - Minimal bundle size (~26KB unminified, ~6KB gzipped)
 
 - **Documentation**
+
   - Comprehensive README with examples
   - API documentation via TypeDoc
   - 4 detailed example files:
@@ -115,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 **Legend**:
+
 - `Added` for new features
 - `Changed` for changes in existing functionality
 - `Deprecated` for soon-to-be removed features

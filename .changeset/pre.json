@@ -1,0 +1,8 @@
+{
+  "mode": "pre",
+  "tag": "alpha",
+  "initialVersions": {
+    "procxy": "0.1.0-alpha.1"
+  },
+  "changesets": ["wild-crabs-wait"]
+}
