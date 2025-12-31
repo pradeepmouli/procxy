@@ -230,6 +230,7 @@ interface ProcxyOptions {
   env?: Record<string, string>;      // Custom environment variables for child process
   cwd?: string;                      // Working directory for child process
   args?: Jsonifiable[];              // Additional command line arguments
+  serialization?: 'json' | 'advanced'; // Serialization mode (default: 'json')
 }
 ```
 
@@ -240,6 +241,7 @@ import { procxy } from 'procxy';
 import { HeavyWorker } from './heavy-worker.js';
 import { APIClient } from './api-client.js';
 import { FileProcessor } from './file-processor.js';
+import { BinaryProcessor } from './binary-processor.js';
 
 // Long-running operations
 await procxy(HeavyWorker, { timeout: 300000 });  // 5 minutes
@@ -251,6 +253,9 @@ await procxy(APIClient, {
 
 // Isolated working directory
 await procxy(FileProcessor, { cwd: '/tmp/workspace' });
+
+// Advanced serialization for binary data
+await procxy(BinaryProcessor, { serialization: 'advanced' });
 ```
 
 ## 🎯 Use Cases
@@ -490,14 +495,177 @@ const worker = await procxy(Worker, {
 });
 ```
 
+## 🎨 Advanced Serialization (V8 Structured Clone)
+
+By default, procxy uses JSON serialization for IPC messages. However, you can enable **advanced serialization mode** to support additional data types using V8's structured clone algorithm.
+
+### Supported Types in Advanced Mode
+
+When using `serialization: 'advanced'`, you can pass these additional types:
+
+- **Binary Data**: `Buffer`, `ArrayBuffer`, `TypedArray` (Uint8Array, Int32Array, Float32Array, etc.)
+- **Collections**: `Map`, `Set` with full fidelity (not converted to arrays)
+- **Large Numbers**: `BigInt` values
+- **Built-in Objects**: `Date`, `RegExp`, `Error` instances with all properties preserved
+
+### Usage
+
+```typescript
+import { procxy } from 'procxy';
+import { ImageProcessor } from './image-processor.js';
+
+// Enable advanced serialization
+await using processor = await procxy(ImageProcessor, {
+  serialization: 'advanced'  // 👈 Enable V8 structured clone
+});
+
+// Now you can pass Buffer, TypedArray, Map, Set, BigInt, etc.
+const imageBuffer = Buffer.from(imageData);
+const processed = await processor.processImage(imageBuffer);
+
+// Use Map for caching
+const cache = new Map([
+  ['key1', Buffer.from('data1')],
+  ['key2', Buffer.from('data2')]
+]);
+await processor.bulkCache(cache);
+
+// Use BigInt for large numbers
+const timestamp = BigInt(Date.now()) * BigInt(1000000);
+await processor.recordTimestamp(timestamp);
+
+// TypedArray for binary protocols
+const binaryData = new Uint8Array([0x00, 0x01, 0x02, 0x03]);
+await processor.sendBinary(binaryData);
+
+// Set for unique collections
+const uniqueIds = new Set([1, 2, 3, 4, 5]);
+await processor.processIds(uniqueIds);
+```
+
+### Example: Binary Data Processing
+
+```typescript
+// binary-processor.ts
+export class BinaryProcessor {
+  // Process Buffer data
+  processBuffer(data: Buffer): Buffer {
+    const result = Buffer.alloc(data.length);
+    for (let i = 0; i < data.length; i++) {
+      result[i] = data[i] ^ 0xFF;  // XOR transformation
+    }
+    return result;
+  }
+
+  // Work with TypedArray
+  sumFloat32Array(arr: Float32Array): number {
+    return arr.reduce((sum, val) => sum + val, 0);
+  }
+
+  // Use Map for caching
+  private cache = new Map<string, Buffer>();
+  
+  cacheData(key: string, data: Buffer): void {
+    this.cache.set(key, data);
+  }
+
+  getAllCache(): Map<string, Buffer> {
+    return new Map(this.cache);  // Returns actual Map, not array
+  }
+
+  // Process BigInt
+  multiplyBigInt(a: bigint, b: bigint): bigint {
+    return a * b;
+  }
+}
+
+// main.ts
+import { procxy } from 'procxy';
+import { BinaryProcessor } from './binary-processor.js';
+
+await using processor = await procxy(BinaryProcessor, {
+  serialization: 'advanced'
+});
+
+// Process binary data
+const input = Buffer.from([0x00, 0x11, 0x22, 0x33]);
+const output = await processor.processBuffer(input);
+// Buffer: [0xFF, 0xEE, 0xDD, 0xCC]
+
+// Work with TypedArray
+const floats = new Float32Array([1.1, 2.2, 3.3]);
+const sum = await processor.sumFloat32Array(floats);  // 6.6
+
+// Use Map
+await processor.cacheData('key1', Buffer.from('data1'));
+const cache = await processor.getAllCache();  // Returns Map, not array
+console.log(cache instanceof Map);  // true
+console.log(cache.get('key1')?.toString());  // 'data1'
+
+// BigInt support
+const result = await processor.multiplyBigInt(BigInt(123), BigInt(456));
+console.log(result);  // 56088n
+```
+
+### JSON vs Advanced Mode Comparison
+
+| Feature | JSON Mode (default) | Advanced Mode |
+|---------|-------------------|---------------|
+| Primitives (string, number, boolean) | ✅ | ✅ |
+| Objects & Arrays | ✅ | ✅ |
+| null & undefined | ✅ | ✅ |
+| Buffer | ❌ | ✅ |
+| TypedArray | ❌ | ✅ |
+| Map | ❌ | ✅ |
+| Set | ❌ | ✅ |
+| BigInt | ❌ | ✅ |
+| Date | ⚠️ (as string) | ✅ (as Date) |
+| RegExp | ⚠️ (as object) | ✅ (as RegExp) |
+| Error | ⚠️ (partial) | ✅ (full props) |
+| Performance | Faster for simple objects | Slightly slower |
+
+### When to Use Advanced Mode
+
+**Use JSON mode (default) when:**
+- Working with simple data structures (objects, arrays, primitives)
+- Maximum performance is critical for simple types
+- No need for binary data or collections
+
+**Use Advanced mode when:**
+- Processing binary data (images, files, network protocols)
+- Working with Map/Set collections
+- Handling large numbers with BigInt
+- Need to preserve Date/RegExp/Error objects with full fidelity
+- Transferring TypedArray data between processes
+
+### Performance Considerations
+
+Advanced serialization has a small overhead compared to JSON for simple objects, but enables much broader type support. See [Performance Benchmarks](#-performance) for detailed comparisons.
+
+```typescript
+// Benchmark results (see benchmark/serialization-comparison.ts)
+// Simple object (100 calls):
+//   JSON mode: 0.12ms average
+//   Advanced mode: 0.15ms average (~25% slower)
+//
+// Buffer data (100 calls):
+//   JSON mode: Not supported
+//   Advanced mode: 0.18ms average
+//
+// Map with 100 entries (100 calls):
+//   JSON mode: Not supported
+//   Advanced mode: 0.25ms average
+```
+
 ## 🔍 Limitations
 
 Understanding these constraints will help you use procxy effectively:
 
-1. **JSON Serialization Required**
-   - Method arguments and return values must be JSON-serializable
+1. **Serialization Requirements**
+   - **JSON mode (default)**: Method arguments and return values must be JSON-serializable
+   - **Advanced mode**: Supports V8 structured clone types (Buffer, Map, Set, BigInt, etc.)
    - Functions are automatically proxied as callbacks (no manual serialization needed)
-   - Circular references, symbols, and non-JSON types are not supported
+   - Circular references and symbols are not supported in either mode
 
 2. **Parent Properties Are Read-Only**
    - Parent process can only **read** properties (via local synchronized store)
