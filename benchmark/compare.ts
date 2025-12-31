@@ -13,7 +13,6 @@
 import Tinypool from 'tinypool';
 import { procxy } from '../src/index.js';
 import { Calculator } from '../tests/fixtures/calculator.js';
-import { ca } from 'zod/locales';
 
 const WARMUP_CALLS = 10;
 const BENCHMARK_CALLS = 100;
