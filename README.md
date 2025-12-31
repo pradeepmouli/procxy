@@ -665,7 +665,8 @@ Understanding these constraints will help you use procxy effectively:
    - **JSON mode (default)**: Method arguments and return values must be JSON-serializable
    - **Advanced mode**: Supports V8 structured clone types (Buffer, Map, Set, BigInt, etc.)
    - Functions are automatically proxied as callbacks (no manual serialization needed)
-   - Circular references and symbols are not supported in either mode
+   - **JSON mode**: Circular references and symbols are not supported
+   - **Advanced mode**: Circular references are supported via V8 structured clone; symbols are not supported
 
 2. **Parent Properties Are Read-Only**
    - Parent process can only **read** properties (via local synchronized store)
