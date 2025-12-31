@@ -2,8 +2,6 @@
 
 ## 0.1.0-alpha.2
 
-### Patch Changes
-
 - advanced serialization support
 
 All notable changes to this project will be documented in this file.
