@@ -283,7 +283,8 @@ export async function procxy<T extends object | Record<string, typeof Object>, C
     type: 'INIT',
     modulePath: resolvedModulePath,
     className: moduleResolution.className,
-    constructorArgs: [...constructorArgs]
+    constructorArgs: [...constructorArgs],
+    serialization: serializationMode
   };
 
   child.send(initMessage);
