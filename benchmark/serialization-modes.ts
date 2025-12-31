@@ -149,7 +149,7 @@ async function main() {
   );
   formatResult(jsonStringResult);
 
-  await using advancedWorker1 = await procxy<JsonWorker, 'advanced'>(JsonWorker, undefined, {
+  await using advancedWorker1 = await procxy<JsonWorker, 'advanced'>(JsonWorker, {
     serialization: 'advanced' as const
   });
   const advancedStringResult = await runBenchmark(
