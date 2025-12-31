@@ -23,11 +23,7 @@ export type IsProcxiable<T, Mode extends SerializationMode> = T extends
   | undefined
   | Function
   ? true
-  : T extends void
-    ? true
-    : T extends undefined
-      ? true
-      : false;
+  : false;
 
 /**
  * Check if a type extends Jsonifiable or is a function (callback).
@@ -38,13 +34,7 @@ export type IsProcxiable<T, Mode extends SerializationMode> = T extends
  * - For union types like (string | undefined), we use [T] to prevent distribution
  *   and check if the entire union is assignable to (Jsonifiable | void | undefined | Function)
  */
-type IsJsonifiable<T> = T extends Jsonifiable | void | undefined | Function
-  ? true
-  : T extends void
-    ? true
-    : T extends undefined
-      ? true
-      : false;
+type IsJsonifiable<T> = T extends Jsonifiable | void | undefined | Function ? true : false;
 
 /**
  * Check if all parameters in a tuple are procxiable for the given mode.
