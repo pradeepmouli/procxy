@@ -9,7 +9,6 @@
  */
 
 import { procxy } from '../../src/index.js';
-import { fileURLToPath } from 'node:url';
 
 /**
  * Custom error with additional context
