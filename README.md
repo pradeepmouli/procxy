@@ -610,7 +610,7 @@ class DataStream extends EventEmitter {
   }
 }
 
-const stream = await procxy(DataStream, './stream.js');
+const stream = await procxy(DataStream);
 
 let dataCount = 0;
 stream.on('data', (chunk) => {
