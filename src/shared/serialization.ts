@@ -14,6 +14,7 @@ export type V8Serializable =
   | Jsonifiable
   | Buffer
   | ArrayBuffer
+  | DataView
   | Int8Array
   | Uint8Array
   | Uint8ClampedArray
@@ -35,7 +36,7 @@ export type V8Serializable =
 /**
  * Check if a value is V8-serializable.
  * V8 structured clone supports more types than JSON, including:
- * - Binary data: Buffer, ArrayBuffer, TypedArray
+ * - Binary data: Buffer, ArrayBuffer, DataView, TypedArray
  * - Collections: Map, Set
  * - BigInt
  * - Date, RegExp, Error
@@ -135,7 +136,7 @@ export function validateV8Serializable(
         : type;
 
     throw new SerializationError(value, context, {
-      error: `Value of type '${typeName}' is not V8-serializable. Supported types include primitives, Buffer, TypedArray, Map, Set, BigInt, Date, RegExp, Error, and plain objects/arrays.`
+      error: `Value of type '${typeName}' is not V8-serializable. Supported types include primitives, Buffer, ArrayBuffer, DataView, TypedArray, Map, Set, BigInt, Date, RegExp, Error, and plain objects/arrays.`
     });
   }
 }

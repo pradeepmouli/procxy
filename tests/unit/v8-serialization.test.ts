@@ -58,6 +58,12 @@ describe('V8 Serialization Utilities', () => {
       expect(isV8Serializable(new ArrayBuffer(8))).toBe(true);
     });
 
+    it('should accept DataView', () => {
+      const buffer = new ArrayBuffer(8);
+      expect(isV8Serializable(new DataView(buffer))).toBe(true);
+      expect(isV8Serializable(new DataView(buffer, 2, 4))).toBe(true);
+    });
+
     it('should accept TypedArray instances', () => {
       expect(isV8Serializable(new Uint8Array([1, 2, 3]))).toBe(true);
       expect(isV8Serializable(new Int8Array([1, 2, 3]))).toBe(true);
