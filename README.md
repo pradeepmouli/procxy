@@ -66,6 +66,7 @@ const calc2 = await procxy(Calculator, './calculator.js');
 ### Using Disposables (Recommended)
 
 ```typescript
+import { procxy } from 'procxy';
 import { Calculator } from './calculator.js';
 
 // Automatic cleanup with await using
@@ -77,22 +78,22 @@ const result = await calc.add(5, 3);
 ### Constructor Arguments
 
 ```typescript
+import { procxy } from 'procxy';
 import { Worker } from './worker.js';
 
-class Worker {
-  constructor(public name: string, public threads: number) {}
-
-  async process(data: string[]): Promise<string[]> {
-    // Heavy processing in isolated process
-    return data.map(s => s.toUpperCase());
-  }
-}
+// Worker class (in worker.ts):
+// class Worker {
+//   constructor(public name: string, public threads: number) {}
+//
+//   async process(data: string[]): Promise<string[]> {
+//     return data.map(s => s.toUpperCase());
+//   }
+// }
 
 // Pass constructor arguments after options
 const worker = await procxy(
   Worker,
-  './worker.js',  // Can be omitted if Worker is imported
-  undefined,      // options (or omit)
+  undefined,      // options (or omit entirely)
   'MyWorker',     // name argument
   4               // threads argument
 );
@@ -186,8 +187,10 @@ Creates a process-based proxy for a class instance.
 
 **Parameters:**
 
-- `Class: Constructor<T>` - The class constructor to instantiate
-- `modulePath?: string` - **Optional** path to the module containing the class (auto-detected if omitted)
+- `Class: Constructor<T>` - The class constructor to instantiate (must be a named class)
+- `modulePath?: string` - **Optional** - Path to the module containing the class
+  - **Omit this parameter** when using static imports (automatic resolution)
+  - **Provide explicitly** for dynamic imports or complex re-exports
 - `options?: ProcxyOptions` - Optional configuration
 - `...constructorArgs` - Arguments for the class constructor
 
@@ -195,33 +198,59 @@ Creates a process-based proxy for a class instance.
 
 **Module Path Auto-Detection:**
 
-see above. 
+When `modulePath` is omitted, procxy automatically detects the module path by:
+1. Inspecting the call stack to find where procxy was called
+2. Reading and parsing the source file for import/require statements
+3. Matching the class name to find the corresponding import path
+
+This works with ESM imports, CommonJS requires, and classes defined in the same file. See [Automatic Module Resolution](#-automatic-module-resolution) for details. 
 
 ### `Procxy<T>` Type
 
 The proxy type that wraps your class instance:
 
 - **Methods**: All methods become `async` and return `Promise<ReturnType>`
-- **Properties**: Public properties available as read-only on the parent proxy (updated from child)
-- **Callbacks**: Function parameters are automatically proxied across process boundaries
-- **Filtering**: Only JSON-serializable methods and properties are included
+- **Properties**: Public properties are read-only on the parent (synchronized from child after method calls)
+- **Callbacks**: Function parameters are automatically proxied bidirectionally across processes
+- **Events**: EventEmitter events flow from child to parent transparently
 - **Lifecycle Methods**:
-  - `$terminate(): Promise<void>` - Terminate the child process
-  - `$process: ChildProcess` - Access the underlying process
-- **Disposable**: Supports `using` and `await using` for automatic cleanup
+  - `$terminate(): Promise<void>` - Gracefully terminate the child process
+  - `$process: ChildProcess` - Access the underlying Node.js child process
+- **Disposable Protocol**: Supports `using` and `await using` for automatic cleanup
+- **Type Safety**: Full TypeScript IntelliSense and autocomplete support
 
 ### `ProcxyOptions`
 
-Configuration options:
+Configuration options for customizing child process behavior:
 
 ```typescript
 interface ProcxyOptions {
-  timeout?: number;      // Timeout per method call (default: 30000ms)
-  retries?: number;      // Retry attempts (default: 3)
-  env?: Record<string, string>;  // Custom environment variables
-  cwd?: string;          // Working directory for child process
-  args?: Jsonifiable[];  // Command line arguments
+  timeout?: number;                  // Timeout per method call in ms (default: 30000)
+  retries?: number;                  // Number of retry attempts on failure (default: 3)
+  env?: Record<string, string>;      // Custom environment variables for child process
+  cwd?: string;                      // Working directory for child process
+  args?: Jsonifiable[];              // Additional command line arguments
 }
+```
+
+**Examples:**
+
+```typescript
+import { procxy } from 'procxy';
+import { HeavyWorker } from './heavy-worker.js';
+import { APIClient } from './api-client.js';
+import { FileProcessor } from './file-processor.js';
+
+// Long-running operations
+await procxy(HeavyWorker, { timeout: 300000 });  // 5 minutes
+
+// Custom environment
+await procxy(APIClient, {
+  env: { API_KEY: process.env.API_KEY }
+});
+
+// Isolated working directory
+await procxy(FileProcessor, { cwd: '/tmp/workspace' });
 ```
 
 ## 🎯 Use Cases
@@ -231,13 +260,10 @@ interface ProcxyOptions {
 Offload heavy computations without blocking the event loop:
 
 ```typescript
-class ImageProcessor {
-  async resize(image: Buffer, width: number): Promise<Buffer> {
-    // Heavy image processing
-  }
-}
+import { procxy } from 'procxy';
+import { ImageProcessor } from './image-processor.js';
 
-await using processor = await procxy(ImageProcessor, './image-processor.js');
+await using processor = await procxy(ImageProcessor);
 const resized = await processor.resize(imageData, 800);
 ```
 
@@ -246,13 +272,10 @@ const resized = await processor.resize(imageData, 800);
 Run untrusted code in isolated processes:
 
 ```typescript
-class SandboxedRunner {
-  async execute(code: string): Promise<any> {
-    // Execute in isolated environment
-  }
-}
+import { procxy } from 'procxy';
+import { SandboxedRunner } from './sandbox.js';
 
-const sandbox = await procxy(SandboxedRunner, './sandbox.js', {
+const sandbox = await procxy(SandboxedRunner, {
   timeout: 5000,  // Kill after 5s
   env: { NODE_ENV: 'sandbox' }
 });
@@ -263,16 +286,18 @@ const sandbox = await procxy(SandboxedRunner, './sandbox.js', {
 Classes extending EventEmitter work transparently:
 
 ```typescript
+import { procxy } from 'procxy';
 import { EventEmitter } from 'events';
+import { DataStream } from './stream.js';
 
-class DataStream extends EventEmitter {
-  async start(): Promise<void> {
-    // Stream data and emit events
-    this.emit('data', { chunk: 'example' });
-  }
-}
+// DataStream class (in stream.ts):
+// class DataStream extends EventEmitter {
+//   async start(): Promise<void> {
+//     this.emit('data', { chunk: 'example' });
+//   }
+// }
 
-const stream = await procxy(DataStream, './stream.js');
+const stream = await procxy(DataStream);
 
 stream.on('data', (chunk) => {
   console.log('Received:', chunk);
@@ -286,21 +311,25 @@ await stream.start();
 Pass callbacks as function parameters and they'll be transparently proxied across the process boundary:
 
 ```typescript
-class AsyncWorker {
-  async processWithCallback(
-    data: string[],
-    onProgress: (current: number, total: number) => void
-  ): Promise<string[]> {
-    const result = [];
-    for (let i = 0; i < data.length; i++) {
-      result.push(data[i].toUpperCase());
-      onProgress(i + 1, data.length);  // Invokes callback in parent
-    }
-    return result;
-  }
-}
+import { procxy } from 'procxy';
+import { AsyncWorker } from './async-worker.js';
 
-const worker = await procxy(AsyncWorker, './async-worker.js');
+// AsyncWorker class (in async-worker.ts):
+// class AsyncWorker {
+//   async processWithCallback(
+//     data: string[],
+//     onProgress: (current: number, total: number) => void
+//   ): Promise<string[]> {
+//     const result = [];
+//     for (let i = 0; i < data.length; i++) {
+//       result.push(data[i].toUpperCase());
+//       onProgress(i + 1, data.length);  // Invokes callback in parent
+//     }
+//     return result;
+//   }
+// }
+
+const worker = await procxy(AsyncWorker);
 
 const result = await worker.processWithCallback(
   ['hello', 'world'],
@@ -323,47 +352,72 @@ const result = await worker.processWithCallback(
 
 ### Properties Support
 
-Public properties are accessible as read-only on the parent and can be read/modified on the child:
+Public properties are accessible with different capabilities on parent vs. child:
+
+**Parent Process (Read-Only):**
+- **Get**: Synchronous property reads from local property store
+- Properties are automatically synced after each method call
+
+**Child Process (Read/Write):**
+- **Get**: Direct property access (no IPC overhead)
+- **Set**: Modifies property and syncs to parent
 
 ```typescript
+// counter.ts
+import { procxy } from 'procxy';
+
 class Counter {
   public count: number = 0;
   public name: string = '';
 
   increment(): void {
+    // Child can SET properties directly
     this.count++;
   }
 
   setName(newName: string): void {
+    // Child can SET properties
     this.name = newName;
   }
 
   getCount(): number {
+    // Child can GET properties directly (no IPC)
     return this.count;
+  }
+
+  getName(): string {
+    // Child can GET properties directly
+    return this.name;
   }
 }
 
-const counter = await procxy(Counter, './counter.js');
+// main.ts
+import { procxy } from 'procxy';
+import { Counter } from './counter.js';
 
-// Properties are read-only on parent
-console.log(counter.count);  // 0 - synchronous read from property store
-console.log(counter.name);   // '' - synchronous read
+const counter = await procxy(Counter);
 
-// Modify via child methods
+// Parent can GET properties (synchronous read from property store)
+console.log(counter.count);  // 0 - no IPC, reads from local store
+console.log(counter.name);   // '' - synchronous
+
+// Modify via child methods (parent CANNOT set directly)
 await counter.increment();
 await counter.setName('MyCounter');
 
-// Parent reads updated values
-console.log(counter.count);  // 1 - automatically synced from child
-console.log(counter.name);   // 'MyCounter' - automatically synced
+// Parent GETs updated values (automatically synced from child)
+console.log(counter.count);  // 1 - synced after increment()
+console.log(counter.name);   // 'MyCounter' - synced after setName()
+
+// Parent cannot SET properties (read-only)
+// counter.count = 5;  // ❌ Throws error: properties are read-only on parent
 ```
 
 **Property Synchronization:**
 - Parent maintains a property store synchronized from the child
-- Child can read properties directly (no IPC needed)
-- Child can set properties (sends update to parent)
-- Property updates are automatically synced after method calls
-- Parent can only read properties (attempting to set throws an error)
+- Child can **get** and **set** properties directly (no IPC needed for reads)
+- Property updates are automatically synced to parent after method calls
+- Parent can only **get** properties (attempting to set throws an error)
 - No race conditions: only the child can modify properties
 
 ## 🛡️ Error Handling
@@ -401,7 +455,10 @@ try {
 ### Timeouts and Retries
 
 ```typescript
-const worker = await procxy(Worker, './worker.js', {
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
+const worker = await procxy(Worker, {
   timeout: 60000,  // 60 seconds per call
   retries: 5       // Retry 5 times before failing
 });
@@ -410,7 +467,10 @@ const worker = await procxy(Worker, './worker.js', {
 ### Custom Environment
 
 ```typescript
-const worker = await procxy(Worker, './worker.js', {
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
+const worker = await procxy(Worker, {
   env: {
     NODE_ENV: 'production',
     API_KEY: process.env.API_KEY,
@@ -422,17 +482,37 @@ const worker = await procxy(Worker, './worker.js', {
 ### Working Directory
 
 ```typescript
-const worker = await procxy(Worker, './worker.js', {
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
+const worker = await procxy(Worker, {
   cwd: '/tmp/workspace'
 });
 ```
 
 ## 🔍 Limitations
 
-1. **JSON Serialization** - Method arguments and return values must be JSON-serializable (functions are proxied as callbacks)
-2. **Properties Read-Only on Parent** - Parent can only read properties, modifications must be done via child methods
-3. **One-Way Events** - EventEmitter events only flow from child to parent (emit only works in child)
-4. **Callback Context** - Callbacks are invoked with serialized arguments (e.g., no `this` binding)
+Understanding these constraints will help you use procxy effectively:
+
+1. **JSON Serialization Required**
+   - Method arguments and return values must be JSON-serializable
+   - Functions are automatically proxied as callbacks (no manual serialization needed)
+   - Circular references, symbols, and non-JSON types are not supported
+
+2. **Parent Properties Are Read-Only**
+   - Parent process can only **read** properties (via local synchronized store)
+   - Child process can **read and write** properties
+   - Modifications must be done via child methods, not direct assignment on parent
+
+3. **One-Way Event Flow**
+   - EventEmitter events flow from child → parent only
+   - Parent can listen to events, but cannot emit events to the child
+   - The child process owns the EventEmitter instance
+
+4. **Callback Context Limitations**
+   - Callbacks are invoked with serialized arguments
+   - No `this` binding preservation across process boundaries
+   - Callback functions cannot access closure variables from the other process
 
 ## 🧪 Testing
 
@@ -458,15 +538,23 @@ pnpm test tests/integration/basic-invocation.test.ts
 
 ### Module Resolution Errors
 
-If you get `ModuleResolutionError`, ensure the `modulePath` argument points to the correct file:
+If you get `ModuleResolutionError`, ensure you have a static import or provide an explicit `modulePath`:
 
 ```typescript
-// ✅ Correct - explicit path
-await procxy(Worker, './worker.js');
-await procxy(Worker, '/absolute/path/to/worker.js');
+// ✅ Best - automatic resolution with static import
+import { Worker } from './worker.js';
+await procxy(Worker);
 
-// ❌ Wrong - missing module path
-await procxy(Worker);  // Error!
+// ✅ Also works - explicit path
+await procxy(Worker, './worker.js');
+
+// ❌ Won't work - dynamic import without explicit path
+const { Worker } = await import('./worker.js');
+await procxy(Worker);  // Error: Cannot resolve module path!
+
+// ✅ Fix - provide explicit path with dynamic import
+const { Worker } = await import('./worker.js');
+await procxy(Worker, './worker.js');
 ```
 
 ### Serialization Errors
@@ -486,7 +574,10 @@ await proxy.process({ name: 'test', fn: () => {} });
 Increase timeout for long-running methods:
 
 ```typescript
-const worker = await procxy(Worker, './worker.js', {
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
+const worker = await procxy(Worker, {
   timeout: 300000  // 5 minutes
 });
 ```
@@ -560,17 +651,10 @@ class Task extends EventEmitter<Events> {
 ### Data Processing Pipeline
 
 ```typescript
-class ImageProcessor {
-  async resize(data: Buffer, width: number): Promise<Buffer> {
-    // Heavy computation in isolated process
-  }
+import { procxy } from 'procxy';
+import { ImageProcessor } from './image-processor.js';
 
-  async compress(data: Buffer, quality: number): Promise<Buffer> {
-    // Another heavy operation
-  }
-}
-
-await using processor = await procxy(ImageProcessor, './image-processor.js');
+await using processor = await procxy(ImageProcessor);
 
 let image = await processor.resize(imageData, 800);
 image = await processor.compress(image, 85);
@@ -581,12 +665,15 @@ console.log('Processed:', image.length, 'bytes');
 ### Worker Pool Pattern
 
 ```typescript
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
 class WorkerPool {
   private workers: any[] = [];
 
   async initialize(poolSize: number): Promise<void> {
     for (let i = 0; i < poolSize; i++) {
-      this.workers.push(await procxy(Worker, './worker.js'));
+      this.workers.push(await procxy(Worker));
     }
   }
 
@@ -604,11 +691,8 @@ class WorkerPool {
 ### Real-Time Data Streaming
 
 ```typescript
-class DataStream extends EventEmitter {
-  async startStream(filter: (x: any) => boolean): Promise<void> {
-    // Start streaming data
-  }
-}
+import { procxy } from 'procxy';
+import { DataStream } from './stream.js';
 
 const stream = await procxy(DataStream);
 
@@ -628,27 +712,10 @@ await stream.startStream(x => x.value > 100);
 ### Batch Processing with Progress
 
 ```typescript
-class BatchProcessor {
-  async processBatch(
-    items: string[],
-    onProgress: (processed: number, total: number, item: string) => void
-  ): Promise<string[]> {
-    const results = [];
-    for (let i = 0; i < items.length; i++) {
-      const result = await this.heavyProcess(items[i]);
-      results.push(result);
-      onProgress(i + 1, items.length, items[i]);
-    }
-    return results;
-  }
+import { procxy } from 'procxy';
+import { BatchProcessor } from './batch-processor.js';
 
-  private async heavyProcess(item: string): Promise<string> {
-    // CPU-intensive work
-    return item.toUpperCase();
-  }
-}
-
-const processor = await procxy(BatchProcessor, './batch-processor.js');
+const processor = await procxy(BatchProcessor);
 
 const results = await processor.processBatch(
   ['item1', 'item2', 'item3'],
@@ -665,26 +732,12 @@ console.log('Results:', results);
 Use static factory methods or wrapper functions for cleaner initialization:
 
 ```typescript
-class Database {
-  private connectionString: string = '';
-  private connected: boolean = false;
-
-  async connect(url: string): Promise<void> {
-    this.connectionString = url;
-    this.connected = true;
-    // Simulate connection setup
-    await new Promise(r => setTimeout(r, 100));
-  }
-
-  async query(sql: string): Promise<any[]> {
-    if (!this.connected) throw new Error('Not connected');
-    return [{ result: 'example' }];
-  }
-}
+import { procxy } from 'procxy';
+import { Database } from './database.js';
 
 // Factory function for cleaner API
 async function createDatabase(url: string) {
-  const db = await procxy(Database, './database.js');
+  const db = await procxy(Database);
   await db.connect(url);
   return db;
 }
@@ -700,27 +753,32 @@ await db.$terminate();
 Build complex instances with fluent API and async setup:
 
 ```typescript
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
 class WorkerBuilder {
   private name: string = 'Worker';
   private threads: number = 1;
   private timeout: number = 30000;
 
-  setName(name: string): void {
+  setName(name: string): this {
     this.name = name;
+    return this;
   }
 
-  setThreads(threads: number): void {
+  setThreads(threads: number): this {
     this.threads = threads;
+    return this;
   }
 
-  setTimeout(ms: number): void {
+  setTimeout(ms: number): this {
     this.timeout = ms;
+    return this;
   }
 
   async build(): Promise<Procxy<Worker>> {
     const worker = await procxy(
       Worker,
-      './worker.js',
       { timeout: this.timeout },
       this.name,
       this.threads
@@ -747,6 +805,9 @@ await worker.processImage(imageData);
 Manage a pool of async-initialized resources:
 
 ```typescript
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
 class AsyncResourcePool<T> {
   private available: Procxy<T>[] = [];
   private inUse = new Set<Procxy<T>>();
@@ -784,7 +845,7 @@ class AsyncResourcePool<T> {
 
 // Usage
 async function createWorker() {
-  return await procxy(Worker, './worker.js');
+  return await procxy(Worker);
 }
 
 const pool = new AsyncResourcePool<Worker>();
@@ -807,13 +868,16 @@ await pool.shutdown();
 Create and cache instances on first use:
 
 ```typescript
+import { procxy } from 'procxy';
+import { Worker } from './worker.js';
+
 class LazyWorkerSingleton {
   private static instance: Procxy<Worker> | null = null;
 
   static async getInstance(): Promise<Procxy<Worker>> {
     if (!this.instance) {
       console.log('Initializing worker...');
-      this.instance = await procxy(Worker, './worker.js');
+      this.instance = await procxy(Worker);
 
       // Set up cleanup on process exit
       process.on('exit', async () => {
@@ -847,6 +911,10 @@ await LazyWorkerSingleton.reset();
 Resolve dependencies asynchronously before using proxies:
 
 ```typescript
+import { procxy } from 'procxy';
+import { Database } from './database.js';
+import { Cache } from './cache.js';
+
 class ServiceContainer {
   private services = new Map<string, any>();
 
@@ -873,13 +941,8 @@ class ServiceContainer {
 // Setup
 const container = new ServiceContainer();
 
-await container.register('database', () =>
-  procxy(Database, './database.js')
-);
-
-await container.register('cache', () =>
-  procxy(Cache, './cache.js')
-);
+await container.register('database', () => procxy(Database));
+await container.register('cache', () => procxy(Cache));
 
 // Usage with injected dependencies
 const db = container.get<Database>('database');
