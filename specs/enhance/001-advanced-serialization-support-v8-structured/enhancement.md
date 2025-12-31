@@ -51,13 +51,13 @@ This is backward compatible - `serialization: 'json'` is the default, maintainin
 **Phase 1: V8 Serialization Support**
 
 **Tasks**:
-1. [ ] Add `serialization: 'json' | 'advanced'` option to ProcxyOptions and pass to fork()
-2. [ ] Create V8Serializable, Procxiable<Mode>, IsProcxiable type definitions
-3. [ ] Implement isV8Serializable() and validateV8Serializable() runtime validation
-4. [ ] Update Procxy<T, Mode> type with method filtering based on mode
-5. [ ] Add procxy() function overloads for mode type inference
-6. [ ] Write comprehensive tests for Buffer, TypedArray, Map, Set, BigInt, Date, RegExp, Error
-7. [ ] Add integration tests verifying end-to-end serialization of all supported types
+1. [X] Add `serialization: 'json' | 'advanced'` option to ProcxyOptions and pass to fork()
+2. [X] Create V8Serializable, Procxiable<Mode>, IsProcxiable type definitions
+3. [X] Implement isV8Serializable() and validateV8Serializable() runtime validation
+4. [X] Update Procxy<T, Mode> type with method filtering based on mode
+5. [X] Add procxy() function overloads for mode type inference
+6. [X] Write comprehensive tests for Buffer, TypedArray, Map, Set, BigInt, Date, RegExp, Error
+7. [X] Add integration tests verifying end-to-end serialization of all supported types
 
 **Acceptance Criteria**:
 - [ ] Can pass Buffer/TypedArray instances when using `serialization: 'advanced'`

@@ -1,19 +1,21 @@
 import type { Jsonifiable } from 'type-fest';
+import type { SerializationMode } from '../types/options.js';
 
 /**
  * IPC message protocol types for Procxy parent-child communication.
- * All payloads use JSON serialization (Jsonifiable from type-fest).
+ * Payloads use either JSON serialization or V8 structured clone based on serialization mode.
  */
 
 /**
  * Initialization message sent from parent to child on startup.
- * Contains module path, class name, and constructor arguments.
+ * Contains module path, class name, constructor arguments, and serialization mode.
  */
 export interface InitMessage {
   type: 'INIT';
   modulePath: string; // Path to module to import (absolute or relative)
   className: string; // Name of class to instantiate
   constructorArgs: [...Jsonifiable[]]; // Constructor arguments (rest parameter style)
+  serialization?: SerializationMode; // Serialization mode ('json' or 'advanced')
 }
 
 /**

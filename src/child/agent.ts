@@ -10,11 +10,13 @@ import type {
   InitSuccess,
   DisposeResponse
 } from '../shared/protocol.js';
+import type { SerializationMode } from '../types/options.js';
 import { ModuleResolutionError } from '../shared/errors.js';
-import { validateJsonifiableArray } from '../shared/serialization.js';
+import { validateJsonifiableArray, validateV8SerializableArray } from '../shared/serialization.js';
 import { ChildProxy } from './child-proxy.js';
 
 let childProxy: ChildProxy | undefined;
+let serializationMode: SerializationMode = 'json'; // Default to json mode
 
 function sendToParent(message: ChildToParentMessage): void {
   if (process.send) {
@@ -40,7 +42,15 @@ function toErrorInfo(error: unknown): ErrorInfo {
 
 async function handleInit(message: InitMessage): Promise<void> {
   try {
-    validateJsonifiableArray(message.constructorArgs, 'constructor arguments');
+    // Store serialization mode for this child process
+    serializationMode = message.serialization ?? 'json';
+
+    // Validate constructor args based on serialization mode
+    if (serializationMode === 'json') {
+      validateJsonifiableArray(message.constructorArgs, 'constructor arguments');
+    } else {
+      validateV8SerializableArray(message.constructorArgs, 'constructor arguments');
+    }
 
     let modulePath = message.modulePath;
     if (!modulePath.startsWith('file://')) {
@@ -65,7 +75,7 @@ async function handleInit(message: InitMessage): Promise<void> {
     }
 
     const instance = new TargetClass(...message.constructorArgs);
-    childProxy = new ChildProxy(instance, sendToParent);
+    childProxy = new ChildProxy(instance, sendToParent, serializationMode);
 
     const success: InitSuccess = { type: 'INIT_SUCCESS' };
     sendToParent(success);

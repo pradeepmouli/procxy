@@ -9,6 +9,7 @@ import type {
   PropertySet,
   PropertyResult
 } from '../shared/protocol.js';
+import type { SerializationMode } from '../types/options.js';
 import {
   serializeToJson,
   deserializeFromJson,
@@ -41,7 +42,8 @@ export class ChildProxy {
 
   constructor(
     private readonly target: any,
-    private readonly send: (message: ChildToParentMessage) => void
+    private readonly send: (message: ChildToParentMessage) => void,
+    private readonly serializationMode: SerializationMode = 'json'
   ) {
     // Create a proxy that intercepts property access
     this.proxiedTarget = new Proxy(target, {
@@ -252,16 +254,29 @@ export class ChildProxy {
       // Handle void/undefined return values - send null instead
       const valueToSerialize = value === undefined ? null : value;
 
-      const serialized = serializeToJson(valueToSerialize as any, 'response value');
-      const deserialized = deserializeFromJson(serialized, 'response value');
+      // In JSON mode, validate by round-tripping through JSON
+      // In advanced mode, skip validation - Node.js handles V8 serialization
+      if (this.serializationMode === 'json') {
+        const serialized = serializeToJson(valueToSerialize as any, 'response value');
+        const deserialized = deserializeFromJson(serialized, 'response value');
 
-      const response: Response = {
-        type: 'RESULT',
-        id,
-        value: deserialized
-      };
+        const response: Response = {
+          type: 'RESULT',
+          id,
+          value: deserialized
+        };
 
-      this.send(response);
+        this.send(response);
+      } else {
+        // Advanced mode - Node.js will handle V8 serialization
+        const response: Response = {
+          type: 'RESULT',
+          id,
+          value: valueToSerialize
+        };
+
+        this.send(response);
+      }
     } catch (error) {
       this.sendError(id, error as Error);
     }

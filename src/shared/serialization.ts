@@ -7,6 +7,169 @@ import { SerializationError } from './errors.js';
  */
 
 /**
+ * Types that are serializable with V8 structured clone algorithm.
+ * This includes all JSON-serializable types plus additional V8-specific types.
+ */
+export type V8Serializable =
+  | Jsonifiable
+  | Buffer
+  | ArrayBuffer
+  | DataView
+  | Int8Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Int16Array
+  | Uint16Array
+  | Int32Array
+  | Uint32Array
+  | Float32Array
+  | Float64Array
+  | BigInt64Array
+  | BigUint64Array
+  | Map<any, any>
+  | Set<any>
+  | Error
+  | RegExp
+  | bigint
+  | Date
+  | { [key: string]: V8Serializable | undefined }
+  | ReadonlyArray<V8Serializable>;
+
+/**
+ * Check if a value is V8-serializable.
+ * V8 structured clone supports more types than JSON, including:
+ * - Binary data: Buffer, ArrayBuffer, DataView, TypedArray
+ * - Collections: Map, Set
+ * - BigInt
+ * - Date, RegExp, Error
+ *
+ * @param value - The value to check
+ * @returns true if the value can be serialized with V8 structured clone
+ */
+export function isV8Serializable(value: unknown): value is V8Serializable {
+  if (value === null || value === undefined) return true;
+
+  const type = typeof value;
+
+  // Primitive types (including NaN and Infinity for numbers)
+  if (type === 'string' || type === 'number' || type === 'boolean' || type === 'bigint') {
+    return true;
+  }
+
+  // Functions are not serializable
+  if (type === 'function') return false;
+
+  // Symbols are not serializable
+  if (type === 'symbol') return false;
+
+  // Check for specific object types
+  if (typeof value === 'object') {
+    // Date
+    if (value instanceof Date) return true;
+
+    // RegExp
+    if (value instanceof RegExp) return true;
+
+    // Error
+    if (value instanceof Error) return true;
+
+    // Buffer (Node.js specific)
+    if (Buffer.isBuffer(value)) return true;
+
+    // ArrayBuffer
+    if (value instanceof ArrayBuffer) return true;
+
+    // TypedArray
+    if (ArrayBuffer.isView(value)) return true;
+
+    // Map
+    if (value instanceof Map) {
+      for (const [k, v] of value.entries()) {
+        if (!isV8Serializable(k) || !isV8Serializable(v)) return false;
+      }
+      return true;
+    }
+
+    // Set
+    if (value instanceof Set) {
+      for (const item of value.values()) {
+        if (!isV8Serializable(item)) return false;
+      }
+      return true;
+    }
+
+    // Plain arrays
+    if (Array.isArray(value)) {
+      return value.every((item) => isV8Serializable(item));
+    }
+
+    // Plain objects
+    if (
+      Object.getPrototypeOf(value) === Object.prototype ||
+      Object.getPrototypeOf(value) === null
+    ) {
+      return Object.values(value).every((v) => isV8Serializable(v));
+    }
+
+    // Other object types are not supported
+    return false;
+  }
+
+  return false;
+}
+
+/**
+ * Validates that a value is V8-serializable.
+ * Throws SerializationError if validation fails.
+ *
+ * @param value - The value to validate
+ * @param context - Description of where this value is from
+ * @throws SerializationError if value is not V8-serializable
+ */
+export function validateV8Serializable(
+  value: unknown,
+  context: string
+): asserts value is V8Serializable {
+  if (!isV8Serializable(value)) {
+    const type = typeof value;
+    const typeName =
+      type === 'object' && value !== null && value !== undefined
+        ? value.constructor?.name || 'Object'
+        : type;
+
+    throw new SerializationError(value, context, {
+      error: `Value of type '${typeName}' is not V8-serializable. Supported types include primitives, Buffer, ArrayBuffer, DataView, TypedArray, Map, Set, BigInt, Date, RegExp, Error, and plain objects/arrays.`
+    });
+  }
+}
+
+/**
+ * Validates that all values in an array are V8-serializable.
+ *
+ * @param values - Array of values to validate
+ * @param context - Description of where these values are from
+ * @throws SerializationError if any value is not V8-serializable
+ */
+export function validateV8SerializableArray(
+  values: unknown[],
+  context: string
+): asserts values is V8Serializable[] {
+  for (let i = 0; i < values.length; i++) {
+    try {
+      validateV8Serializable(values[i], `${context}[${i}]`);
+    } catch (error) {
+      if (error instanceof SerializationError) {
+        throw error;
+      }
+      throw new SerializationError(values[i], `${context}[${i}]`, {
+        error: error instanceof Error ? error.message : String(error),
+        index: i
+      });
+    }
+  }
+}
+
+/**
  * Marker interface for serialized callbacks.
  */
 export interface SerializedCallback {
@@ -67,6 +230,7 @@ export class CallbackRegistry {
 
 /**
  * Serialize a value, converting callbacks to callback IDs.
+ * In advanced serialization mode, special types (Buffer, Map, Set, etc.) are preserved.
  */
 export function serializeWithCallbacks(
   value: unknown,
@@ -81,7 +245,52 @@ export function serializeWithCallbacks(
     return value.map((item) => serializeWithCallbacks(item, callbackRegistry)) as any;
   }
 
-  if (value && typeof value === 'object' && !(value instanceof Date)) {
+  // Preserve V8-serializable types - don't destructure them
+  // These types will be handled by Node.js's V8 serialization when serialization: 'advanced'
+  if (value && typeof value === 'object') {
+    // Date - preserve as-is
+    if (value instanceof Date) {
+      return value as any;
+    }
+
+    // Buffer - preserve as-is (Node.js specific)
+    if (Buffer.isBuffer(value)) {
+      return value as any;
+    }
+
+    // TypedArray - preserve as-is
+    if (ArrayBuffer.isView(value)) {
+      return value as any;
+    }
+
+    // Map - preserve as-is
+    if (value instanceof Map) {
+      return value as any;
+    }
+
+    // Set - preserve as-is
+    if (value instanceof Set) {
+      return value as any;
+    }
+
+    // ArrayBuffer - preserve as-is
+    if (value instanceof ArrayBuffer) {
+      return value as any;
+    }
+
+    // RegExp - preserve as-is
+    if (value instanceof RegExp) {
+      return value as any;
+    }
+
+    // Error - preserve as-is
+    if (value instanceof Error) {
+      return value as any;
+    }
+
+    // BigInt is a primitive, handled below
+
+    // Plain objects - recursively serialize
     const result: any = {};
     for (const [key, val] of Object.entries(value)) {
       result[key] = serializeWithCallbacks(val, callbackRegistry);
