@@ -203,7 +203,7 @@ When `modulePath` is omitted, procxy automatically detects the module path by:
 2. Reading and parsing the source file for import/require statements
 3. Matching the class name to find the corresponding import path
 
-This works with ESM imports, CommonJS requires, and classes defined in the same file. See [Automatic Module Resolution](#-automatic-module-resolution) for details. 
+This works with ESM imports, CommonJS requires, and classes defined in the same file. See [Automatic Module Resolution](#-automatic-module-resolution) for details.
 
 ### `Procxy<T>` Type
 
@@ -564,7 +564,7 @@ export class BinaryProcessor {
 
   // Use Map for caching
   private cache = new Map<string, Buffer>();
-  
+
   cacheData(key: string, data: Buffer): void {
     this.cache.set(key, data);
   }
