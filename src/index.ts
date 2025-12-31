@@ -75,7 +75,17 @@ export type { Procxy } from './types/procxy.js';
  *
  * @see {@link ProcxyOptions} interface
  */
-export type { ProcxyOptions } from './types/options.js';
+export type { ProcxyOptions, SerializationMode } from './types/options.js';
+
+/**
+ * Type definitions for V8 serializable types and mode-aware type checking.
+ *
+ * @see {@link V8Serializable} - Types supported by V8 structured clone algorithm
+ * @see {@link Procxiable} - Get serializable type constraint for a given mode
+ * @see {@link IsProcxiable} - Check if a type is serializable for a given mode
+ */
+export type { V8Serializable } from './shared/serialization.js';
+export type { Procxiable, IsProcxiable } from './types/procxy.js';
 
 /**
  * Base error class for all Procxy-specific errors.
