@@ -1,6 +1,33 @@
 import type { ChildProcess } from 'child_process';
 import type { EventEmitter } from 'events';
 import type { Jsonifiable, ArrayValues, UnionToIntersection } from 'type-fest';
+import type { SerializationMode } from './options.js';
+import type { V8Serializable } from '../shared/serialization.js';
+
+/**
+ * Get the serializable type constraint based on the serialization mode.
+ * - 'json' mode: Jsonifiable types only
+ * - 'advanced' mode: V8Serializable types (includes Buffer, Map, Set, BigInt, etc.)
+ */
+export type Procxiable<Mode extends SerializationMode> = Mode extends 'advanced'
+  ? V8Serializable
+  : Jsonifiable;
+
+/**
+ * Check if a type is procxiable (serializable) for the given mode.
+ * Also handles void, undefined, and Function types (callbacks).
+ */
+export type IsProcxiable<T, Mode extends SerializationMode> = T extends
+  | Procxiable<Mode>
+  | void
+  | undefined
+  | Function
+  ? true
+  : T extends void
+    ? true
+    : T extends undefined
+      ? true
+      : false;
 
 /**
  * Check if a type extends Jsonifiable or is a function (callback).
@@ -20,6 +47,15 @@ type IsJsonifiable<T> = T extends Jsonifiable | void | undefined | Function
       : false;
 
 /**
+ * Check if all parameters in a tuple are procxiable for the given mode.
+ * Generic version that works for both 'json' and 'advanced' modes.
+ */
+type AreParamsProcxiable<
+  P extends readonly any[],
+  Mode extends SerializationMode
+> = UnionToIntersection<IsProcxiable<ArrayValues<P>, Mode>>;
+
+/**
  * Check if all parameters in a tuple are Jsonifiable.
  * For optional parameters (e.g., greeting?: string), TypeScript represents them
  * as unions with undefined. We map over numeric indices and check if all are jsonifiable.
@@ -29,12 +65,13 @@ type AreParamsJsonifiable<P extends readonly any[]> = UnionToIntersection<
 >;
 
 /**
- * Get keys of methods that have Jsonifiable parameters and return values.
+ * Get keys of methods that have procxiable parameters and return values for the given mode.
+ * Generic version that filters based on serialization mode.
  */
-type JsonifiableMethodKeys<T> = {
+type ProcxiableMethodKeys<T, Mode extends SerializationMode> = {
   [K in keyof T]: T[K] extends (...args: infer A) => infer R
-    ? AreParamsJsonifiable<A> extends true
-      ? IsJsonifiable<Awaited<R>> extends true
+    ? AreParamsProcxiable<A, Mode> extends true
+      ? IsProcxiable<Awaited<R>, Mode> extends true
         ? K
         : never
       : never
@@ -42,9 +79,9 @@ type JsonifiableMethodKeys<T> = {
 }[keyof T];
 
 /**
- * Pick only methods with Jsonifiable parameters and return values.
+ * Pick only methods with procxiable parameters and return values for the given mode.
  */
-type JsonifiableMethods<T> = Pick<T, JsonifiableMethodKeys<T>>;
+type ProcxiableMethods<T, Mode extends SerializationMode> = Pick<T, ProcxiableMethodKeys<T, Mode>>;
 
 /**
  * Extract the event map from an EventEmitter type.
@@ -90,29 +127,33 @@ type JsonifiableEventMap<E extends Record<string | symbol, (...args: any[]) => a
 };
 
 /**
- * Get keys of properties (non-function values) from a type.
+ * Get keys of properties (non-function values) from a type, mode-aware.
  */
-type JsonifiablePropertyKeys<T> = {
+type ProcxiablePropertyKeys<T, Mode extends SerializationMode> = {
   [K in keyof T]: T[K] extends (...args: any[]) => any
     ? never
-    : T[K] extends Jsonifiable
+    : IsProcxiable<T[K], Mode> extends true
       ? K
       : never;
 }[keyof T];
 
 /**
- * Get readonly properties from the type (excluding methods).
+ * Get readonly properties from the type (excluding methods), mode-aware.
  * Properties are read-only on the proxy - only the child can modify them.
  */
-type ReadonlyProperties<T> = {
-  readonly [K in JsonifiablePropertyKeys<T>]: T[K];
+type ReadonlyProperties<T, Mode extends SerializationMode> = {
+  readonly [K in ProcxiablePropertyKeys<T, Mode>]: T[K];
 };
 
 /**
- * Procxy<T> — The proxy type that wraps a remote object instance.
+ * Procxy<T, Mode> — The proxy type that wraps a remote object instance.
  *
  * All methods of T are transformed to async (returning Promise<ReturnType>).
- * Only methods with JSON-serializable parameters and return values are included.
+ * Only methods with serializable parameters and return values are included.
+ * The serialization constraint depends on the Mode parameter:
+ * - 'json' (default): JSON-serializable types only (primitive, objects, arrays)
+ * - 'advanced': V8-serializable types (includes Buffer, TypedArray, Map, Set, BigInt, etc.)
+ *
  * Properties are included as read-only - they can be read but not set from the parent.
  * To modify properties, use methods provided by the child class.
  *
@@ -133,10 +174,11 @@ type ReadonlyProperties<T> = {
  * Note: .emit() is not available on the proxy; events originate from the child.
  *
  * @template T - The original class/interface type
+ * @template Mode - Serialization mode: 'json' (default) or 'advanced'
  *
  * @example
  * ```typescript
- * // Using async disposable (recommended)
+ * // Using async disposable (recommended) with default JSON mode
  * await using proxy = await procxy(Calculator, { modulePath });
  * const result = await proxy.add(1, 2);
  * // Automatically cleaned up when block exits
@@ -144,21 +186,26 @@ type ReadonlyProperties<T> = {
  *
  * @example
  * ```typescript
- * // Using disposable (sync cleanup)
- * using proxy = await procxy(Calculator, { modulePath });
- * const result = await proxy.add(1, 2);
- * // Cleanup triggered synchronously
+ * // Using advanced serialization mode for Buffer support
+ * await using proxy = await procxy(ImageProcessor, {
+ *   modulePath,
+ *   serialization: 'advanced'
+ * });
+ * const buffer = Buffer.from('image data');
+ * const processed = await proxy.processImage(buffer);
  * ```
  */
-export type Procxy<T> = {
+export type Procxy<T, Mode extends SerializationMode = 'json'> = {
   /**
-   * Transform all Jsonifiable methods to async.
-   * Methods with non-Jsonifiable parameters or return values are excluded.
+   * Transform all procxiable methods to async.
+   * Methods with non-procxiable parameters or return values are excluded.
    */
-  [K in keyof JsonifiableMethods<T>]: JsonifiableMethods<T>[K] extends (...args: infer A) => infer R
+  [K in keyof ProcxiableMethods<T, Mode>]: ProcxiableMethods<T, Mode>[K] extends (
+    ...args: infer A
+  ) => infer R
     ? (...args: A) => Promise<Awaited<R>>
     : never;
-} & ReadonlyProperties<T> & {
+} & ReadonlyProperties<T, Mode> & {
     /**
      * Explicitly terminate the child process.
      * Subsequent method calls will fail with ChildCrashedError.
@@ -192,37 +239,46 @@ export type Procxy<T> = {
           on<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T>;
-          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
+          ): Procxy<T, Mode>;
+          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
           once<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T>;
-          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
+          ): Procxy<T, Mode>;
+          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
           off<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T>;
-          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
+          ): Procxy<T, Mode>;
+          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
           removeListener<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T>;
-          removeListener(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
+          ): Procxy<T, Mode>;
+          removeListener(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode>;
         }
       : {
           // EventEmitter without typed event map - provide untyped methods
-          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
-          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
-          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
-          removeListener(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
+          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          removeListener(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode>;
         }
     : T extends EventEmitter
       ? {
           // Plain EventEmitter (no generic parameter)
-          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
-          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
-          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
-          removeListener(event: string | symbol, listener: (...args: any[]) => void): Procxy<T>;
+          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          removeListener(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode>;
         }
       : {});

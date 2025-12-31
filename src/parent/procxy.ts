@@ -7,7 +7,7 @@ import type { Constructor, Jsonifiable } from 'type-fest';
 import type { Procxy } from '../types/procxy.js';
 import type { ProcxyOptions } from '../types/options.js';
 import { resolveConstructorModule } from '../shared/module-resolver.js';
-import { validateJsonifiableArray } from '../shared/serialization.js';
+import { validateJsonifiableArray, validateV8SerializableArray } from '../shared/serialization.js';
 import { createParentProxy } from './parent-proxy.js';
 import { IPCClient } from './ipc-client.js';
 import { ChildCrashedError, OptionsValidationError, TimeoutError } from '../shared/errors.js';
@@ -51,6 +51,16 @@ function validateOptions(options: ProcxyOptions): void {
   if (options.cwd) {
     if (!existsSync(options.cwd) || !statSync(options.cwd).isDirectory()) {
       throw new OptionsValidationError('cwd', options.cwd, 'must be an existing directory');
+    }
+  }
+
+  if (options.serialization !== undefined) {
+    if (options.serialization !== 'json' && options.serialization !== 'advanced') {
+      throw new OptionsValidationError(
+        'serialization',
+        options.serialization,
+        'must be either "json" or "advanced"'
+      );
     }
   }
 }
@@ -230,7 +240,15 @@ export async function procxy<T extends object | Record<string, typeof Object>, C
       : never
 ): Promise<T extends object ? Procxy<T> : T[C] extends Constructor<infer U> ? Procxy<U> : never> {
   validateOptions(options ?? {});
-  validateJsonifiableArray(constructorArgs, 'constructor arguments');
+
+  const serializationMode = options?.serialization ?? 'json';
+
+  // Validate constructor args based on serialization mode
+  if (serializationMode === 'json') {
+    validateJsonifiableArray(constructorArgs, 'constructor arguments');
+  } else {
+    validateV8SerializableArray(constructorArgs, 'constructor arguments');
+  }
 
   const moduleResolution = resolveConstructorModule(
     classOrClassName as unknown as Function,
@@ -253,7 +271,8 @@ export async function procxy<T extends object | Record<string, typeof Object>, C
     stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
     cwd: options?.cwd ?? process.cwd(),
     env: { ...process.env, ...options?.env },
-    execArgv
+    execArgv,
+    serialization: serializationMode
   };
 
   const child = fork(agentPath, toArgStrings(options?.args), forkOptions);
@@ -264,7 +283,8 @@ export async function procxy<T extends object | Record<string, typeof Object>, C
     type: 'INIT',
     modulePath: resolvedModulePath,
     className: moduleResolution.className,
-    constructorArgs: [...constructorArgs]
+    constructorArgs: [...constructorArgs],
+    serialization: serializationMode
   };
 
   child.send(initMessage);
