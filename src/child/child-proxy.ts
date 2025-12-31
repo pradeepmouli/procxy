@@ -254,11 +254,6 @@ export class ChildProxy {
       // Handle void/undefined return values - send null instead
       const valueToSerialize = value === undefined ? null : value;
 
-      // DEBUG: Log what we're sending
-      console.log('[CHILD] Sending value:', valueToSerialize);
-      console.log('[CHILD] Is Buffer:', Buffer.isBuffer(valueToSerialize));
-      console.log('[CHILD] Constructor:', valueToSerialize?.constructor?.name);
-
       // In JSON mode, validate by round-tripping through JSON
       // In advanced mode, skip validation - Node.js handles V8 serialization
       if (this.serializationMode === 'json') {
@@ -279,9 +274,6 @@ export class ChildProxy {
           id,
           value: valueToSerialize
         };
-
-        console.log('[CHILD] Sending response:', response);
-        console.log('[CHILD] response.value is Buffer:', Buffer.isBuffer(response.value));
 
         this.send(response);
       }

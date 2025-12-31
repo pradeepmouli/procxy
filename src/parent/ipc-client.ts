@@ -271,16 +271,6 @@ export class IPCClient extends EventEmitter {
    * Handle incoming messages from child process.
    */
   private handleMessage(message: ChildToParentMessage): void {
-    // DEBUG: Log raw message
-    if (message.type === 'RESULT' || message.type === 'ERROR') {
-      console.log('[IPC-CLIENT] handleMessage type:', message.type);
-      if (message.type === 'RESULT') {
-        const resp = message as Response;
-        console.log('[IPC-CLIENT] Raw response.value:', resp.value);
-        console.log('[IPC-CLIENT] Raw is Buffer:', Buffer.isBuffer(resp.value));
-      }
-    }
-
     if (message.type === 'RESULT' || message.type === 'ERROR') {
       this.handleResponse(message);
       return;
@@ -335,13 +325,6 @@ export class IPCClient extends EventEmitter {
 
     // Remove from pending
     this.pendingRequests.delete(response.id);
-
-    // DEBUG: Log the response value
-    if (response.type === 'RESULT') {
-      console.log('[IPC-CLIENT] Received RESULT:', response.value);
-      console.log('[IPC-CLIENT] Is Buffer:', Buffer.isBuffer(response.value));
-      console.log('[IPC-CLIENT] Constructor:', response.value?.constructor?.name);
-    }
 
     // Resolve or reject
     if (response.type === 'RESULT') {

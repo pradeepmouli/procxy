@@ -227,6 +227,7 @@ export class CallbackRegistry {
 
 /**
  * Serialize a value, converting callbacks to callback IDs.
+ * In advanced serialization mode, special types (Buffer, Map, Set, etc.) are preserved.
  */
 export function serializeWithCallbacks(
   value: unknown,
@@ -241,7 +242,52 @@ export function serializeWithCallbacks(
     return value.map((item) => serializeWithCallbacks(item, callbackRegistry)) as any;
   }
 
-  if (value && typeof value === 'object' && !(value instanceof Date)) {
+  // Preserve V8-serializable types - don't destructure them
+  // These types will be handled by Node.js's V8 serialization when serialization: 'advanced'
+  if (value && typeof value === 'object') {
+    // Date - preserve as-is
+    if (value instanceof Date) {
+      return value as any;
+    }
+
+    // Buffer - preserve as-is (Node.js specific)
+    if (Buffer.isBuffer(value)) {
+      return value as any;
+    }
+
+    // TypedArray - preserve as-is
+    if (ArrayBuffer.isView(value)) {
+      return value as any;
+    }
+
+    // Map - preserve as-is
+    if (value instanceof Map) {
+      return value as any;
+    }
+
+    // Set - preserve as-is
+    if (value instanceof Set) {
+      return value as any;
+    }
+
+    // ArrayBuffer - preserve as-is
+    if (value instanceof ArrayBuffer) {
+      return value as any;
+    }
+
+    // RegExp - preserve as-is
+    if (value instanceof RegExp) {
+      return value as any;
+    }
+
+    // Error - preserve as-is
+    if (value instanceof Error) {
+      return value as any;
+    }
+
+    // BigInt is a primitive, handled below
+
+    // Plain objects - recursively serialize
     const result: any = {};
     for (const [key, val] of Object.entries(value)) {
       result[key] = serializeWithCallbacks(val, callbackRegistry);
