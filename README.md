@@ -646,6 +646,110 @@ class Task extends EventEmitter<Events> {
 }
 ```
 
+### Advanced Serialization Support
+
+Support for V8's structured clone algorithm to enable passing richer data types:
+
+```typescript
+// Binary data processing
+class ImageProcessor {
+  async process(image: Buffer): Promise<Uint8Array> {
+    // Process binary data directly without conversion
+  }
+}
+
+const processor = await procxy(ImageProcessor, {
+  serialization: 'advanced'  // Enable V8 serialization
+});
+
+const imageBuffer = await fs.promises.readFile('image.png');
+const result = await processor.process(imageBuffer);  // ✅ Buffer supported!
+
+// Collections and BigInt
+class DataAnalyzer {
+  async analyze(data: Map<string, bigint>): Promise<Set<string>> {
+    // Work with Map, Set, and BigInt directly
+  }
+}
+
+const analyzer = await procxy(DataAnalyzer, {
+  serialization: 'advanced'
+});
+
+const stats = new Map([['total', 100n], ['processed', 75n]]);
+const results = await analyzer.analyze(stats);  // ✅ Map and BigInt supported!
+```
+
+**Planned Support:**
+- ✅ **Binary Types**: `Buffer`, `ArrayBuffer`, `TypedArray` (Uint8Array, Int32Array, etc.)
+- ✅ **Collections**: `Map`, `Set` with full type preservation
+- ✅ **Large Numbers**: `BigInt` for cryptographic and mathematical operations
+- ✅ **Rich Objects**: Full `Date`, `RegExp`, `Error` instances (not just strings)
+- ✅ **Handle Passing**: Transfer sockets, servers, and file descriptors to child processes
+
+See [ENHANCEMENT_SPEC_ADVANCED_SERIALIZATION.md](./ENHANCEMENT_SPEC_ADVANCED_SERIALIZATION.md) for the complete specification.
+
+### Worker Thread Support
+
+Support for Node.js worker threads as an alternative to child processes:
+
+```typescript
+// This will be possible in a future release
+import { procxy } from 'procxy';
+import { HeavyComputation } from './computation.js';
+
+const worker = await procxy(HeavyComputation, {
+  runtime: 'worker_threads'  // Use worker threads instead of child processes
+});
+
+// Same API, but runs in a worker thread
+const result = await worker.compute(largeDataset);
+```
+
+**Benefits of Worker Threads:**
+- **Shared Memory**: Use `SharedArrayBuffer` for zero-copy data sharing
+- **Lower Overhead**: Faster startup and less memory than child processes
+- **Same V8 Instance**: Share compiled code and optimize across workers
+- **Better for CPU-bound tasks**: Ideal for parallel computation
+
+**Use Cases:**
+- Parallel data processing with shared memory
+- CPU-intensive calculations (cryptography, image processing, ML inference)
+- High-frequency worker creation/destruction
+- Scenarios where process isolation is not required
+
+### Web Worker Support
+
+Support for Web Workers in browser environments:
+
+```typescript
+// This will be possible in a future release (if feasible)
+import { procxy } from 'procxy/browser';
+import { DataProcessor } from './processor.js';
+
+// Same API works in the browser!
+const processor = await procxy(DataProcessor, {
+  runtime: 'web_worker'
+});
+
+const result = await processor.processLargeDataset(data);
+// Runs in a Web Worker, keeping the main thread responsive
+```
+
+**Feasibility Considerations:**
+- **Module Loading**: Web Workers use `importScripts()` or ES modules (limited browser support)
+- **Serialization**: Structured clone algorithm already supported in browsers
+- **Class Instantiation**: May require bundler integration or runtime code generation
+- **Evaluation**: Research needed to determine if automatic class proxying is practical
+
+**Potential Use Cases:**
+- Offload heavy computations from the main thread (parsing, compression, encryption)
+- Keep UI responsive during data processing
+- Run untrusted code in sandboxed workers
+- Isomorphic libraries that work in both Node.js and browsers
+
+**Note**: Web Worker support is under evaluation. The primary challenge is dynamic class instantiation in workers without explicit registration. Community feedback welcome!
+
 ## 📚 More Examples
 
 ### Data Processing Pipeline
