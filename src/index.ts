@@ -83,9 +83,10 @@ export type { ProcxyOptions, SerializationMode } from './types/options.js';
  * @see {@link V8Serializable} - Types supported by V8 structured clone algorithm
  * @see {@link Procxiable} - Get serializable type constraint for a given mode
  * @see {@link IsProcxiable} - Check if a type is serializable for a given mode
+ * @see {@link PassableHandle} - Types that can be transferred as handles
  */
 export type { V8Serializable } from './shared/serialization.js';
-export type { Procxiable, IsProcxiable } from './types/procxy.js';
+export type { Procxiable, IsProcxiable, PassableHandle } from './types/procxy.js';
 
 /**
  * Base error class for all Procxy-specific errors.
@@ -169,5 +170,7 @@ export type {
   ErrorInfo,
   EventMessage,
   ParentToChildMessage,
-  ChildToParentMessage
+  ChildToParentMessage,
+  HandleMessage,
+  HandleAck
 } from './shared/protocol.js';

@@ -1,8 +1,39 @@
 # Changelog
 
+## 0.1.0-alpha.3
+
+### Minor Changes
+
+- added support for passing sockets
+
 ## 0.1.0-alpha.2
 
-- advanced serialization support
+- **Advanced Serialization Support (V8 Structured Clone)**
+
+  - Support for `BigInt`, `ArrayBuffer`, `TypedArray`, `DataView`, `Date`, `Map`, `Set`, `Error` objects
+  - Nested structure support with recursive serialization/deserialization
+  - Configurable via `serialization: 'advanced'` option with `as const` for type inference
+
+- **Handle Passing Support (IPC File Descriptors)**
+
+  - Type-safe handle passing with conditional `$sendHandle()` method
+  - Only available when `supportHandles: true` option is explicitly set
+  - Used for passing TCP sockets, UDP sockets, server handles, or other OS-level descriptors
+  - Implemented via `child.send()` with third parameter in Node.js IPC protocol
+
+- **Generic Type Improvements**
+
+  - Added `SupportHandles` generic parameter to `Procxy<T, Mode, SupportHandles>` type
+  - Conditional `$sendHandle()` method visibility based on `SupportHandles` generic
+  - Added `SupportHandles` generic parameter to `ProcxyOptions<Mode, SupportHandles>`
+  - Improved type inference with proper literal type handling via `as const`
+
+- **Documentation & Examples**
+  - 5 comprehensive examples for advanced serialization and handle passing
+  - Buffer processing with BigInt calculations
+  - Error preservation across process boundaries
+  - Socket transfer using handle passing
+  - Collection processing with Map/Set support
 
 All notable changes to this project will be documented in this file.
 

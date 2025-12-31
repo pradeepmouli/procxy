@@ -184,8 +184,16 @@ type ReadonlyProperties<T, Mode extends SerializationMode> = {
  * const buffer = Buffer.from('image data');
  * const processed = await proxy.processImage(buffer);
  * ```
+ *
+ * @template T - The original class/interface type
+ * @template Mode - Serialization mode: 'json' | 'advanced'
+ * @template SupportHandles - Whether handle passing is enabled
  */
-export type Procxy<T, Mode extends SerializationMode = 'json'> = {
+export type Procxy<
+  T,
+  Mode extends SerializationMode = 'json',
+  SupportHandles extends boolean = false
+> = {
   /**
    * Transform all procxiable methods to async.
    * Methods with non-procxiable parameters or return values are excluded.
@@ -222,53 +230,145 @@ export type Procxy<T, Mode extends SerializationMode = 'json'> = {
      * @returns Promise that resolves when the child process has terminated
      */
     [Symbol.asyncDispose](): Promise<void>;
-  } & (T extends EventEmitter<infer E>
+  } & (SupportHandles extends true
+    ? {
+        /**
+         * Send a handle (socket, server, or file descriptor) to the child process.
+         * The handle is transferred to the child and should not be used in the parent after this call.
+         *
+         * **Available only when `supportHandles: true` in ProcxyOptions**
+         *
+         * @param handle - The handle to send (Socket, Server, dgram.Socket, or file descriptor)
+         * @param handleId - Optional identifier for the handle in the child process
+         * @returns Promise that resolves when the handle has been sent
+         *
+         * @throws {Error} If the handle type is not supported
+         * @throws {Error} If called on Windows (limited support)
+         *
+         * @remarks
+         * - The handle is transferred, not cloned
+         * - Parent should not use the handle after sending
+         * - Child receives handle via internal registry
+         * - Platform-specific: full support on Unix, limited on Windows
+         *
+         * @example
+         * ```typescript
+         * import { procxy } from 'procxy';
+         * import net from 'net';
+         *
+         * const worker = await procxy(SocketHandler, {
+         *   serialization: 'advanced',
+         *   supportHandles: true
+         * } as const);
+         *
+         * const socket = new net.Socket();
+         * socket.connect(8080, 'localhost');
+         *
+         * // Transfer socket to child (ownership transferred)
+         * await worker.$sendHandle(socket);
+         * ```
+         */
+        $sendHandle(handle: PassableHandle, handleId?: string): Promise<void>;
+      }
+    : {}) &
+  (T extends EventEmitter<infer E>
     ? E extends Record<string | symbol, any[]>
       ? // EventEmitter with typed event map - always provide methods
         {
           on<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T, Mode>;
-          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
+          on(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
           once<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T, Mode>;
-          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
+          once(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
           off<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T, Mode>;
-          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
+          off(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
           removeListener<K extends keyof JsonifiableEventMap<ExtractEventMap<T>>>(
             event: K,
             listener: JsonifiableEventMap<ExtractEventMap<T>>[K]
-          ): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
           removeListener(
             event: string | symbol,
             listener: (...args: any[]) => void
-          ): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
         }
       : {
           // EventEmitter without typed event map - provide untyped methods
-          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
-          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
-          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          on(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
+          once(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
+          off(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
           removeListener(
             event: string | symbol,
             listener: (...args: any[]) => void
-          ): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
         }
     : T extends EventEmitter
       ? {
           // Plain EventEmitter (no generic parameter)
-          on(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
-          once(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
-          off(event: string | symbol, listener: (...args: any[]) => void): Procxy<T, Mode>;
+          on(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
+          once(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
+          off(
+            event: string | symbol,
+            listener: (...args: any[]) => void
+          ): Procxy<T, Mode, SupportHandles>;
           removeListener(
             event: string | symbol,
             listener: (...args: any[]) => void
-          ): Procxy<T, Mode>;
+          ): Procxy<T, Mode, SupportHandles>;
         }
       : {});
+
+/**
+ * Types that can be passed as handles to child processes.
+ * These are transferred (not cloned) to the child.
+ *
+ * Supported handle types:
+ * - net.Socket: TCP/IPC sockets
+ * - net.Server: TCP/IPC servers
+ * - dgram.Socket: UDP sockets
+ * - number: File descriptors (Unix only)
+ *
+ * @remarks
+ * Handle passing is platform-dependent:
+ * - Full support on Unix-like systems (Linux, macOS)
+ * - Limited support on Windows
+ *
+ * After a handle is sent, the parent process should not use it anymore,
+ * as ownership is transferred to the child process.
+ */
+export type PassableHandle =
+  | import('net').Socket
+  | import('net').Server
+  | import('dgram').Socket
+  | number;

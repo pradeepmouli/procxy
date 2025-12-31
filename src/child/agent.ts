@@ -15,6 +15,9 @@ import { ModuleResolutionError } from '../shared/errors.js';
 import { validateJsonifiableArray, validateV8SerializableArray } from '../shared/serialization.js';
 import { ChildProxy } from './child-proxy.js';
 
+// Handle registry for received handles (sockets, servers, etc.)
+const handleRegistry = new Map<string, any>();
+
 let childProxy: ChildProxy | undefined;
 let serializationMode: SerializationMode = 'json'; // Default to json mode
 
@@ -144,9 +147,18 @@ async function handleParentMessage(message: ParentToChildMessage): Promise<void>
     return;
   }
 
+  if (message.type === 'HANDLE') {
+    // Handle messages are received separately via process.on('message') with handle parameter
+    // This code path acknowledges that we received the handle metadata
+    // The actual handle is stored via setupHandleListener()
+    return;
+  }
+
   if (!childProxy) {
-    const errorInfo = toErrorInfo(new Error('Child agent not initialized'));
-    sendToParent({ type: 'ERROR', id: message.id, error: errorInfo });
+    if ('id' in message) {
+      const errorInfo = toErrorInfo(new Error('Child agent not initialized'));
+      sendToParent({ type: 'ERROR', id: message.id, error: errorInfo });
+    }
     return;
   }
 
@@ -159,7 +171,37 @@ function setupIpcListener(): void {
     process.exit(1);
   }
 
-  process.on('message', (msg: ParentToChildMessage) => {
+  // Set up handle listener first (handles are sent with messages)
+  process.on('message', (msg: ParentToChildMessage, handle?: any) => {
+    // If a handle is provided, this is a handle transfer message
+    if (handle && msg.type === 'HANDLE') {
+      const handleMsg = msg as import('../shared/protocol.js').HandleMessage;
+
+      try {
+        // Store the handle in registry
+        handleRegistry.set(handleMsg.handleId, handle);
+
+        // Send acknowledgment
+        const ack: import('../shared/protocol.js').HandleAck = {
+          type: 'HANDLE_ACK',
+          handleId: handleMsg.handleId,
+          received: true
+        };
+        sendToParent(ack);
+      } catch (error) {
+        // Send error acknowledgment
+        const ack: import('../shared/protocol.js').HandleAck = {
+          type: 'HANDLE_ACK',
+          handleId: handleMsg.handleId,
+          received: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        };
+        sendToParent(ack);
+      }
+      return;
+    }
+
+    // Regular message handling
     handleParentMessage(msg).catch((error) => {
       console.error('Failed to handle IPC message:', error);
     });
@@ -168,6 +210,14 @@ function setupIpcListener(): void {
   process.on('disconnect', () => {
     process.exit(0);
   });
+}
+
+/**
+ * Get a handle from the registry by ID.
+ * Exposed for use by child proxies if needed.
+ */
+export function getHandle(handleId: string): any {
+  return handleRegistry.get(handleId);
 }
 
 setupIpcListener();

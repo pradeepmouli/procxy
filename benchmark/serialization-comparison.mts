@@ -4,7 +4,7 @@
  * Run with: pnpm tsx benchmark/serialization-comparison.ts
  */
 
-import { resolve, dirname } from 'node:path';
+import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { procxy } from '../src/index.js';
 import { BinaryProcessor } from '../tests/fixtures/BinaryProcessor.js';
@@ -133,14 +133,14 @@ function printResults(results: BenchmarkResult[]) {
 async function main() {
   const results: BenchmarkResult[] = [];
 
-  const binaryProcessorPath = resolve(__dirname, '../tests/fixtures/BinaryProcessor.ts');
-
   console.log('Starting performance benchmarks...\n');
 
   // Test 1: Buffer processing (Advanced mode only)
   console.log('Running: Buffer processing (Advanced mode)...');
   {
-    const proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+    const proxy = await procxy<BinaryProcessor, 'advanced'>(BinaryProcessor, undefined, {
+      serialization: 'advanced' as const
+    });
     const buffer = Buffer.from([0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]);
     const result = await benchmark(
       'Buffer processing (8 bytes)',

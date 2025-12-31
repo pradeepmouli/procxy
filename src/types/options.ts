@@ -11,8 +11,25 @@ export type SerializationMode = 'json' | 'advanced';
  * Configuration options for procxy() function.
  *
  * Allows fine-grained control over child process creation, timeouts, and module resolution.
+ *
+ * @template Mode - Serialization mode: 'json' | 'advanced'
+ * @template SupportHandles - Whether handle passing is enabled (literal boolean)
  */
-export interface ProcxyOptions {
+export type ProcxyOptions<
+  Mode extends SerializationMode = 'json',
+  SupportHandles extends boolean = false
+> = {
+  /**
+   * Path to the module containing the class.
+   * Can be specified here or as the second parameter to procxy().
+   *
+   * If not provided, procxy will attempt to auto-detect the module path
+   * from the class constructor's source location.
+   *
+   * @default undefined (auto-detect from class)
+   */
+  modulePath?: string;
+
   /**
    * Arguments to pass to the child process (via process.argv).
    * All values must be JSON-serializable (type-fest's Jsonifiable).
@@ -73,5 +90,25 @@ export interface ProcxyOptions {
    *
    * 'json' mode is faster for simple objects but cannot handle these types.
    */
-  serialization?: SerializationMode;
-}
+} & (Mode extends 'advanced'
+  ? {
+      serialization: 'advanced';
+      /**
+       * Enable handle passing support in advanced serialization mode.
+       * Allows passing of certain resource handles (e.g., net.Socket) between
+       * parent and child processes.
+       *
+       * Use `as const` for literal type inference:
+       * ```typescript
+       * { serialization: 'advanced', supportHandles: true } as const
+       * ```
+       *
+       * @default false
+       *
+       * @remarks
+       * This option is only valid when serialization mode is 'advanced'.
+       * It enables special handling for supported handle types.
+       */
+      supportHandles?: SupportHandles;
+    }
+  : { serialization?: 'json' });
