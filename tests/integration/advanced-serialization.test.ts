@@ -9,11 +9,7 @@ const binaryProcessorPath = resolve(process.cwd(), 'tests/fixtures/BinaryProcess
 describe('Advanced Serialization Mode - V8 Structured Clone', () => {
   describe('Buffer support', () => {
     it('should handle Buffer arguments and return values', async () => {
-      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
-        BinaryProcessor,
-        binaryProcessorPath,
-        { serialization: 'advanced' }
-      );
+      await using proxy = await procxy(BinaryProcessor, { serialization: 'advanced' });
 
       const input = Buffer.from([0x00, 0x11, 0x22, 0x33]);
       const result = await proxy.processBuffer(input);

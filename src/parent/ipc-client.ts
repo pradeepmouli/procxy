@@ -450,6 +450,88 @@ export class IPCClient extends EventEmitter {
   }
 
   /**
+   * Send a handle (socket, server, or file descriptor) to the child process.
+   * The handle is transferred (not cloned) to the child.
+   *
+   * @param handle - The handle to send
+   * @param handleId - Unique identifier for the handle
+   * @returns Promise that resolves when handle is acknowledged by child
+   */
+  async sendHandle(
+    handle: import('net').Socket | import('net').Server | import('dgram').Socket | number,
+    handleId: string = randomUUID()
+  ): Promise<void> {
+    if (this.isTerminated) {
+      throw new Error('Child process has been terminated');
+    }
+
+    // Determine handle type
+    let handleType: 'socket' | 'server' | 'dgram' | 'fd';
+    if (typeof handle === 'number') {
+      handleType = 'fd';
+    } else if ('listen' in handle && typeof handle.listen === 'function') {
+      handleType = 'server';
+    } else if ('send' in handle && 'bind' in handle) {
+      handleType = 'dgram';
+    } else {
+      handleType = 'socket';
+    }
+
+    const message: import('../shared/protocol.js').HandleMessage = {
+      type: 'HANDLE',
+      handleId,
+      handleType
+    };
+
+    // Send message with handle
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(`Handle send timeout after ${this.timeout}ms`));
+      }, this.timeout);
+
+      // Wait for acknowledgment
+      const ackHandler = (msg: ChildToParentMessage) => {
+        if (msg.type === 'HANDLE_ACK' && msg.handleId === handleId) {
+          clearTimeout(timeoutId);
+          this.childProcess.off('message', ackHandler);
+
+          if (msg.received) {
+            resolve();
+          } else {
+            reject(new Error(msg.error ?? 'Handle transfer failed'));
+          }
+        }
+      };
+
+      this.childProcess.on('message', ackHandler);
+
+      // Send handle via Node.js IPC
+      // Cast handle to SendHandle type (Node.js doesn't accept raw file descriptors via send())
+      const sendHandle = typeof handle === 'number' ? undefined : handle;
+
+      if (typeof handle === 'number') {
+        // File descriptors can't be sent directly, only sockets/servers
+        reject(
+          new Error(
+            'File descriptor handles are not supported via IPC. Use socket or server instead.'
+          )
+        );
+        clearTimeout(timeoutId);
+        this.childProcess.off('message', ackHandler);
+        return;
+      }
+
+      this.childProcess.send(message, sendHandle, (error) => {
+        if (error) {
+          clearTimeout(timeoutId);
+          this.childProcess.off('message', ackHandler);
+          reject(error);
+        }
+      });
+    });
+  }
+
+  /**
    * Terminate the IPC client and child process.
    * Sends DISPOSE message to child to trigger cleanup of remote object if it implements disposable.
    */

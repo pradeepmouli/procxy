@@ -168,6 +168,27 @@ export interface InitFailure {
 }
 
 /**
+ * Handle transmission message sent from parent to child.
+ * Notifies child that a handle (socket, server, file descriptor) is being sent.
+ * The actual handle is passed separately via Node.js child.send(message, handle).
+ */
+export interface HandleMessage {
+  type: 'HANDLE';
+  handleId: string; // Unique identifier for the handle
+  handleType: 'socket' | 'server' | 'dgram' | 'fd'; // Type of handle for validation
+}
+
+/**
+ * Handle acknowledgment sent from child to parent after handle is received.
+ */
+export interface HandleAck {
+  type: 'HANDLE_ACK';
+  handleId: string; // Matches HandleMessage.handleId
+  received: boolean; // Whether handle was successfully received
+  error?: string; // Error message if handle reception failed
+}
+
+/**
  * Union type of all IPC messages sent from parent to child.
  */
 export type ParentToChildMessage =
@@ -178,7 +199,8 @@ export type ParentToChildMessage =
   | EventUnsubscribe
   | CallbackResult
   | CallbackError
-  | PropertyResult;
+  | PropertyResult
+  | HandleMessage;
 
 /**
  * Union type of all IPC messages sent from child to parent.
@@ -191,4 +213,5 @@ export type ChildToParentMessage =
   | DisposeResponse
   | CallbackInvoke
   | PropertyGet
-  | PropertySet;
+  | PropertySet
+  | HandleAck;

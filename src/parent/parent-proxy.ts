@@ -23,7 +23,11 @@ function isValidIdentifier(name: string): boolean {
 /**
  * Create the parent-side proxy that forwards method calls to the IPC client.
  */
-export function createParentProxy<T extends object>(ipcClient: IPCClient): Procxy<T> {
+export function createParentProxy<
+  T extends object,
+  M extends 'json' | 'advanced' = 'json',
+  SH extends boolean = false
+>(ipcClient: IPCClient): Procxy<T, M, SH> {
   const base: T = {} as T;
 
   const proxy = new Proxy<T>(base, {
@@ -38,6 +42,10 @@ export function createParentProxy<T extends object>(ipcClient: IPCClient): Procx
 
       if (prop === '$process') {
         return ipcClient.process;
+      }
+
+      if (prop === '$sendHandle') {
+        return (handle: any, handleId?: string) => ipcClient.sendHandle(handle, handleId);
       }
 
       // Disposable protocol support
@@ -104,5 +112,5 @@ export function createParentProxy<T extends object>(ipcClient: IPCClient): Procx
     }
   });
 
-  return proxy as unknown as Procxy<T>;
+  return proxy as unknown as Procxy<T, M, SH>;
 }

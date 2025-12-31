@@ -225,12 +225,14 @@ Configuration options for customizing child process behavior:
 
 ```typescript
 interface ProcxyOptions {
+  modulePath?: string;               // Path to module (optional if using static imports)
   timeout?: number;                  // Timeout per method call in ms (default: 30000)
   retries?: number;                  // Number of retry attempts on failure (default: 3)
   env?: Record<string, string>;      // Custom environment variables for child process
   cwd?: string;                      // Working directory for child process
   args?: Jsonifiable[];              // Additional command line arguments
   serialization?: 'json' | 'advanced'; // Serialization mode (default: 'json')
+  supportHandles?: boolean;          // Enable handle passing for sockets (advanced mode only)
 }
 ```
 
@@ -622,7 +624,48 @@ console.log(result);  // 56088n
 | Date | ⚠️ (as string) | ✅ (as Date) |
 | RegExp | ⚠️ (as object) | ✅ (as RegExp) |
 | Error | ⚠️ (partial) | ✅ (full props) |
+| Handle Passing (sockets) | ❌ | ✅ (with `supportHandles`) |
 | Performance | Faster for simple objects | Slightly slower |
+
+### Handle Passing
+
+Advanced serialization mode also enables **handle passing** - the ability to transfer network sockets and server handles between processes.
+
+```typescript
+import { procxy } from 'procxy';
+import * as net from 'net';
+
+class SocketHandler {
+  registerConnection(id: string, socket: net.Socket): void {
+    socket.on('data', (data) => {
+      console.log(`Received on ${id}:`, data.toString());
+    });
+  }
+}
+
+// Enable handle passing
+const handler = await procxy(SocketHandler, {
+  serialization: 'advanced',
+  supportHandles: true  // Required for handle passing
+} as const);  // Use 'as const' for type inference
+
+// Create a server and accept connections
+const server = net.createServer((socket) => {
+  // Transfer the socket to the child process
+  handler.$sendHandle(socket, 'connection-1');  // TypeScript knows $sendHandle is available!
+
+  // Register it in the child
+  handler.registerConnection('connection-1', socket);
+});
+
+server.listen(8080);
+```
+
+**Platform Support:**
+- ✅ **Unix/Linux/macOS**: Full support for socket transfer
+- ⚠️ **Windows**: Limited support - some handle types may not work correctly
+
+See [examples/advanced-serialization/socket-transfer.ts](./examples/advanced-serialization/socket-transfer.ts) for a complete example.
 
 ### When to Use Advanced Mode
 
@@ -637,6 +680,17 @@ console.log(result);  // 56088n
 - Handling large numbers with BigInt
 - Need to preserve Date/RegExp/Error objects with full fidelity
 - Transferring TypedArray data between processes
+- **Passing network sockets between processes** (requires `supportHandles: true`)
+
+### More Examples
+
+See [examples/advanced-serialization/](./examples/advanced-serialization/) for comprehensive examples:
+- [Buffer Processing](./examples/advanced-serialization/buffer-processing.ts) - Image data processing with Buffers
+- [BigInt Calculations](./examples/advanced-serialization/bigint-calculations.ts) - Large number operations
+- [Collection Processing](./examples/advanced-serialization/collection-processing.ts) - Map and Set usage
+- [Socket Transfer](./examples/advanced-serialization/socket-transfer.ts) - Handle passing with network sockets
+- [Error Preservation](./examples/advanced-serialization/error-preservation.ts) - Full Error object preservation
+- [Migration Guide](./examples/advanced-serialization/migration-guide.md) - Step-by-step migration from JSON mode
 
 ### Performance Considerations
 
@@ -728,14 +782,75 @@ await procxy(Worker, './worker.js');
 
 ### Serialization Errors
 
-Ensure all arguments and return values are JSON-serializable:
+Ensure all arguments and return values are serializable for your chosen mode:
 
+**JSON Mode:**
 ```typescript
 // ✅ OK
 await proxy.process({ name: 'test', count: 42 });
 
 // ❌ Not OK - contains function
 await proxy.process({ name: 'test', fn: () => {} });
+
+// ❌ Not OK - Buffer requires advanced mode
+await proxy.processImage(Buffer.from('data'));
+```
+
+**Advanced Mode:**
+```typescript
+// Enable advanced mode
+const proxy = await procxy<Worker, 'advanced'>(
+  Worker,
+  { serialization: 'advanced' }
+);
+
+// ✅ Now OK - Buffer is supported
+await proxy.processImage(Buffer.from('data'));
+
+// ✅ OK - Map and Set supported
+await proxy.processMap(new Map([['key', 'value']]));
+await proxy.processSet(new Set([1, 2, 3]));
+
+// ✅ OK - BigInt supported
+await proxy.calculate(123456789n);
+```
+
+### Type Inference Issues
+
+When using advanced serialization, ensure the type parameter matches the option:
+
+```typescript
+// ✅ Correct - type parameter matches serialization option
+const worker = await procxy<Worker, 'advanced'>(
+  Worker,
+  { serialization: 'advanced' }
+);
+
+// ❌ Wrong - type mismatch will cause TypeScript errors
+const worker = await procxy<Worker, 'json'>(
+  Worker,
+  { serialization: 'advanced' }  // TypeScript error!
+);
+```
+
+### Handle Passing Issues
+
+If handle passing doesn't work:
+
+```typescript
+// ✅ Ensure both advanced mode AND supportHandles are enabled with 'as const'
+const handler = await procxy(Handler, {
+  serialization: 'advanced',
+  supportHandles: true  // Required!
+} as const);  // 'as const' ensures TypeScript infers supportHandles: true
+
+// ✅ Now $sendHandle is available in TypeScript autocomplete
+await handler.$sendHandle(socket);
+
+// ✅ Check platform - Windows has limited support
+if (process.platform === 'win32') {
+  console.warn('Handle passing may not work on Windows');
+}
 ```
 
 ### Timeout Issues

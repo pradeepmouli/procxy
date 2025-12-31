@@ -17,7 +17,9 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
 const MIN_INIT_TIMEOUT_MS = 1000;
 
-function validateOptions(options: ProcxyOptions): void {
+function validateOptions<M extends 'json' | 'advanced', SH extends boolean = false>(
+  options: ProcxyOptions<M, SH>
+): void {
   if (
     options.timeout !== undefined &&
     (typeof options.timeout !== 'number' || options.timeout <= 0)
@@ -45,7 +47,11 @@ function validateOptions(options: ProcxyOptions): void {
   }
 
   if (options.args) {
-    validateJsonifiableArray(options.args as unknown[], 'ProcxyOptions.args');
+    if (options.serialization === 'json' || options.serialization === undefined) {
+      validateJsonifiableArray(options.args as unknown[], 'ProcxyOptions.args');
+    } else {
+      validateV8SerializableArray(options.args as unknown[], 'ProcxyOptions.args');
+    }
   }
 
   if (options.cwd) {
@@ -218,49 +224,75 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
 export async function procxy<
   T extends Record<string, typeof Object>,
   C extends keyof T,
-  M extends 'advanced' | 'json' = 'json'
+  M extends 'advanced' | 'json',
+  SH extends boolean = false
 >(
   className: keyof T,
-  modulePath?: string,
-  options?: ProcxyOptions &
-    (M extends 'advanced' ? { serialization: 'advanced' } : { serialization?: 'json' }),
+  modulePathOrOptions?: string | ProcxyOptions<M, SH>,
+  options?: ProcxyOptions<M, SH>,
   ...constructorArgs: T[keyof T] extends Constructor<any>
     ? ConstructorParameters<T[keyof T]>
     : never
-): Promise<T[C] extends Constructor<infer U> ? Procxy<U, M> : never>;
-export async function procxy<T extends object, M extends 'advanced' | 'json' = 'json'>(
+): Promise<T[C] extends Constructor<infer U> ? Procxy<U, M, SH> : never>;
+export async function procxy<
+  T extends object,
+  M extends 'advanced' | 'json',
+  SH extends boolean = false
+>(
   Class: Constructor<T>,
-  modulePath?: string,
-  options?: ProcxyOptions &
-    (M extends 'advanced' ? { serialization: 'advanced' } : { serialization?: 'json' }),
+  modulePathOrOptions?: string | ProcxyOptions<M, SH>,
+  options?: ProcxyOptions<M, SH>,
   ...constructorArgs: ConstructorParameters<Constructor<T>>
-): Promise<Procxy<T, M>>;
+): Promise<Procxy<T, M, SH>>;
 export async function procxy<
   T extends object | Record<string, typeof Object>,
   C extends keyof T,
-  M extends 'advanced' | 'json' = 'json'
+  M extends 'advanced' | 'json',
+  SH extends boolean = false
 >(
   classOrClassName: T extends object ? Constructor<T> : C,
-  modulePath?: string,
-  options?: ProcxyOptions &
-    (M extends 'advanced' ? { serialization: 'advanced' } : { serialization?: 'json' }),
+  modulePathOrOptions?: string | ProcxyOptions<M, SH>,
+  options?: ProcxyOptions<M, SH>,
   ...constructorArgs: T extends object
     ? ConstructorParameters<Constructor<T>>
     : T[C] extends Constructor<any>
       ? ConstructorParameters<T[C]>
       : never
 ): Promise<
-  T extends object ? Procxy<T, M> : T[C] extends Constructor<infer U> ? Procxy<U, M> : never
+  T extends object ? Procxy<T, M, SH> : T[C] extends Constructor<infer U> ? Procxy<U, M, SH> : never
 > {
-  validateOptions(options ?? {});
+  // Handle flexible parameter: second parameter can be modulePath (string) or options (object)
+  let modulePath: string | undefined;
+  let resolvedOptions: ProcxyOptions<M, SH> | undefined;
 
-  const serializationMode = options?.serialization ?? 'json';
+  if (typeof modulePathOrOptions === 'string') {
+    // Traditional usage: procxy(Class, modulePath, options, ...args)
+    modulePath = modulePathOrOptions;
+    resolvedOptions = options;
+  } else {
+    // Ergonomic usage: procxy(Class, options, ...args) where options.modulePath is optional
+    resolvedOptions = modulePathOrOptions;
+    modulePath = resolvedOptions?.modulePath;
+  }
+
+  validateOptions(resolvedOptions ?? ({} as ProcxyOptions<M, SH>));
+
+  const serializationMode = resolvedOptions?.serialization ?? 'json';
 
   // Validate constructor args based on serialization mode
   if (serializationMode === 'json') {
     validateJsonifiableArray(constructorArgs, 'constructor arguments');
-  } else {
+  } else if (resolvedOptions?.serialization === 'advanced') {
     validateV8SerializableArray(constructorArgs, 'constructor arguments');
+    const supportHandles = resolvedOptions?.supportHandles ?? false;
+
+    // Warn if handle passing is requested on Windows
+    if (supportHandles && process.platform === 'win32') {
+      console.warn(
+        '[procxy] Warning: Handle passing has limited support on Windows. ' +
+          'Some features may not work correctly.'
+      );
+    }
   }
 
   const moduleResolution = resolveConstructorModule(
@@ -274,21 +306,21 @@ export async function procxy<
   const resolvedModulePath = moduleResolution.modulePath.startsWith('file://')
     ? fileURLToPath(moduleResolution.modulePath)
     : resolve(moduleResolution.modulePath);
-  const timeout = options?.timeout ?? DEFAULT_TIMEOUT_MS;
-  const retries = options?.retries ?? DEFAULT_RETRIES;
+  const timeout = resolvedOptions?.timeout ?? DEFAULT_TIMEOUT_MS;
+  const retries = resolvedOptions?.retries ?? DEFAULT_RETRIES;
 
   const agentPath = pickAgentPath();
   const execArgv = pickExecArgv(agentPath);
 
   const forkOptions: ForkOptions = {
     stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
-    cwd: options?.cwd ?? process.cwd(),
-    env: { ...process.env, ...options?.env },
+    cwd: resolvedOptions?.cwd ?? process.cwd(),
+    env: { ...process.env, ...resolvedOptions?.env },
     execArgv,
     serialization: serializationMode
   };
 
-  const child = fork(agentPath, toArgStrings(options?.args), forkOptions);
+  const child = fork(agentPath, toArgStrings(resolvedOptions?.args), forkOptions);
 
   const ipcClient = new IPCClient(child, timeout, retries);
 
@@ -303,7 +335,6 @@ export async function procxy<
   child.send(initMessage);
   await waitForInitialization(ipcClient, timeout);
 
-  return createParentProxy<T>(ipcClient) as unknown as Promise<
-    T extends object ? Procxy<T, M> : T[C] extends Constructor<infer U> ? Procxy<U, M> : never
-  >;
+  // Cast through any to work around TypeScript's conditional type narrowing limitations
+  return createParentProxy(ipcClient) as any;
 }

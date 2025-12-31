@@ -4,5 +4,5 @@
   "initialVersions": {
     "procxy": "0.1.0-alpha.1"
   },
-  "changesets": ["wild-crabs-wait"]
+  "changesets": ["slow-humans-drive", "wild-crabs-wait"]
 }
