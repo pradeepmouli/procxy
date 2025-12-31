@@ -215,30 +215,43 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * @see {@link ProcxyOptions} for available configuration options
  * @see {@link https://github.com/pradeepmouli/procxy#readme | Procxy Documentation}
  */
-export async function procxy<T extends Record<string, typeof Object>, C extends keyof T>(
+export async function procxy<
+  T extends Record<string, typeof Object>,
+  C extends keyof T,
+  M extends 'advanced' | 'json' = 'json'
+>(
   className: keyof T,
   modulePath?: string,
-  options?: ProcxyOptions,
+  options?: ProcxyOptions &
+    (M extends 'advanced' ? { serialization: 'advanced' } : { serialization?: 'json' }),
   ...constructorArgs: T[keyof T] extends Constructor<any>
     ? ConstructorParameters<T[keyof T]>
     : never
-): Promise<T[C] extends Constructor<infer U> ? Procxy<U> : never>;
-export async function procxy<T extends object>(
+): Promise<T[C] extends Constructor<infer U> ? Procxy<U, M> : never>;
+export async function procxy<T extends object, M extends 'advanced' | 'json' = 'json'>(
   Class: Constructor<T>,
   modulePath?: string,
-  options?: ProcxyOptions,
+  options?: ProcxyOptions &
+    (M extends 'advanced' ? { serialization: 'advanced' } : { serialization?: 'json' }),
   ...constructorArgs: ConstructorParameters<Constructor<T>>
-): Promise<Procxy<T>>;
-export async function procxy<T extends object | Record<string, typeof Object>, C extends keyof T>(
+): Promise<Procxy<T, M>>;
+export async function procxy<
+  T extends object | Record<string, typeof Object>,
+  C extends keyof T,
+  M extends 'advanced' | 'json' = 'json'
+>(
   classOrClassName: T extends object ? Constructor<T> : C,
   modulePath?: string,
-  options?: ProcxyOptions,
+  options?: ProcxyOptions &
+    (M extends 'advanced' ? { serialization: 'advanced' } : { serialization?: 'json' }),
   ...constructorArgs: T extends object
     ? ConstructorParameters<Constructor<T>>
     : T[C] extends Constructor<any>
       ? ConstructorParameters<T[C]>
       : never
-): Promise<T extends object ? Procxy<T> : T[C] extends Constructor<infer U> ? Procxy<U> : never> {
+): Promise<
+  T extends object ? Procxy<T, M> : T[C] extends Constructor<infer U> ? Procxy<U, M> : never
+> {
   validateOptions(options ?? {});
 
   const serializationMode = options?.serialization ?? 'json';
@@ -291,6 +304,6 @@ export async function procxy<T extends object | Record<string, typeof Object>, C
   await waitForInitialization(ipcClient, timeout);
 
   return createParentProxy<T>(ipcClient) as unknown as Promise<
-    T extends object ? Procxy<T> : T[C] extends Constructor<infer U> ? Procxy<U> : never
+    T extends object ? Procxy<T, M> : T[C] extends Constructor<infer U> ? Procxy<U, M> : never
   >;
 }

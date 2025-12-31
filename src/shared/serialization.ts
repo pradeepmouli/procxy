@@ -26,12 +26,14 @@ export type V8Serializable =
   | Float64Array
   | BigInt64Array
   | BigUint64Array
-  | Map<V8Serializable, V8Serializable>
-  | Set<V8Serializable>
+  | Map<any, any>
+  | Set<any>
   | Error
   | RegExp
   | bigint
-  | Date;
+  | Date
+  | { [key: string]: V8Serializable | undefined }
+  | ReadonlyArray<V8Serializable>;
 
 /**
  * Check if a value is V8-serializable.

@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import type { Procxy } from '../../src/types/procxy.js';
 import { BinaryProcessor } from '../fixtures/BinaryProcessor.js';
@@ -7,18 +7,13 @@ import { BinaryProcessor } from '../fixtures/BinaryProcessor.js';
 const binaryProcessorPath = resolve(process.cwd(), 'tests/fixtures/BinaryProcessor.ts');
 
 describe('Advanced Serialization Mode - V8 Structured Clone', () => {
-  let proxy: Procxy<BinaryProcessor, 'advanced'> | undefined;
-
-  afterEach(async () => {
-    if (proxy) {
-      await proxy.$terminate();
-      proxy = undefined;
-    }
-  });
-
   describe('Buffer support', () => {
     it('should handle Buffer arguments and return values', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const input = Buffer.from([0x00, 0x11, 0x22, 0x33]);
       const result = await proxy.processBuffer(input);
@@ -32,7 +27,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle Buffer.from with string', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const input = Buffer.from('hello');
       const result = await proxy.processBuffer(input);
@@ -42,7 +41,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should cache and retrieve Buffer data', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const data = Buffer.from('cached data');
       await proxy.cacheData('key1', data);
@@ -55,7 +58,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('TypedArray support', () => {
     it('should handle Uint8Array', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const input = new Uint8Array([1, 2, 3, 4]);
       const result = await proxy.processTypedArray(input);
@@ -65,7 +72,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle Float32Array', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const input = new Float32Array([1.1, 2.2, 3.3]);
       const result = await proxy.sumFloat32Array(input);
@@ -74,7 +85,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle Int32Array', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const input = new Int32Array([10, 20, 30, 15]);
       const result = await proxy.maxInt32Array(input);
@@ -85,7 +100,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('Map support', () => {
     it('should return Map from remote method', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       await proxy.cacheData('key1', Buffer.from('data1'));
       await proxy.cacheData('key2', Buffer.from('data2'));
@@ -99,7 +118,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle Map as argument', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const map = new Map([
         ['a', 1],
@@ -121,7 +144,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('Set support', () => {
     it('should return Set from remote method', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       await proxy.markProcessed(1);
       await proxy.markProcessed(2);
@@ -137,7 +164,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle Set operations', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       await proxy.markProcessed(42);
       expect(await proxy.isProcessed(42)).toBe(true);
@@ -145,7 +176,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle Set as argument', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const set = new Set(['apple', 'banana', 'cherry']);
 
@@ -163,7 +198,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('BigInt support', () => {
     it('should handle BigInt arguments and return values', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const result = await proxy.multiplyBigInt(BigInt(123), BigInt(456));
 
@@ -172,7 +211,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle large BigInt values', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const largeNumber = BigInt('9007199254740992'); // 2^53
       const result = await proxy.multiplyBigInt(largeNumber, BigInt(2));
@@ -181,7 +224,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should return BigInt from method', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const timestamp = await proxy.getNanosTimestamp();
 
@@ -192,7 +239,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('Date support', () => {
     it('should handle Date arguments and return values', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const date = new Date('2024-01-01');
       const result = await proxy.addDays(date, 5);
@@ -202,7 +253,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should preserve Date object properties', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const date = new Date('2024-06-15T12:30:00Z');
       const result = await proxy.addDays(date, 0);
@@ -214,7 +269,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('RegExp support', () => {
     it('should handle RegExp arguments', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const pattern = /test/i;
       const result1 = await proxy.testPattern(pattern, 'This is a TEST');
@@ -225,7 +284,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle RegExp with flags', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const pattern = new RegExp('\\d+', 'g');
       const result = await proxy.testPattern(pattern, '123abc456');
@@ -236,7 +299,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('Error support', () => {
     it('should handle Error arguments', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const error = new Error('Test error message');
       const result = await proxy.processError(error);
@@ -246,7 +313,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     });
 
     it('should handle TypeError', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const error = new TypeError('Type error message');
       const result = await proxy.processError(error);
@@ -258,7 +329,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('Complex nested structures', () => {
     it('should handle complex operation with multiple V8 types', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       const input = {
         buffer: Buffer.from([0x01, 0x02, 0x03]),
@@ -284,7 +359,11 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
 
   describe('Backward compatibility', () => {
     it('should still work with JSON-serializable types in advanced mode', async () => {
-      proxy = await procxy(BinaryProcessor, binaryProcessorPath, { serialization: 'advanced' });
+      await using proxy: Procxy<BinaryProcessor, 'advanced'> = await procxy(
+        BinaryProcessor,
+        binaryProcessorPath,
+        { serialization: 'advanced' }
+      );
 
       // These should work fine even in advanced mode
       await proxy.markProcessed(1);
