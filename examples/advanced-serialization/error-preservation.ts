@@ -124,7 +124,10 @@ async function main() {
   console.log('🚨 Error Preservation Example\n');
 
   console.log('Creating ErrorService with advanced serialization...');
-  await using service = await procxy(ErrorService, undefined, { serialization: 'advanced' });
+  await using service = await procxy(ErrorService, {
+    modulePath: fileURLToPath(import.meta.url),
+    serialization: 'advanced'
+  });
 
   // Example 1: Custom validation error
   console.log('\n📝 Example 1: Validation error with custom properties');
