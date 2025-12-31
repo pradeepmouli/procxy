@@ -1,5 +1,5 @@
 ---
-"procxy": patch
+"procxy": minor
 ---
 
 advanced serialization support
