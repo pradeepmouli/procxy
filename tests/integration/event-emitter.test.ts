@@ -1,20 +1,11 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import { EventWorker } from '../fixtures/event-worker.js';
 
 describe('EventEmitter Integration', () => {
-  const activeProxies: Array<{ $terminate: () => Promise<void> }> = [];
-
-  afterEach(async () => {
-    // Clean up any proxies that weren't terminated in the test
-    await Promise.all(activeProxies.map((p) => p.$terminate().catch(() => {})));
-    activeProxies.length = 0;
-  });
-
   describe('event forwarding', () => {
     it('should forward events from child to parent', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const events: number[] = [];
       worker.on('progress', (percent: number) => {
@@ -25,13 +16,10 @@ describe('EventEmitter Integration', () => {
 
       expect(events).toHaveLength(5);
       expect(events).toEqual([20, 40, 60, 80, 100]);
-
-      await worker.$terminate();
     });
 
     it('should forward complete event with object payload', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const completeData = await new Promise((resolve) => {
         worker.on('complete', (data: { duration: number; steps: number }) => {
@@ -41,13 +29,10 @@ describe('EventEmitter Integration', () => {
       });
 
       expect(completeData).toEqual({ duration: 100, steps: 5 });
-
-      await worker.$terminate();
     });
 
     it('should forward events with multiple arguments', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const received = await new Promise((resolve) => {
         worker.on('multi', (a: number, b: string, c: boolean) => {
@@ -57,15 +42,12 @@ describe('EventEmitter Integration', () => {
       });
 
       expect(received).toEqual({ a: 42, b: 'test', c: true });
-
-      await worker.$terminate();
     });
   });
 
   describe('multiple listeners', () => {
     it('should support multiple listeners on same event', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const listener1Values: number[] = [];
       const listener2Values: number[] = [];
@@ -84,13 +66,10 @@ describe('EventEmitter Integration', () => {
 
       expect(listener1Values).toEqual([1, 2, 3]);
       expect(listener2Values).toEqual([2, 4, 6]);
-
-      await worker.$terminate();
     });
 
     it('should support .once() for one-time listeners', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const values: number[] = [];
 
@@ -103,13 +82,10 @@ describe('EventEmitter Integration', () => {
       await worker.increment(); // Should not trigger
 
       expect(values).toEqual([1]); // Only first value
-
-      await worker.$terminate();
     });
 
     it('should support .off() to remove listeners', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const values: number[] = [];
       const listener = (value: number) => {
@@ -126,15 +102,12 @@ describe('EventEmitter Integration', () => {
       await worker.increment(); // Should not trigger
 
       expect(values).toEqual([1]); // Only first value
-
-      await worker.$terminate();
     });
   });
 
   describe('multiple event types', () => {
     it('should handle multiple different event types', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const event1Data: string[] = [];
       const event2Data: string[] = [];
@@ -150,15 +123,12 @@ describe('EventEmitter Integration', () => {
       expect(event1Data).toEqual(['hello', 'world']);
       expect(event2Data).toEqual(['HELLO', 'WORLD']);
       expect(event3Data).toEqual([5, 5]);
-
-      await worker.$terminate();
     });
   });
 
   describe('method calls and events', () => {
     it('should handle concurrent method calls and events', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       const progressEvents: number[] = [];
       worker.on('progress', (percent: number) => {
@@ -170,13 +140,10 @@ describe('EventEmitter Integration', () => {
       expect(result).toBe('Task completed');
       expect(value).toBe(0);
       expect(progressEvents.length).toBeGreaterThan(0);
-
-      await worker.$terminate();
     });
 
     it('should handle listeners added after instantiation', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       // Call a method first without any listeners
       await worker.increment(); // value = 1
@@ -192,13 +159,10 @@ describe('EventEmitter Integration', () => {
       await worker.increment(); // value = 3
 
       expect(events).toEqual([2, 3]);
-
-      await worker.$terminate();
     });
 
     it('should not forward events when no listeners are attached', async () => {
-      const worker = await procxy(EventWorker);
-      activeProxies.push(worker);
+      await using worker = await procxy(EventWorker);
 
       // Call methods that emit events, but don't add any listeners
       // This tests the optimization - events should not be forwarded over IPC
@@ -215,8 +179,6 @@ describe('EventEmitter Integration', () => {
       await worker.increment(); // value = 4, should be captured
 
       expect(events).toEqual([4]);
-
-      await worker.$terminate();
     });
   });
 });

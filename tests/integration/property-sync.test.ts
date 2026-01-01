@@ -1,25 +1,13 @@
 import { resolve } from 'node:path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
-import type { Procxy } from '../../src/types/procxy.js';
 import { PropertyWorker } from '../fixtures/property-worker.js';
 
 const propertyWorkerPath = resolve(process.cwd(), 'tests/fixtures/property-worker.ts');
 
 describe('Property Synchronization', () => {
-  let proxy: Procxy<PropertyWorker>;
-
-  beforeEach(async () => {
-    proxy = await procxy(PropertyWorker, propertyWorkerPath);
-  });
-
-  afterEach(async () => {
-    if (proxy) {
-      await proxy.$terminate();
-    }
-  });
-
   it('should synchronize public property writes from child to parent', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     // Initially counter is 0
     expect(await proxy.getCounter()).toBe(0);
 
@@ -31,6 +19,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should synchronize property writes from child', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     // Set name in child
     await proxy.setName('Alice');
 
@@ -39,6 +28,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should support multiple property updates', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     await proxy.setName('Bob');
     await proxy.incrementCounter();
     await proxy.incrementCounter();
@@ -49,6 +39,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should handle property getter/setter with transformation', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     // The PropertyWorker doubles values when setting via setter
     await proxy.incrementCounter(); // counter = 1
 
@@ -58,6 +49,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should maintain property values across method calls', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     await proxy.setName('Charlie');
     await proxy.incrementCounter();
 
@@ -70,6 +62,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should allow parent to read properties synchronously', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     // First, set a property from the child
     await proxy.setName('Diana');
 
@@ -78,6 +71,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should reject parent attempts to set properties', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     // Parent cannot set properties - this should throw
     expect(() => {
       (proxy as any).counter = 5;
@@ -85,6 +79,7 @@ describe('Property Synchronization', () => {
   });
 
   it('should synchronize property updates from child to parent', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
     // Child sets
     await proxy.setName('Frank');
     expect(proxy.name).toBe('Frank');

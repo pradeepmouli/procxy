@@ -1,25 +1,13 @@
 import { resolve } from 'node:path';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
-import type { Procxy } from '../../src/types/procxy.js';
 import { CallbackWorker } from '../fixtures/callback-worker.js';
 
 const callbackWorkerPath = resolve(process.cwd(), 'tests/fixtures/callback-worker.ts');
 
 describe('Callbacks', () => {
-  let proxy: Procxy<CallbackWorker>;
-
-  beforeEach(async () => {
-    proxy = await procxy(CallbackWorker, callbackWorkerPath);
-  });
-
-  afterEach(async () => {
-    if (proxy) {
-      await proxy.$terminate();
-    }
-  });
-
   it('should invoke callback immediately', async () => {
+    await using proxy = await procxy(CallbackWorker, callbackWorkerPath);
     const values: number[] = [];
 
     await proxy.invoke((value) => {
@@ -30,6 +18,7 @@ describe('Callbacks', () => {
   });
 
   it('should invoke async callback', async () => {
+    await using proxy = await procxy(CallbackWorker, callbackWorkerPath);
     const values: number[] = [];
 
     await proxy.invokeAsync(async (value) => {
@@ -40,6 +29,7 @@ describe('Callbacks', () => {
   });
 
   it('should invoke callback multiple times', async () => {
+    await using proxy = await procxy(CallbackWorker, callbackWorkerPath);
     const values: number[] = [];
 
     await proxy.invokeMultiple((value) => {
@@ -50,6 +40,7 @@ describe('Callbacks', () => {
   });
 
   it('should handle callback with multiple parameters', async () => {
+    await using proxy = await procxy(CallbackWorker, callbackWorkerPath);
     let capturedA: number | undefined;
     let capturedB: string | undefined;
     let capturedC: boolean | undefined;
@@ -66,6 +57,7 @@ describe('Callbacks', () => {
   });
 
   it('should handle multiple concurrent callbacks', async () => {
+    await using proxy = await procxy(CallbackWorker, callbackWorkerPath);
     const values: number[] = [];
 
     await Promise.all([
@@ -78,6 +70,7 @@ describe('Callbacks', () => {
   });
 
   it('should handle callback that modifies parent state', async () => {
+    await using proxy = await procxy(CallbackWorker, callbackWorkerPath);
     let counter = 0;
 
     await proxy.invokeMultiple(() => {

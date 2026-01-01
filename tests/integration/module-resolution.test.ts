@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import type { Procxy } from '../../src/types/procxy.js';
 import { Calculator } from '../fixtures/calculator.js';
@@ -10,15 +10,6 @@ const asyncWorkerPath = resolve(process.cwd(), 'tests/fixtures/async-worker.ts')
 
 describe('Module Resolution (T068)', () => {
   let proxies: Procxy<any>[] = [];
-
-  afterEach(async () => {
-    for (const proxy of proxies) {
-      if (proxy) {
-        await proxy.$terminate();
-      }
-    }
-    proxies = [];
-  });
 
   describe('Explicit modulePath option', () => {
     it('should use explicit modulePath when provided', async () => {

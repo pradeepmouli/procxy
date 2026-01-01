@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import type { Procxy } from '../../src/types/procxy.js';
 import { Calculator } from '../fixtures/calculator.js';
@@ -8,18 +8,9 @@ const calculatorPath = resolve(process.cwd(), 'tests/fixtures/calculator.ts');
 const OVERHEAD_THRESHOLD_MS = 10; // SC-003: Method call overhead must be under 10ms
 
 describe('Performance Benchmarks (T070)', () => {
-  let proxy: Procxy<Calculator> | null = null;
-
-  afterEach(async () => {
-    if (proxy) {
-      await proxy.$terminate();
-      proxy = null;
-    }
-  });
-
   describe('Method call overhead', () => {
     it('should have under 10ms overhead for simple method calls (SC-003)', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       // Warm up the connection
       await proxy.add(1, 2);
@@ -39,7 +30,7 @@ describe('Performance Benchmarks (T070)', () => {
     });
 
     it('should have consistent overhead across different method types', async () => {
-      proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+      await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
 
       // Warm up
       await proxy.add(1, 2);
@@ -85,7 +76,7 @@ describe('Performance Benchmarks (T070)', () => {
     });
 
     it('should maintain low overhead with increasing call volume', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       // Test with different batch sizes
       const batchSizes = [10, 50, 100, 500];
@@ -108,7 +99,7 @@ describe('Performance Benchmarks (T070)', () => {
 
   describe('Concurrent performance', () => {
     it('should handle multiple concurrent calls efficiently', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       // Warm up
       await proxy.add(1, 2);
@@ -136,7 +127,7 @@ describe('Performance Benchmarks (T070)', () => {
     });
 
     it('should scale linearly with concurrent request count', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       // Warm up
       await proxy.add(1, 2);
@@ -168,20 +159,16 @@ describe('Performance Benchmarks (T070)', () => {
   describe('Initialization performance', () => {
     it('should initialize procxy instance efficiently', async () => {
       const startTime = performance.now();
-      const instance = await procxy(Calculator, calculatorPath);
+      await using instance = await procxy(Calculator, calculatorPath);
       const initTime = performance.now() - startTime;
 
-      try {
-        // Verify it works
-        const result = await instance.add(1, 2);
-        expect(result).toBe(3);
+      // Verify it works
+      const result = await instance.add(1, 2);
+      expect(result).toBe(3);
 
-        // Initialization should be reasonable (typically 100-300ms for Node.js fork)
-        // We don't enforce a strict limit here as fork() is inherently slow
-        console.log(`Procxy initialization: ${initTime.toFixed(2)}ms`);
-      } finally {
-        await instance.$terminate();
-      }
+      // Initialization should be reasonable (typically 100-300ms for Node.js fork)
+      // We don't enforce a strict limit here as fork() is inherently slow
+      console.log(`Procxy initialization: ${initTime.toFixed(2)}ms`);
     });
 
     it('should handle rapid instance creation', async () => {
@@ -211,7 +198,7 @@ describe('Performance Benchmarks (T070)', () => {
 
   describe('Memory efficiency', () => {
     it('should not accumulate overhead with sequential operations', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       const operationGroups = 5;
       const operationsPerGroup = 100;
@@ -241,7 +228,7 @@ describe('Performance Benchmarks (T070)', () => {
     });
 
     it('should maintain performance with large argument lists', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       // Warm up
       await proxy.add(1, 2);
@@ -264,7 +251,7 @@ describe('Performance Benchmarks (T070)', () => {
 
   describe('Variance analysis', () => {
     it('should have predictable call time variance', async () => {
-      proxy = await procxy(Calculator, calculatorPath);
+      await using proxy = await procxy(Calculator, calculatorPath);
 
       // Warm up
       await proxy.add(1, 2);

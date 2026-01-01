@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
-import type { Procxy } from '../../src/types/procxy.js';
 import { Calculator } from '../fixtures/calculator.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -11,19 +10,9 @@ const __dirname = dirname(__filename);
 const calculatorPath = join(__dirname, '../fixtures/calculator.ts');
 
 describe('Concurrent Method Calls', () => {
-  let proxy: Procxy<Calculator>;
-
-  beforeEach(async () => {
-    proxy = await procxy(Calculator, calculatorPath, undefined, 2);
-  });
-
-  afterEach(async () => {
-    if (proxy) {
-      await proxy.$terminate();
-    }
-  });
-
   it('should handle multiple simultaneous method calls', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     const promises = [
       proxy.add(1, 2),
       proxy.add(3, 4),
@@ -38,6 +27,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should maintain request correlation across concurrent calls', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     // Fire 100 concurrent calls with different arguments
     const promises = Array.from({ length: 100 }, (_, i) => proxy.add(i, i));
 
@@ -50,6 +41,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should handle interleaved fast and slow operations', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     // Create a mix of fast and slow operations
     const promises = [
       proxy.add(1, 1), // fast
@@ -65,6 +58,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should handle concurrent calls to the same method', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     const promises = Array.from({ length: 50 }, () => proxy.add(1, 1));
 
     const results = await Promise.all(promises);
@@ -75,6 +70,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should handle concurrent calls with mixed success and errors', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     const promises = [
       proxy.add(1, 2), // success
       proxy.divide(10, 0), // error
@@ -102,6 +99,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should not have cross-talk between concurrent requests', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     // Test that request IDs are properly correlated
     // Each call should get its own unique result
     const promises = [
@@ -118,6 +117,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should handle rapid sequential batches of concurrent calls', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     // Fire 3 batches of 10 concurrent calls each
     const batch1 = await Promise.all(Array.from({ length: 10 }, (_, i) => proxy.add(i, 10)));
 
@@ -156,6 +157,8 @@ describe('Concurrent Method Calls', () => {
   });
 
   it('should maintain performance under load', async () => {
+    await using proxy = await procxy(Calculator, calculatorPath, undefined, 2);
+
     const iterations = 200;
     const startTime = Date.now();
 
