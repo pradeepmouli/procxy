@@ -11,7 +11,7 @@ describe('Advanced Serialization Mode - V8 Structured Clone', () => {
     it('should handle Buffer arguments and return values', async () => {
       await using proxy = await procxy(BinaryProcessor, {
         modulePath: binaryProcessorPath,
-        serialization: 'advanced',
+        serialization: 'advanced'
       });
 
       const input = Buffer.from([0x00, 0x11, 0x22, 0x33]);
