@@ -1,6 +1,6 @@
 {
   "name": "procxy",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.4",
   "description": "Type-safe process-based proxy for Node.js - Run class instances in isolated child processes with full TypeScript support",
   "keywords": [
     "proxy",
