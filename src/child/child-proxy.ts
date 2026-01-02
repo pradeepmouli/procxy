@@ -67,15 +67,19 @@ export class ChildProxy {
           return false;
         }
 
-        // Send property set to parent
-        const message: PropertySet = {
-          type: 'PROPERTY_SET',
-          prop,
-          value
-        };
-        this.send(message);
+        // Filter out function assignments - they cannot be serialized over IPC
+        // This includes method assignments and EventEmitter listener manipulation
+        if (typeof value !== 'function') {
+          // Send property set to parent (only for non-function values)
+          const message: PropertySet = {
+            type: 'PROPERTY_SET',
+            prop,
+            value
+          };
+          this.send(message);
+        }
 
-        // Also set locally on target
+        // Always set locally on target (including functions)
         target[prop] = value;
         return true;
       }
@@ -121,11 +125,20 @@ export class ChildProxy {
 
   /**
    * Capture all public (non-function) properties from the target.
+   * Filters out functions and EventEmitter internal state.
    */
   private capturePublicProperties(): Map<string, any> {
     const props = new Map<string, any>();
 
     for (const key in this.target) {
+      // Skip EventEmitter internal properties (these contain listener functions)
+      if (
+        key.startsWith('_') &&
+        (key === '_events' || key === '_eventsCount' || key === '_maxListeners')
+      ) {
+        continue;
+      }
+
       const value = this.target[key];
       if (typeof value !== 'function') {
         props.set(key, value);
