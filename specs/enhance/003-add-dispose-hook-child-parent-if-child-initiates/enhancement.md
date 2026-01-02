@@ -72,11 +72,3 @@ This is an additive change that doesn't modify existing APIs.
 
 ---
 *Enhancement created using `/enhance` workflow - See .specify/extensions/workflows/enhance/*
-- [ ] Documentation updated (if needed)
-- [ ] Code reviewed (if appropriate)
-
-## Notes
-[Any additional context, considerations, or decisions made during implementation]
-
----
-*Enhancement created using `/enhance` workflow - See .specify/extensions/workflows/enhance/*
