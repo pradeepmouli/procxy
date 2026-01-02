@@ -121,6 +121,17 @@ async function handleInit(message: InitMessage): Promise<void> {
     const instance = new TargetClass(...message.constructorArgs);
     childProxy = new ChildProxy(instance, sendToParent, serializationMode);
 
+    // Capture initial properties set during construction
+    const initialProperties = childProxy.captureInitialProperties();
+
+    // Send initial properties first (before INIT_SUCCESS)
+    const initProps: import('../shared/protocol.js').InitProperties = {
+      type: 'INIT_PROPERTIES',
+      properties: initialProperties
+    };
+    sendToParent(initProps);
+
+    // Then signal success
     const success: InitSuccess = { type: 'INIT_SUCCESS' };
     sendToParent(success);
   } catch (error) {
