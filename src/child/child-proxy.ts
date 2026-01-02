@@ -188,6 +188,31 @@ export class ChildProxy {
   }
 
   /**
+   * Capture initial properties from constructor for bulk initialization.
+   * Returns a map of property name -> value for all procxyable properties.
+   * Automatically tracks all captured properties.
+   */
+  captureInitialProperties(): Record<string, any> {
+    const properties: Record<string, any> = {};
+
+    for (const key in this.target) {
+      const value = this.target[key];
+
+      // Same filter as capturePublicProperties
+      const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(key);
+      const isProxiable = isValidIdentifier && !key.startsWith('$') && typeof value !== 'function';
+
+      if (isProxiable) {
+        properties[key] = value;
+        // Auto-track all initial properties
+        this.trackedProperties.add(key);
+      }
+    }
+
+    return properties;
+  }
+
+  /**
    * Deserialize an argument, converting SerializedCallback to proxy function.
    */
   private deserializeArg(arg: any): any {

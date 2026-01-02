@@ -2,8 +2,13 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import { PropertyWorker } from '../fixtures/property-worker.js';
+import { ConstructorPropertyWorker } from '../fixtures/constructor-property-worker.js';
 
 const propertyWorkerPath = resolve(process.cwd(), 'tests/fixtures/property-worker.ts');
+const constructorPropertyWorkerPath = resolve(
+  process.cwd(),
+  'tests/fixtures/constructor-property-worker.ts'
+);
 
 describe('Property Synchronization', () => {
   it('should synchronize public property writes from child to parent', async () => {
@@ -87,5 +92,43 @@ describe('Property Synchronization', () => {
     // Child sets again
     await proxy.setName('Grace');
     expect(proxy.name).toBe('Grace');
+  });
+
+  it('should make constructor-set properties immediately available', async () => {
+    await using proxy = await procxy(
+      ConstructorPropertyWorker,
+      constructorPropertyWorkerPath,
+      'Alice',
+      30,
+      true
+    );
+
+    // Properties set in constructor should be immediately available (no method call needed)
+    expect(proxy.name).toBe('Alice');
+    expect(proxy.age).toBe(30);
+    expect(proxy.active).toBe(true);
+  });
+
+  it('should track constructor-set properties for subsequent updates', async () => {
+    await using proxy = await procxy(
+      ConstructorPropertyWorker,
+      constructorPropertyWorkerPath,
+      'Bob',
+      25
+    );
+
+    // Initial values from constructor
+    expect(proxy.name).toBe('Bob');
+    expect(proxy.age).toBe(25);
+
+    // Update properties via methods
+    await proxy.setName('Charlie');
+    await proxy.incrementAge();
+    await proxy.toggleActive();
+
+    // Updated values should be synced
+    expect(proxy.name).toBe('Charlie');
+    expect(proxy.age).toBe(26);
+    expect(proxy.active).toBe(false);
   });
 });

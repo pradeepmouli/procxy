@@ -15,7 +15,8 @@ import type {
   CallbackError,
   PropertyGet,
   PropertySet,
-  PropertyResult
+  PropertyResult,
+  InitProperties
 } from '../shared/protocol.js';
 import { TimeoutError, ChildCrashedError } from '../shared/errors.js';
 import { EventEmitter } from 'node:events';
@@ -296,6 +297,11 @@ export class IPCClient extends EventEmitter {
       return;
     }
 
+    if (message.type === 'INIT_PROPERTIES') {
+      this.handleInitProperties(message);
+      return;
+    }
+
     if (message.type === 'INIT_SUCCESS') {
       this.emit('init_success');
       return;
@@ -418,6 +424,17 @@ export class IPCClient extends EventEmitter {
    */
   private handlePropertySet(message: PropertySet): void {
     this.propertyStore.set(message.prop, message.value);
+  }
+
+  /**
+   * Handle initial properties message from child.
+   * Bulk initialization of property store with constructor-set properties.
+   */
+  private handleInitProperties(message: InitProperties): void {
+    // Populate property store with all initial properties
+    for (const [prop, value] of Object.entries(message.properties)) {
+      this.propertyStore.set(prop, value);
+    }
   }
 
   /**

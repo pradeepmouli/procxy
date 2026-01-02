@@ -169,6 +169,16 @@ export interface InitSuccess {
 }
 
 /**
+ * Initial properties message sent from child to parent after construction.
+ * Contains all procxyable properties set during construction (bulk initialization).
+ * This is separate from PROPERTY_SET which is used for subsequent runtime updates.
+ */
+export interface InitProperties {
+  type: 'INIT_PROPERTIES';
+  properties: Record<string, Jsonifiable>; // Property name -> value map
+}
+
+/**
  * Initialization failure message sent from child to parent when instantiation fails.
  */
 export interface InitFailure {
@@ -228,6 +238,7 @@ export type ChildToParentMessage =
   | Response
   | EventMessage
   | InitSuccess
+  | InitProperties
   | InitFailure
   | DisposeResponse
   | CallbackInvoke
