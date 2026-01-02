@@ -181,9 +181,12 @@ export type {
  * These utilities enable bidirectional type mapping and introspection:
  * - UnwrapProcxy: Extract T from Procxy<T>
  * - IsProcxy: Check if a type is a Procxy type
+ * - IsProcxyIsomorphic: Compile-time verification that T <-> Procxy<T> form an isomorphism
  * - ProcxyIsomorphism: Demonstrate the bidirectional mapping
  * - ChangeProcxyMode: Convert between serialization modes
  * - VerifyIsomorphism: Compile-time verification of the isomorphism
+ * - MaybeProxy: Type representing either T or Procxy<T>
+ * - Procxify: Extract procxiable properties from an object type
  *
  * @example
  * ```typescript
@@ -208,6 +211,7 @@ export type {
 export type {
   UnwrapProcxy,
   IsProcxy,
+  IsProcxyIsomorphic,
   GetProcxyMode,
   HasHandleSupport,
   ChangeProcxyMode,
@@ -215,5 +219,52 @@ export type {
   ProcxyIsomorphism,
   VerifyIsomorphism,
   GetProcxyMethods,
-  GetProcxyLifecycleMethods
+  GetProcxyLifecycleMethods,
+  MaybeProxy
 } from './types/isomorphism.js';
+
+/**
+ * Runtime utilities for working with Procxy instances.
+ *
+ * These functions provide runtime checks for Procxy instances:
+ * - isProcxy: Check if a value is a Procxy instance
+ * - isAdvancedMode: Check if a Procxy instance uses advanced serialization mode
+ * - isHandleSupported: Check if a Procxy instance supports handle passing
+ *
+ * @example
+ * ```typescript
+ * import { procxy, isProcxy, isAdvancedMode } from 'procxy';
+ *
+ * const calc = await procxy(Calculator, './calculator.js');
+ *
+ * if (isProcxy(calc)) {
+ *   console.log('Is a Procxy instance');
+ * }
+ *
+ * if (isAdvancedMode(calc)) {
+ *   console.log('Using advanced serialization');
+ * }
+ * ```
+ */
+export { isProcxy, isAdvancedMode, isHandleSupported } from './types/isomorphism.js';
+
+/**
+ * Type utility for extracting procxiable properties from an object.
+ *
+ * Procxify picks only non-method properties that can be serialized across the IPC boundary
+ * based on the serialization mode. This is useful for typing data transfer objects.
+ *
+ * @example
+ * ```typescript
+ * import { Procxify } from 'procxy';
+ *
+ * class User {
+ *   name: string;
+ *   age: number;
+ *   greet() { return `Hello ${this.name}`; }
+ * }
+ *
+ * type UserData = Procxify<User>; // { name: string; age: number }
+ * ```
+ */
+export type { Procxify } from './types/procxy.js';
