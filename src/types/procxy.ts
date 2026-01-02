@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'child_process';
 import type { EventEmitter } from 'events';
-import type { Jsonifiable, ArrayValues, UnionToIntersection, Jsonify } from 'type-fest';
+import type { Jsonifiable, ArrayValues, UnionToIntersection } from 'type-fest';
 import type { SerializationMode } from './options.js';
 import type { V8Serializable } from '../shared/serialization.js';
 
