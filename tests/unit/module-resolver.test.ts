@@ -170,10 +170,7 @@ describe('Module Resolver', () => {
         "import { TestWorker } from './worker';\nconst x = TestWorker;"
       );
 
-      class TestWorker {}
-
-      // Since we can't easily mock the stack trace, we'll test the internal behavior
-      // by verifying the files were created correctly and import resolution would work
+      // Verify both files exist - the resolver should prefer .ts
       expect(existsSync(tsModuleFile)).toBe(true);
       expect(existsSync(jsModuleFile)).toBe(true);
 
@@ -196,8 +193,6 @@ describe('Module Resolver', () => {
         "import { TestWorker } from './worker';\nconst x = TestWorker;"
       );
 
-      class TestWorker {}
-
       // Verify .js exists but .ts doesn't
       expect(existsSync(jsModuleFile)).toBe(true);
       expect(existsSync(tsModuleFile)).toBe(false);
@@ -218,8 +213,6 @@ describe('Module Resolver', () => {
         callerFile,
         "import { TestWorker } from './worker';\nconst x = TestWorker;"
       );
-
-      class TestWorker {}
 
       // Verify neither file exists
       expect(existsSync(tsModuleFile)).toBe(false);
