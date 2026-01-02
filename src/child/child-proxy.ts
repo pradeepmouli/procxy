@@ -69,16 +69,13 @@ export class ChildProxy {
         }
 
         // Only send PROPERTY_SET for properties that parent can handle:
-        // - Valid JavaScript identifiers (letters, numbers, $, _ but not starting with number)
-        // - Not reserved (no $ prefix)
-        // - Not private (no _ prefix - these are internal like EventEmitter's _events)
-        // - Not functions (functions can't be serialized)
-        const isValidIdentifier = /^[A-Za-z$][\w$]*$/.test(prop);
+        // - Valid JavaScript identifiers (matches parent validation)
+        // - Not reserved (no $ prefix - parent rejects this)
+        // - Not functions (can't be serialized over IPC)
+        // Note: We don't filter _ prefix - parent accepts it and serialization will validate
+        const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(prop);
         const isProxiable =
-          isValidIdentifier &&
-          !prop.startsWith('$') &&
-          !prop.startsWith('_') &&
-          typeof value !== 'function';
+          isValidIdentifier && !prop.startsWith('$') && typeof value !== 'function';
 
         if (isProxiable) {
           // Send property set to parent for procxyable properties only
@@ -90,7 +87,7 @@ export class ChildProxy {
           this.send(message);
         }
 
-        // Always set locally on target (including functions and private properties)
+        // Always set locally on target (including functions and reserved properties)
         target[prop] = value;
         return true;
       }
@@ -136,7 +133,7 @@ export class ChildProxy {
 
   /**
    * Capture all procxyable properties from the target.
-   * Only includes properties that can be synced to parent (valid identifiers, not private, not functions).
+   * Only includes properties that can be synced to parent (valid identifiers, not reserved, not functions).
    */
   private capturePublicProperties(): Map<string, any> {
     const props = new Map<string, any>();
@@ -145,12 +142,8 @@ export class ChildProxy {
       const value = this.target[key];
 
       // Only capture properties that parent can handle (same filter as set trap)
-      const isValidIdentifier = /^[A-Za-z$][\w$]*$/.test(key);
-      const isProxiable =
-        isValidIdentifier &&
-        !key.startsWith('$') &&
-        !key.startsWith('_') &&
-        typeof value !== 'function';
+      const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(key);
+      const isProxiable = isValidIdentifier && !key.startsWith('$') && typeof value !== 'function';
 
       if (isProxiable) {
         props.set(key, value);
