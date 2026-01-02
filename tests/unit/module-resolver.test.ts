@@ -165,10 +165,7 @@ describe('Module Resolver', () => {
       writeFileSync(jsModuleFile, 'export class TestWorker {}');
 
       // Create caller that imports without extension
-      writeFileSync(
-        callerFile,
-        "import { TestWorker } from './worker';\nconst x = TestWorker;"
-      );
+      writeFileSync(callerFile, "import { TestWorker } from './worker';\nconst x = TestWorker;");
 
       // Verify both files exist - the resolver should prefer .ts
       expect(existsSync(tsModuleFile)).toBe(true);
@@ -188,10 +185,7 @@ describe('Module Resolver', () => {
       writeFileSync(jsModuleFile, 'export class TestWorker {}');
 
       // Create caller that imports without extension
-      writeFileSync(
-        callerFile,
-        "import { TestWorker } from './worker';\nconst x = TestWorker;"
-      );
+      writeFileSync(callerFile, "import { TestWorker } from './worker';\nconst x = TestWorker;");
 
       // Verify .js exists but .ts doesn't
       expect(existsSync(jsModuleFile)).toBe(true);
@@ -209,10 +203,7 @@ describe('Module Resolver', () => {
 
       // Don't create either file - testing the fallback behavior
       // Create caller that imports without extension
-      writeFileSync(
-        callerFile,
-        "import { TestWorker } from './worker';\nconst x = TestWorker;"
-      );
+      writeFileSync(callerFile, "import { TestWorker } from './worker';\nconst x = TestWorker;");
 
       // Verify neither file exists
       expect(existsSync(tsModuleFile)).toBe(false);
