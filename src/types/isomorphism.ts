@@ -179,7 +179,7 @@ export type IsProcxyIsomorphic<
  *   private secret(): void {}
  * }
  *
- * type Methods = GetProcxyMethods<Procxy<Calculator>>; // 'add' | '$terminate' | '$sendHandle' | ...
+ * type Methods = GetProcxyMethods<Procxy<Calculator>>; // 'add'
  * ```
  */
 export type GetProcxyMethods<P> =
