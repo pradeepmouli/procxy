@@ -1,4 +1,4 @@
-import { describe, it, expectTypeOf } from 'vitest';
+import { describe, it, expectTypeOf, expect } from 'vitest';
 import type { Procxy } from '../../src/types/procxy.js';
 import type {
   UnwrapProcxy,
@@ -13,6 +13,8 @@ import type {
   GetProcxyLifecycleMethods,
   MaybeProxy
 } from '../../src/types/isomorphism.js';
+import { isProcxy, isAdvancedMode, isHandleSupported } from '../../src/types/isomorphism.js';
+import { procxy } from '../../src/index.js';
 
 // Test classes
 class Calculator {
@@ -268,6 +270,129 @@ describe('Isomorphism Type Utilities', () => {
 
       expectTypeOf<Maybe>().not.toMatchTypeOf<{ $terminate(): Promise<void> }>();
       expectTypeOf<Maybe>().not.toMatchTypeOf<{ $process: unknown }>();
+    });
+  });
+
+  describe('isProcxy (runtime)', () => {
+    it('should return false for null and undefined', () => {
+      expect(isProcxy(null)).toBe(false);
+      expect(isProcxy(undefined)).toBe(false);
+    });
+
+    it('should return false for primitives', () => {
+      expect(isProcxy(42)).toBe(false);
+      expect(isProcxy('string')).toBe(false);
+      expect(isProcxy(true)).toBe(false);
+    });
+
+    it('should return false for plain objects', () => {
+      expect(isProcxy({})).toBe(false);
+      expect(isProcxy({ foo: 'bar' })).toBe(false);
+    });
+
+    it('should return false for objects missing $terminate or $process', () => {
+      expect(isProcxy({ $process: {} })).toBe(false);
+      expect(isProcxy({ $terminate: () => {} })).toBe(false);
+    });
+
+    it('should return false when $terminate is not a function', () => {
+      expect(isProcxy({ $terminate: 'not a function', $process: {} })).toBe(false);
+    });
+
+    it('should return false when $process is not an object', () => {
+      expect(isProcxy({ $terminate: () => {}, $process: 'not an object' })).toBe(false);
+    });
+
+    it('should return true when $process is null (typeof null is object)', () => {
+      // Note: In JavaScript, typeof null === 'object', so this returns true
+      expect(isProcxy({ $terminate: () => {}, $process: null })).toBe(true);
+    });
+
+    it('should return true for mock procxy objects', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 }
+      };
+      expect(isProcxy(mockProcxy)).toBe(true);
+    });
+
+    it('should return false for regular class instances', () => {
+      const calc = new Calculator();
+      expect(isProcxy(calc)).toBe(false);
+    });
+  });
+
+  describe('isAdvancedMode (runtime)', () => {
+    it('should return false when $getSerializationMode is missing', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 }
+      };
+      expect(isAdvancedMode(mockProcxy as any)).toBe(false);
+    });
+
+    it('should return false when $getSerializationMode is not a function', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 },
+        $getSerializationMode: 'not a function'
+      };
+      expect(isAdvancedMode(mockProcxy as any)).toBe(false);
+    });
+
+    it('should return false when mode is json', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 },
+        $getSerializationMode: () => 'json'
+      };
+      expect(isAdvancedMode(mockProcxy as any)).toBe(false);
+    });
+
+    it('should return true when mode is advanced', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 },
+        $getSerializationMode: () => 'advanced'
+      };
+      expect(isAdvancedMode(mockProcxy as any)).toBe(true);
+    });
+  });
+
+  describe('isHandleSupported (runtime)', () => {
+    it('should return false when $isHandleSupported is missing', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 }
+      };
+      expect(isHandleSupported(mockProcxy as any)).toBe(false);
+    });
+
+    it('should return false when $isHandleSupported is not a function', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 },
+        $isHandleSupported: 'not a function'
+      };
+      expect(isHandleSupported(mockProcxy as any)).toBe(false);
+    });
+
+    it('should return false when handles are not supported', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 },
+        $isHandleSupported: () => false
+      };
+      expect(isHandleSupported(mockProcxy as any)).toBe(false);
+    });
+
+    it('should return true when handles are supported', () => {
+      const mockProcxy = {
+        $terminate: () => Promise.resolve(),
+        $process: { pid: 123 },
+        $isHandleSupported: () => true
+      };
+      expect(isHandleSupported(mockProcxy as any)).toBe(true);
     });
   });
 });
