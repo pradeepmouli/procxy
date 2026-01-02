@@ -2,6 +2,7 @@ import type { Jsonifiable } from 'type-fest';
 import type { Procxy } from '../types/procxy.js';
 import { ProcxyError } from '../shared/errors.js';
 import { IPCClient } from './ipc-client.js';
+import { isValidIdentifier } from '../shared/property-utils.js';
 
 const eventMethods = new Set([
   'on',
@@ -15,10 +16,6 @@ const eventMethods = new Set([
   'listenerCount',
   'eventNames'
 ]);
-
-function isValidIdentifier(name: string): boolean {
-  return /^[A-Za-z_$][\w$]*$/.test(name);
-}
 
 /**
  * Create the parent-side proxy that forwards method calls to the IPC client.

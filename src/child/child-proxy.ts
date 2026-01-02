@@ -17,6 +17,7 @@ import {
 } from '../shared/serialization.js';
 import { EventBridge } from './event-bridge.js';
 import { randomUUID } from 'node:crypto';
+import { isProxiableProperty } from '../shared/property-utils.js';
 
 /**
  * Child-side proxy handler that invokes methods on the target instance
@@ -40,6 +41,7 @@ export class ChildProxy {
   >();
   private proxiedTarget: any;
   private disposeSent = false;
+  private trackedProperties: Set<string> = new Set(); // Auto-tracked properties for sync
 
   constructor(
     private readonly target: any,
@@ -68,10 +70,13 @@ export class ChildProxy {
           return false;
         }
 
-        // Filter out function assignments - they cannot be serialized over IPC
-        // This includes method assignments and EventEmitter listener manipulation
-        if (typeof value !== 'function') {
-          // Send property set to parent (only for non-function values)
+        // Only send PROPERTY_SET for properties that are:
+        // - Proxiable (valid identifiers, not reserved, not functions)
+        // - Being tracked by parent
+        const isTracked = this.trackedProperties.has(prop);
+
+        if (isProxiableProperty(prop, value) && isTracked) {
+          // Send property set to parent only for tracked properties
           const message: PropertySet = {
             type: 'PROPERTY_SET',
             prop,
@@ -80,7 +85,7 @@ export class ChildProxy {
           this.send(message);
         }
 
-        // Always set locally on target (including functions)
+        // Always set locally on target (including functions and reserved properties)
         target[prop] = value;
         return true;
       }
@@ -125,24 +130,20 @@ export class ChildProxy {
   }
 
   /**
-   * Capture all public (non-function) properties from the target.
-   * Filters out functions and EventEmitter internal state.
+   * Capture all procxyable properties from the target.
+   * Only includes properties that can be synced to parent (valid identifiers, not reserved, not functions).
+   * Auto-tracks any new properties found.
    */
   private capturePublicProperties(): Map<string, any> {
     const props = new Map<string, any>();
 
     for (const key in this.target) {
-      // Skip EventEmitter internal properties (these contain listener functions)
-      if (
-        key.startsWith('_') &&
-        (key === '_events' || key === '_eventsCount' || key === '_maxListeners')
-      ) {
-        continue;
-      }
-
       const value = this.target[key];
-      if (typeof value !== 'function') {
+
+      if (isProxiableProperty(key, value)) {
         props.set(key, value);
+        // Auto-track new properties discovered during method execution
+        this.trackedProperties.add(key);
       }
     }
 
@@ -151,13 +152,15 @@ export class ChildProxy {
 
   /**
    * Send property updates that changed between before/after states.
+   * Only sends updates for properties that parent is tracking.
    */
   private sendPropertyUpdates(before: Map<string, any>, after: Map<string, any>): void {
     for (const [prop, afterValue] of after) {
       const beforeValue = before.get(prop);
 
-      // Only send if the value actually changed
-      if (beforeValue !== afterValue) {
+      // Only send if the value actually changed and property is tracked
+      const isTracked = this.trackedProperties.has(prop);
+      if (beforeValue !== afterValue && isTracked) {
         const message: PropertySet = {
           type: 'PROPERTY_SET',
           prop,
@@ -166,6 +169,38 @@ export class ChildProxy {
         this.send(message);
       }
     }
+  }
+
+  /**
+   * Start tracking a property for updates.
+   *
+   * NOTE: Currently unused. Properties are automatically tracked during initialization
+   * (via captureInitialProperties) and method execution (via capturePublicProperties).
+   * Kept for potential future manual property tracking use cases.
+   */
+  trackProperty(prop: string): void {
+    this.trackedProperties.add(prop);
+  }
+
+  /**
+   * Capture initial properties from constructor for bulk initialization.
+   * Returns a map of property name -> value for all procxyable properties.
+   * Automatically tracks all captured properties.
+   */
+  captureInitialProperties(): Record<string, any> {
+    const properties: Record<string, any> = {};
+
+    for (const key in this.target) {
+      const value = this.target[key];
+
+      if (isProxiableProperty(key, value)) {
+        properties[key] = value;
+        // Auto-track all initial properties
+        this.trackedProperties.add(key);
+      }
+    }
+
+    return properties;
   }
 
   /**

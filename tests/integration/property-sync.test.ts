@@ -2,8 +2,18 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import { PropertyWorker } from '../fixtures/property-worker.js';
+import { ConstructorPropertyWorker } from '../fixtures/constructor-property-worker.js';
+import { DefaultPropertyWorker } from '../fixtures/default-property-worker.js';
 
 const propertyWorkerPath = resolve(process.cwd(), 'tests/fixtures/property-worker.ts');
+const constructorPropertyWorkerPath = resolve(
+  process.cwd(),
+  'tests/fixtures/constructor-property-worker.ts'
+);
+const defaultPropertyWorkerPath = resolve(
+  process.cwd(),
+  'tests/fixtures/default-property-worker.ts'
+);
 
 describe('Property Synchronization', () => {
   it('should synchronize public property writes from child to parent', async () => {
@@ -87,5 +97,80 @@ describe('Property Synchronization', () => {
     // Child sets again
     await proxy.setName('Grace');
     expect(proxy.name).toBe('Grace');
+  });
+
+  it('should make constructor-set properties immediately available', async () => {
+    await using proxy = await procxy(
+      ConstructorPropertyWorker,
+      constructorPropertyWorkerPath,
+      'Alice',
+      30,
+      true
+    );
+
+    // Properties set in constructor should be immediately available (no method call needed)
+    expect(proxy.name).toBe('Alice');
+    expect(proxy.age).toBe(30);
+    expect(proxy.active).toBe(true);
+  });
+
+  it('should track constructor-set properties for subsequent updates', async () => {
+    await using proxy = await procxy(
+      ConstructorPropertyWorker,
+      constructorPropertyWorkerPath,
+      'Bob',
+      25
+    );
+
+    // Initial values from constructor
+    expect(proxy.name).toBe('Bob');
+    expect(proxy.age).toBe(25);
+
+    // Update properties via methods
+    await proxy.setName('Charlie');
+    await proxy.incrementAge();
+    await proxy.toggleActive();
+
+    // Updated values should be synced
+    expect(proxy.name).toBe('Charlie');
+    expect(proxy.age).toBe(26);
+    expect(proxy.active).toBe(false);
+  });
+
+  it('should sync class field initializers (default values)', async () => {
+    await using proxy = await procxy(DefaultPropertyWorker, defaultPropertyWorkerPath);
+
+    // Default values set at class field level should be immediately available
+    expect(proxy.name).toBe('default-name');
+    expect(proxy.counter).toBe(0);
+    expect(proxy.enabled).toBe(true);
+  });
+
+  it('should sync class field initializers with constructor override', async () => {
+    await using proxy = await procxy(
+      DefaultPropertyWorker,
+      defaultPropertyWorkerPath,
+      'custom-name'
+    );
+
+    // Constructor overrides the default name
+    expect(proxy.name).toBe('custom-name');
+    // But other defaults are still set
+    expect(proxy.counter).toBe(0);
+    expect(proxy.enabled).toBe(true);
+  });
+
+  it('should track default-initialized properties for updates', async () => {
+    await using proxy = await procxy(DefaultPropertyWorker, defaultPropertyWorkerPath);
+
+    // Initial defaults
+    expect(proxy.name).toBe('default-name');
+    expect(proxy.counter).toBe(0);
+
+    // Update via method
+    await proxy.incrementCounter();
+
+    // Updated value should be synced
+    expect(proxy.counter).toBe(1);
   });
 });
