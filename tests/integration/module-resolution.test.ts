@@ -220,11 +220,11 @@ describe('Module Resolution (T068)', () => {
     it('should resolve .ts file when it exists', async () => {
       // ts-only-worker.ts exists as a .ts file
       const tsOnlyPath = resolve(process.cwd(), 'tests/fixtures/ts-only-worker.ts');
-      
+
       // Dynamic import to test the fixture works
       const module = await import('../fixtures/ts-only-worker.js');
       const TsOnlyWorker = module.TsOnlyWorker;
-      
+
       const proxy = await procxy(TsOnlyWorker, tsOnlyPath);
       proxies.push(proxy);
 
@@ -235,11 +235,11 @@ describe('Module Resolution (T068)', () => {
     it('should resolve .js file when only .js exists', async () => {
       // js-only-worker.js exists as a .js file
       const jsOnlyPath = resolve(process.cwd(), 'tests/fixtures/js-only-worker.js');
-      
+
       // Dynamic import to test the fixture works
       const module = await import('../fixtures/js-only-worker.js');
       const JsOnlyWorker = module.JsOnlyWorker;
-      
+
       const proxy = await procxy(JsOnlyWorker, jsOnlyPath);
       proxies.push(proxy);
 
