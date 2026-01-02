@@ -17,6 +17,30 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
 const MIN_INIT_TIMEOUT_MS = 1000;
 
+/**
+ * Check if an object is likely a ProcxyOptions object.
+ * This checks for known ProcxyOptions properties to distinguish from plain constructor arguments.
+ */
+function isProcxyOptions(obj: unknown): obj is ProcxyOptions {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return false;
+  }
+
+  const knownKeys = [
+    'modulePath',
+    'timeout',
+    'retries',
+    'serialization',
+    'env',
+    'cwd',
+    'args',
+    'supportHandles'
+  ];
+
+  // Check if the object has at least one known ProcxyOptions property
+  return knownKeys.some((key) => key in obj);
+}
+
 function validateOptions<M extends 'json' | 'advanced', SH extends boolean = false>(
   options: ProcxyOptions<M, SH>
 ): void {
@@ -303,7 +327,7 @@ export async function procxy<
     // modulePathOrOptions is a modulePath string
     modulePath = modulePathOrOptions;
 
-    if (options && typeof options === 'object' && !Array.isArray(options)) {
+    if (isProcxyOptions(options)) {
       // Case: procxy(Class, modulePath, options, ...args)
       resolvedOptions = options;
       actualConstructorArgs = constructorArgs;
@@ -313,9 +337,9 @@ export async function procxy<
       actualConstructorArgs =
         options !== undefined ? [options, ...constructorArgs] : constructorArgs;
     }
-  } else if (modulePathOrOptions && typeof modulePathOrOptions === 'object') {
+  } else if (isProcxyOptions(modulePathOrOptions)) {
     // modulePathOrOptions is options object
-    resolvedOptions = modulePathOrOptions;
+    resolvedOptions = modulePathOrOptions as ProcxyOptions<M, SH>;
     modulePath = resolvedOptions.modulePath;
 
     // Case: procxy(Class, options, ...args)

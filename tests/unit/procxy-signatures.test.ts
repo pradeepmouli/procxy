@@ -156,15 +156,37 @@ describe('procxy() function signature permutations', () => {
       await calc.$terminate();
     });
 
-    it('should treat object without procxy options as constructor arg', async () => {
-      // Plain objects that are not ProcxyOptions should pass through as constructor args
-      // Calculator doesn't accept object constructor args, so this is just for demonstration
+    it('should pass number as constructor arg', async () => {
+      // Passing a plain number should not be confused with ProcxyOptions
       const calc = await procxy(Calculator, CALCULATOR_PATH, 3);
       activeProxies.push(calc);
 
       const result = await calc.add(1.111, 2.222);
       expect(result).toBe(3.333);
       await calc.$terminate();
+    });
+
+    it('should treat plain object without procxy options as constructor arg', async () => {
+      // Plain objects without ProcxyOptions properties should pass through as constructor args
+      class ConfiguredService {
+        constructor(public config: { name: string; value: number }) {}
+        getName() {
+          return this.config.name;
+        }
+        getValue() {
+          return this.config.value;
+        }
+      }
+
+      const servicePath = resolve(process.cwd(), 'tests/fixtures/configured-service.ts');
+      const service = await procxy(ConfiguredService, servicePath, { name: 'test', value: 42 });
+      activeProxies.push(service);
+
+      const name = await service.getName();
+      const value = await service.getValue();
+      expect(name).toBe('test');
+      expect(value).toBe(42);
+      await service.$terminate();
     });
 
     it('should handle undefined/null constructor args correctly', async () => {
