@@ -3,11 +3,16 @@ import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import { PropertyWorker } from '../fixtures/property-worker.js';
 import { ConstructorPropertyWorker } from '../fixtures/constructor-property-worker.js';
+import { DefaultPropertyWorker } from '../fixtures/default-property-worker.js';
 
 const propertyWorkerPath = resolve(process.cwd(), 'tests/fixtures/property-worker.ts');
 const constructorPropertyWorkerPath = resolve(
   process.cwd(),
   'tests/fixtures/constructor-property-worker.ts'
+);
+const defaultPropertyWorkerPath = resolve(
+  process.cwd(),
+  'tests/fixtures/default-property-worker.ts'
 );
 
 describe('Property Synchronization', () => {
@@ -130,5 +135,42 @@ describe('Property Synchronization', () => {
     expect(proxy.name).toBe('Charlie');
     expect(proxy.age).toBe(26);
     expect(proxy.active).toBe(false);
+  });
+
+  it('should sync class field initializers (default values)', async () => {
+    await using proxy = await procxy(DefaultPropertyWorker, defaultPropertyWorkerPath);
+
+    // Default values set at class field level should be immediately available
+    expect(proxy.name).toBe('default-name');
+    expect(proxy.counter).toBe(0);
+    expect(proxy.enabled).toBe(true);
+  });
+
+  it('should sync class field initializers with constructor override', async () => {
+    await using proxy = await procxy(
+      DefaultPropertyWorker,
+      defaultPropertyWorkerPath,
+      'custom-name'
+    );
+
+    // Constructor overrides the default name
+    expect(proxy.name).toBe('custom-name');
+    // But other defaults are still set
+    expect(proxy.counter).toBe(0);
+    expect(proxy.enabled).toBe(true);
+  });
+
+  it('should track default-initialized properties for updates', async () => {
+    await using proxy = await procxy(DefaultPropertyWorker, defaultPropertyWorkerPath);
+
+    // Initial defaults
+    expect(proxy.name).toBe('default-name');
+    expect(proxy.counter).toBe(0);
+
+    // Update via method
+    await proxy.incrementCounter();
+
+    // Updated value should be synced
+    expect(proxy.counter).toBe(1);
   });
 });
