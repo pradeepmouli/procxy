@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'url';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { ModuleResolutionError } from './errors.js';
 
@@ -180,8 +180,21 @@ function parseCallerFileForClassPath(callerPath: string, className: string): str
 
           // Add .ts/.js extension if not present
           if (!importPath.match(/\.(ts|js|mts|cts|mjs|cjs)$/)) {
-            // Try .ts first (TypeScript), then .js
-            return resolvedPath + '.ts';
+            // Check for .ts file first (TypeScript), fall back to .js if .ts doesn't exist
+            const tsPath = resolvedPath + '.ts';
+
+            // Prefer .ts if it exists, otherwise check for .js
+            if (existsSync(tsPath)) {
+              return tsPath;
+            }
+
+            const jsPath = resolvedPath + '.js';
+            if (existsSync(jsPath)) {
+              return jsPath;
+            }
+
+            // If neither exists, return .ts (maintains behavior for tsx execution)
+            return tsPath;
           }
 
           return resolvedPath;
