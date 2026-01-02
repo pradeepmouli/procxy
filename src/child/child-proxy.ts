@@ -40,6 +40,7 @@ export class ChildProxy {
   >();
   private proxiedTarget: any;
   private disposeSent = false;
+  private trackedProperties: Set<string> = new Set(); // Properties parent is tracking
 
   constructor(
     private readonly target: any,
@@ -68,17 +69,18 @@ export class ChildProxy {
           return false;
         }
 
-        // Only send PROPERTY_SET for properties that parent can handle:
+        // Only send PROPERTY_SET for properties that parent is tracking:
         // - Valid JavaScript identifiers (matches parent validation)
         // - Not reserved (no $ prefix - parent rejects this)
         // - Not functions (can't be serialized over IPC)
-        // Note: We don't filter _ prefix - parent accepts it and serialization will validate
+        // - Parent has requested tracking for this property
         const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(prop);
         const isProxiable =
           isValidIdentifier && !prop.startsWith('$') && typeof value !== 'function';
+        const isTracked = this.trackedProperties.has(prop);
 
-        if (isProxiable) {
-          // Send property set to parent for procxyable properties only
+        if (isProxiable && isTracked) {
+          // Send property set to parent only for tracked properties
           const message: PropertySet = {
             type: 'PROPERTY_SET',
             prop,
@@ -134,6 +136,7 @@ export class ChildProxy {
   /**
    * Capture all procxyable properties from the target.
    * Only includes properties that can be synced to parent (valid identifiers, not reserved, not functions).
+   * Auto-tracks any new properties found.
    */
   private capturePublicProperties(): Map<string, any> {
     const props = new Map<string, any>();
@@ -147,6 +150,8 @@ export class ChildProxy {
 
       if (isProxiable) {
         props.set(key, value);
+        // Auto-track new properties discovered during method execution
+        this.trackedProperties.add(key);
       }
     }
 
@@ -155,13 +160,15 @@ export class ChildProxy {
 
   /**
    * Send property updates that changed between before/after states.
+   * Only sends updates for properties that parent is tracking.
    */
   private sendPropertyUpdates(before: Map<string, any>, after: Map<string, any>): void {
     for (const [prop, afterValue] of after) {
       const beforeValue = before.get(prop);
 
-      // Only send if the value actually changed
-      if (beforeValue !== afterValue) {
+      // Only send if the value actually changed and property is tracked
+      const isTracked = this.trackedProperties.has(prop);
+      if (beforeValue !== afterValue && isTracked) {
         const message: PropertySet = {
           type: 'PROPERTY_SET',
           prop,
@@ -170,6 +177,14 @@ export class ChildProxy {
         this.send(message);
       }
     }
+  }
+
+  /**
+   * Start tracking a property for updates.
+   * Called when parent requests to track a specific property.
+   */
+  trackProperty(prop: string): void {
+    this.trackedProperties.add(prop);
   }
 
   /**

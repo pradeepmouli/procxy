@@ -147,6 +147,13 @@ async function handleParentMessage(message: ParentToChildMessage): Promise<void>
     return;
   }
 
+  if (message.type === 'PROPERTY_TRACK') {
+    if (childProxy) {
+      childProxy.trackProperty(message.prop);
+    }
+    return;
+  }
+
   if (message.type === 'HANDLE') {
     // Handle messages are received separately via process.on('message') with handle parameter
     // This code path acknowledges that we received the handle metadata
