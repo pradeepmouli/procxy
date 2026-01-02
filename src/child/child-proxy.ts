@@ -68,10 +68,20 @@ export class ChildProxy {
           return false;
         }
 
-        // Filter out function assignments - they cannot be serialized over IPC
-        // This includes method assignments and EventEmitter listener manipulation
-        if (typeof value !== 'function') {
-          // Send property set to parent (only for non-function values)
+        // Only send PROPERTY_SET for properties that parent can handle:
+        // - Valid JavaScript identifiers (letters, numbers, $, _ but not starting with number)
+        // - Not reserved (no $ prefix)
+        // - Not private (no _ prefix - these are internal like EventEmitter's _events)
+        // - Not functions (functions can't be serialized)
+        const isValidIdentifier = /^[A-Za-z$][\w$]*$/.test(prop);
+        const isProxiable =
+          isValidIdentifier &&
+          !prop.startsWith('$') &&
+          !prop.startsWith('_') &&
+          typeof value !== 'function';
+
+        if (isProxiable) {
+          // Send property set to parent for procxyable properties only
           const message: PropertySet = {
             type: 'PROPERTY_SET',
             prop,
@@ -80,7 +90,7 @@ export class ChildProxy {
           this.send(message);
         }
 
-        // Always set locally on target (including functions)
+        // Always set locally on target (including functions and private properties)
         target[prop] = value;
         return true;
       }
@@ -125,23 +135,24 @@ export class ChildProxy {
   }
 
   /**
-   * Capture all public (non-function) properties from the target.
-   * Filters out functions and EventEmitter internal state.
+   * Capture all procxyable properties from the target.
+   * Only includes properties that can be synced to parent (valid identifiers, not private, not functions).
    */
   private capturePublicProperties(): Map<string, any> {
     const props = new Map<string, any>();
 
     for (const key in this.target) {
-      // Skip EventEmitter internal properties (these contain listener functions)
-      if (
-        key.startsWith('_') &&
-        (key === '_events' || key === '_eventsCount' || key === '_maxListeners')
-      ) {
-        continue;
-      }
-
       const value = this.target[key];
-      if (typeof value !== 'function') {
+
+      // Only capture properties that parent can handle (same filter as set trap)
+      const isValidIdentifier = /^[A-Za-z$][\w$]*$/.test(key);
+      const isProxiable =
+        isValidIdentifier &&
+        !key.startsWith('$') &&
+        !key.startsWith('_') &&
+        typeof value !== 'function';
+
+      if (isProxiable) {
         props.set(key, value);
       }
     }
