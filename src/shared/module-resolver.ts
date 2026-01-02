@@ -182,11 +182,14 @@ function parseCallerFileForClassPath(callerPath: string, className: string): str
           if (!importPath.match(/\.(ts|js|mts|cts|mjs|cjs)$/)) {
             // Check for .ts file first (TypeScript), fall back to .js if .ts doesn't exist
             const tsPath = resolvedPath + '.ts';
-            const jsPath = resolvedPath + '.js';
 
+            // Prefer .ts if it exists, otherwise check for .js
             if (existsSync(tsPath)) {
               return tsPath;
-            } else if (existsSync(jsPath)) {
+            }
+
+            const jsPath = resolvedPath + '.js';
+            if (existsSync(jsPath)) {
               return jsPath;
             }
 
