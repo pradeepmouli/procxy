@@ -17,6 +17,30 @@ const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
 const MIN_INIT_TIMEOUT_MS = 1000;
 
+/**
+ * Check if an object is likely a ProcxyOptions object.
+ * This checks for known ProcxyOptions properties to distinguish from plain constructor arguments.
+ */
+function isProcxyOptions(obj: unknown): obj is ProcxyOptions {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) {
+    return false;
+  }
+
+  const knownKeys = [
+    'modulePath',
+    'timeout',
+    'retries',
+    'serialization',
+    'env',
+    'cwd',
+    'args',
+    'supportHandles'
+  ];
+
+  // Check if the object has at least one known ProcxyOptions property
+  return knownKeys.some((key) => key in obj);
+}
+
 function validateOptions<M extends 'json' | 'advanced', SH extends boolean = false>(
   options: ProcxyOptions<M, SH>
 ): void {
@@ -240,10 +264,37 @@ export async function procxy<
   SH extends boolean = false
 >(
   Class: Constructor<T>,
-  modulePathOrOptions?: string | ProcxyOptions<M, SH>,
-  options?: ProcxyOptions<M, SH>,
+  modulePath: string,
+  options: ProcxyOptions<M, SH>,
   ...constructorArgs: ConstructorParameters<Constructor<T>>
 ): Promise<Procxy<T, M, SH>>;
+export async function procxy<
+  T extends object,
+  M extends 'advanced' | 'json',
+  SH extends boolean = false
+>(
+  Class: Constructor<T>,
+  options: ProcxyOptions<M, SH>,
+  ...constructorArgs: ConstructorParameters<Constructor<T>>
+): Promise<Procxy<T, M, SH>>;
+export async function procxy<
+  T extends object,
+  M extends 'advanced' | 'json',
+  SH extends boolean = false
+>(
+  Class: Constructor<T>,
+  modulePath: string,
+  ...constructorArgs: ConstructorParameters<Constructor<T>>
+): Promise<Procxy<T, M, SH>>;
+export async function procxy<
+  T extends object,
+  M extends 'advanced' | 'json',
+  SH extends boolean = false
+>(
+  Class: Constructor<T>,
+  ...constructorArgs: ConstructorParameters<Constructor<T>>
+): Promise<Procxy<T, M, SH>>;
+
 export async function procxy<
   T extends object | Record<string, typeof Object>,
   C extends keyof T,
@@ -261,18 +312,47 @@ export async function procxy<
 ): Promise<
   T extends object ? Procxy<T, M, SH> : T[C] extends Constructor<infer U> ? Procxy<U, M, SH> : never
 > {
-  // Handle flexible parameter: second parameter can be modulePath (string) or options (object)
+  // Parse arguments to handle all permutations:
+  // 1. procxy(Class|className, modulePath, options, ...args)
+  // 2.1. procxy(Class, options, ...args) - options.modulePath optional
+  // 2.2. procxy(className, options, ...args) - options.modulePath mandatory
+  // 3. procxy(Class|className, modulePath, ...args) - no options
+  // 4. procxy(Class, ...args) - no modulePath or options (Class only)
+
   let modulePath: string | undefined;
   let resolvedOptions: ProcxyOptions<M, SH> | undefined;
+  let actualConstructorArgs: any[];
 
   if (typeof modulePathOrOptions === 'string') {
-    // Traditional usage: procxy(Class, modulePath, options, ...args)
+    // modulePathOrOptions is a modulePath string
     modulePath = modulePathOrOptions;
-    resolvedOptions = options;
+
+    if (isProcxyOptions(options)) {
+      // Case: procxy(Class, modulePath, options, ...args)
+      resolvedOptions = options;
+      actualConstructorArgs = constructorArgs;
+    } else {
+      // Case: procxy(Class, modulePath, ...args) - options is actually first constructor arg
+      resolvedOptions = undefined;
+      actualConstructorArgs =
+        options !== undefined ? [options, ...constructorArgs] : constructorArgs;
+    }
+  } else if (isProcxyOptions(modulePathOrOptions)) {
+    // modulePathOrOptions is options object
+    resolvedOptions = modulePathOrOptions as ProcxyOptions<M, SH>;
+    modulePath = resolvedOptions.modulePath;
+
+    // Case: procxy(Class, options, ...args)
+    // options param becomes first constructor arg
+    actualConstructorArgs = options !== undefined ? [options, ...constructorArgs] : constructorArgs;
   } else {
-    // Ergonomic usage: procxy(Class, options, ...args) where options.modulePath is optional
-    resolvedOptions = modulePathOrOptions;
-    modulePath = resolvedOptions?.modulePath;
+    // Case: procxy(Class, ...args) - no modulePath or options
+    modulePath = undefined;
+    resolvedOptions = undefined;
+    actualConstructorArgs =
+      modulePathOrOptions !== undefined
+        ? [modulePathOrOptions, ...(options !== undefined ? [options] : []), ...constructorArgs]
+        : constructorArgs;
   }
 
   validateOptions(resolvedOptions ?? ({} as ProcxyOptions<M, SH>));
@@ -281,9 +361,9 @@ export async function procxy<
 
   // Validate constructor args based on serialization mode
   if (serializationMode === 'json') {
-    validateJsonifiableArray(constructorArgs, 'constructor arguments');
+    validateJsonifiableArray(actualConstructorArgs, 'constructor arguments');
   } else if (resolvedOptions?.serialization === 'advanced') {
-    validateV8SerializableArray(constructorArgs, 'constructor arguments');
+    validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
     const supportHandles = resolvedOptions?.supportHandles ?? false;
 
     // Warn if handle passing is requested on Windows
@@ -328,7 +408,7 @@ export async function procxy<
     type: 'INIT',
     modulePath: resolvedModulePath,
     className: moduleResolution.className,
-    constructorArgs: [...constructorArgs],
+    constructorArgs: [...actualConstructorArgs],
     serialization: serializationMode
   };
 

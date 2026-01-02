@@ -128,6 +128,19 @@ type ProcxiablePropertyKeys<T, Mode extends SerializationMode> = {
 }[keyof T];
 
 /**
+ * Shallow procxiable subset of an object.
+ * Picks only non-method properties whose values can be sent across the wire for the given mode.
+ * Does not transform methods or recurse; intended to mirror type-fest's Jsonify utility for procxiable data.
+ */
+export type Procxify<T, Mode extends SerializationMode = 'json'> = {
+  [K in keyof T as T[K] extends (...args: any[]) => any
+    ? never
+    : IsProcxiable<T[K], Mode> extends true
+      ? K
+      : never]: T[K];
+};
+
+/**
  * Get readonly properties from the type (excluding methods), mode-aware.
  * Properties are read-only on the proxy - only the child can modify them.
  */

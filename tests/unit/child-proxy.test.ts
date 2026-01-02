@@ -64,4 +64,30 @@ describe('ChildProxy', () => {
     expect(response.error?.name).toBe('Error');
     expect(response.error?.message).toBe('boom');
   });
+
+  describe('dispose()', () => {
+    it('should send a dispose message to parent', () => {
+      const proxy = new ChildProxy(target, send);
+
+      // Call dispose
+      proxy.dispose();
+
+      // Verify dispose message was sent
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({ type: 'DISPOSE' });
+    });
+
+    it('should be idempotent (multiple calls safe)', () => {
+      const proxy = new ChildProxy(target, send);
+
+      // Call dispose multiple times
+      proxy.dispose();
+      proxy.dispose();
+      proxy.dispose();
+
+      // Only one message should be sent (idempotent)
+      expect(messages).toHaveLength(1);
+      expect(messages[0]).toEqual({ type: 'DISPOSE' });
+    });
+  });
 });

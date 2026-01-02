@@ -106,7 +106,7 @@ async function handleParentMessage(message: ParentToChildMessage): Promise<void>
     }
 
     try {
-      await childProxy.dispose();
+      await childProxy.disposableCleanup();
       const response: DisposeResponse = { type: 'DISPOSE_COMPLETE' };
       sendToParent(response);
     } catch (error) {
