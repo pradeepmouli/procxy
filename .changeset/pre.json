@@ -4,5 +4,10 @@
   "initialVersions": {
     "procxy": "0.1.0-alpha.1"
   },
-  "changesets": ["fix-typescript-eventemitter", "slow-humans-drive", "wild-crabs-wait"]
+  "changesets": [
+    "fix-typescript-eventemitter",
+    "sixty-roses-jump",
+    "slow-humans-drive",
+    "wild-crabs-wait"
+  ]
 }

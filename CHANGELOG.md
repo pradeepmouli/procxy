@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.6
+
+### Minor Changes
+
+- pkg cleanup
+
 ## 0.1.0-alpha.5
 
 ### Patch Changes
