@@ -104,15 +104,6 @@ export interface PropertyResult {
 }
 
 /**
- * Property tracking message sent from parent to child.
- * Tells child to start sending updates for this specific property.
- */
-export interface PropertyTrack {
-  type: 'PROPERTY_TRACK';
-  prop: string; // Property name to start tracking
-}
-
-/**
  * Property set request sent from child to parent.
  * Updates property value in parent's backing store.
  */
@@ -228,7 +219,6 @@ export type ParentToChildMessage =
   | CallbackResult
   | CallbackError
   | PropertyResult
-  | PropertyTrack
   | HandleMessage;
 
 /**

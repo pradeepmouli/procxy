@@ -17,6 +17,7 @@ import {
 } from '../shared/serialization.js';
 import { EventBridge } from './event-bridge.js';
 import { randomUUID } from 'node:crypto';
+import { isProxiableProperty } from '../shared/property-utils.js';
 
 /**
  * Child-side proxy handler that invokes methods on the target instance
@@ -40,7 +41,7 @@ export class ChildProxy {
   >();
   private proxiedTarget: any;
   private disposeSent = false;
-  private trackedProperties: Set<string> = new Set(); // Properties parent is tracking
+  private trackedProperties: Set<string> = new Set(); // Auto-tracked properties for sync
 
   constructor(
     private readonly target: any,
@@ -69,17 +70,12 @@ export class ChildProxy {
           return false;
         }
 
-        // Only send PROPERTY_SET for properties that parent is tracking:
-        // - Valid JavaScript identifiers (matches parent validation)
-        // - Not reserved (no $ prefix - parent rejects this)
-        // - Not functions (can't be serialized over IPC)
-        // - Parent has requested tracking for this property
-        const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(prop);
-        const isProxiable =
-          isValidIdentifier && !prop.startsWith('$') && typeof value !== 'function';
+        // Only send PROPERTY_SET for properties that are:
+        // - Proxiable (valid identifiers, not reserved, not functions)
+        // - Being tracked by parent
         const isTracked = this.trackedProperties.has(prop);
 
-        if (isProxiable && isTracked) {
+        if (isProxiableProperty(prop, value) && isTracked) {
           // Send property set to parent only for tracked properties
           const message: PropertySet = {
             type: 'PROPERTY_SET',
@@ -144,11 +140,7 @@ export class ChildProxy {
     for (const key in this.target) {
       const value = this.target[key];
 
-      // Only capture properties that parent can handle (same filter as set trap)
-      const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(key);
-      const isProxiable = isValidIdentifier && !key.startsWith('$') && typeof value !== 'function';
-
-      if (isProxiable) {
+      if (isProxiableProperty(key, value)) {
         props.set(key, value);
         // Auto-track new properties discovered during method execution
         this.trackedProperties.add(key);
@@ -181,7 +173,10 @@ export class ChildProxy {
 
   /**
    * Start tracking a property for updates.
-   * Called when parent requests to track a specific property.
+   *
+   * NOTE: Currently unused. Properties are automatically tracked during initialization
+   * (via captureInitialProperties) and method execution (via capturePublicProperties).
+   * Kept for potential future manual property tracking use cases.
    */
   trackProperty(prop: string): void {
     this.trackedProperties.add(prop);
@@ -198,11 +193,7 @@ export class ChildProxy {
     for (const key in this.target) {
       const value = this.target[key];
 
-      // Same filter as capturePublicProperties
-      const isValidIdentifier = /^[A-Za-z$_][\w$]*$/.test(key);
-      const isProxiable = isValidIdentifier && !key.startsWith('$') && typeof value !== 'function';
-
-      if (isProxiable) {
+      if (isProxiableProperty(key, value)) {
         properties[key] = value;
         // Auto-track all initial properties
         this.trackedProperties.add(key);

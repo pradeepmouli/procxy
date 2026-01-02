@@ -36,7 +36,9 @@ export class ConstructorPropertyWorker {
   }
 
   /**
-   * Get internal value (should not be synced).
+   * Get internal value.
+   * Note: _internal is enumerable and will be synced despite the underscore prefix.
+   * Only $-prefixed properties are excluded from sync.
    */
   getInternal(): string {
     return this._internal;
