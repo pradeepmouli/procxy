@@ -11,6 +11,8 @@ interface EventWorkerEvents {
   event1: [data: string];
   event2: [data: string];
   event3: [data: number];
+  _secret: [token: string];
+  $cache: [data: string];
 }
 
 /**
@@ -67,5 +69,10 @@ export class EventWorker extends EventEmitter<EventWorkerEvents> {
    */
   emitMultiArgs(a: number, b: string, c: boolean): void {
     this.emit('multi', a, b, c);
+  }
+
+  emitPrivateEvents(): void {
+    this.emit('_secret', 'hidden');
+    this.emit('$cache', 'cached');
   }
 }

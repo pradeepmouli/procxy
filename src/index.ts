@@ -83,10 +83,17 @@ export type { ProcxyOptions, SerializationMode } from './types/options.js';
  * @see {@link V8Serializable} - Types supported by V8 structured clone algorithm
  * @see {@link Procxiable} - Get serializable type constraint for a given mode
  * @see {@link IsProcxiable} - Check if a type is serializable for a given mode
+ * @see {@link SerializableConstructorArgs} - Constrain constructor args to be serializable
  * @see {@link PassableHandle} - Types that can be transferred as handles
  */
 export type { V8Serializable } from './shared/serialization.js';
-export type { Procxiable, IsProcxiable, PassableHandle } from './types/procxy.js';
+export { sanitizeForV8, sanitizeForV8Array } from './shared/serialization.js';
+export type {
+  Procxiable,
+  IsProcxiable,
+  SerializableConstructorArgs,
+  PassableHandle
+} from './types/procxy.js';
 
 /**
  * Base error class for all Procxy-specific errors.

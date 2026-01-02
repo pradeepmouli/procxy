@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   isV8Serializable,
   validateV8Serializable,
-  validateV8SerializableArray
+  validateV8SerializableArray,
+  sanitizeForV8,
+  sanitizeForV8Array
 } from '../../src/shared/serialization.js';
 import { SerializationError } from '../../src/shared/errors.js';
 
@@ -234,6 +236,44 @@ describe('V8 Serialization Utilities', () => {
         expect(err.context?.error).toContain('not V8-serializable');
       }
     });
+
+    it('should provide detailed error for nested non-serializable properties', () => {
+      try {
+        validateV8Serializable(
+          {
+            config: {
+              handler: () => {}
+            }
+          },
+          'test config'
+        );
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(SerializationError);
+        const err = error as SerializationError;
+        expect(err.context?.error).toContain('property');
+        expect(err.context?.error).toContain('handler');
+      }
+    });
+
+    it('should detect getter/setter properties', () => {
+      const obj = {};
+      Object.defineProperty(obj, 'prop', {
+        get() {
+          return 42;
+        },
+        enumerable: true
+      });
+
+      try {
+        validateV8Serializable(obj, 'test object');
+        expect.fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(SerializationError);
+        const err = error as SerializationError;
+        expect(err.context?.error).toContain('getter');
+      }
+    });
   });
 
   describe('validateV8SerializableArray', () => {
@@ -346,6 +386,163 @@ describe('V8 Serialization Utilities', () => {
         errors: [new Error('error1'), new Error('error2')]
       };
       expect(isV8Serializable(complexData)).toBe(true);
+    });
+  });
+
+  describe('sanitizeForV8', () => {
+    it('should remove function properties', () => {
+      const obj = {
+        data: 'hello',
+        handler: () => {},
+        value: 42
+      };
+      const sanitized = sanitizeForV8(obj);
+      expect(sanitized).toEqual({ data: 'hello', value: 42 });
+      expect(sanitized.handler).toBeUndefined();
+    });
+
+    it('should invoke getters and include their values', () => {
+      const obj = {
+        _value: 42,
+        get value() {
+          return this._value;
+        },
+        data: 'hello'
+      };
+      const sanitized = sanitizeForV8(obj);
+      // Getter is invoked by Object.entries, so value is included
+      expect(sanitized).toEqual({ _value: 42, value: 42, data: 'hello' });
+    });
+
+    it('should recursively sanitize nested objects', () => {
+      const obj = {
+        config: {
+          handler: () => {},
+          value: 42,
+          nested: {
+            method: () => {},
+            data: 'hello'
+          }
+        }
+      };
+      const sanitized = sanitizeForV8(obj);
+      expect(sanitized).toEqual({
+        config: {
+          value: 42,
+          nested: {
+            data: 'hello'
+          }
+        }
+      });
+    });
+
+    it('should sanitize array elements', () => {
+      const arr = [{ handler: () => {}, data: 'a' }, { method: () => {}, value: 42 }, 'string', 42];
+      const sanitized = sanitizeForV8(arr);
+      expect(sanitized).toEqual([{ data: 'a' }, { value: 42 }, 'string', 42]);
+    });
+
+    it('should preserve V8-serializable types', () => {
+      const obj = {
+        buffer: Buffer.from('test'),
+        date: new Date('2024-01-01'),
+        regexp: /test/,
+        map: new Map([['key', 'value']]),
+        set: new Set([1, 2, 3]),
+        error: new Error('test'),
+        bigint: BigInt(123)
+      };
+      const sanitized = sanitizeForV8(obj);
+      expect(sanitized.buffer).toEqual(obj.buffer);
+      expect(sanitized.date).toEqual(obj.date);
+      expect(sanitized.regexp).toEqual(obj.regexp);
+      expect(sanitized.map).toEqual(obj.map);
+      expect(sanitized.set).toEqual(obj.set);
+      expect(sanitized.error).toEqual(obj.error);
+      expect(sanitized.bigint).toBe(obj.bigint);
+    });
+
+    it('should sanitize Map entries', () => {
+      const map = new Map([
+        ['key1', { handler: () => {}, data: 'value1' }],
+        ['key2', { value: 'value2' }]
+      ]);
+      const sanitized = sanitizeForV8(map);
+      expect(sanitized).toBeInstanceOf(Map);
+      expect(sanitized.get('key1')).toEqual({ data: 'value1' });
+      expect(sanitized.get('key2')).toEqual({ value: 'value2' });
+    });
+
+    it('should sanitize Set elements', () => {
+      const set = new Set([{ handler: () => {}, data: 'a' }, { value: 42 }, 'string']);
+      const sanitized = sanitizeForV8(set);
+      expect(sanitized).toBeInstanceOf(Set);
+      expect(sanitized.has('string')).toBe(true);
+    });
+
+    it('should preserve null and undefined', () => {
+      expect(sanitizeForV8(null)).toBe(null);
+      expect(sanitizeForV8(undefined)).toBeUndefined();
+    });
+
+    it('should return plain object for class instances', () => {
+      class CustomClass {
+        value = 42;
+        method() {}
+      }
+      const result = sanitizeForV8(new CustomClass());
+      // Class instance is converted to plain object with enumerable properties
+      expect(result).toEqual({ value: 42 });
+      expect(result.method).toBeUndefined();
+    });
+
+    it('should handle empty objects and arrays', () => {
+      expect(sanitizeForV8({})).toEqual({});
+      expect(sanitizeForV8([])).toEqual([]);
+    });
+
+    it('should break circular references for objects', () => {
+      const obj: any = {};
+      obj.self = obj;
+
+      const sanitized = sanitizeForV8(obj);
+      expect(() => JSON.stringify(sanitized)).not.toThrow();
+      expect(JSON.stringify(sanitized)).toContain('[Circular]');
+    });
+
+    it('should sanitize Timeout objects without throwing', () => {
+      const timeout = setTimeout(() => {}, 10);
+      const sanitized = sanitizeForV8(timeout as any);
+      clearTimeout(timeout);
+
+      expect(() => JSON.stringify(sanitized)).not.toThrow();
+    });
+
+    it('should convert class instance objects to plain objects', () => {
+      // Create an object that looks like a class but is actually plain
+      const obj = Object.create(null);
+      obj.data = 'hello';
+      obj.value = 42;
+      const sanitized = sanitizeForV8(obj);
+      expect(sanitized).toEqual({ data: 'hello', value: 42 });
+    });
+  });
+
+  describe('sanitizeForV8Array', () => {
+    it('should sanitize array of values', () => {
+      const arr = [{ handler: () => {}, data: 'a' }, { value: 42 }, 'string', 42];
+      const sanitized = sanitizeForV8Array(arr);
+      expect(sanitized).toEqual([{ data: 'a' }, { value: 42 }, 'string', 42]);
+    });
+
+    it('should handle empty array', () => {
+      expect(sanitizeForV8Array([])).toEqual([]);
+    });
+
+    it('should preserve primitives', () => {
+      const arr = [1, 'hello', true, null, undefined];
+      const sanitized = sanitizeForV8Array(arr);
+      expect(sanitized).toEqual(arr);
     });
   });
 });

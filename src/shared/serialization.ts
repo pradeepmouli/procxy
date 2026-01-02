@@ -104,11 +104,33 @@ export function isV8Serializable(value: unknown): value is V8Serializable {
     }
 
     // Plain objects
-    if (
-      Object.getPrototypeOf(value) === Object.prototype ||
-      Object.getPrototypeOf(value) === null
-    ) {
-      return Object.values(value).every((v) => isV8Serializable(v));
+    const proto = Object.getPrototypeOf(value);
+    if (proto === Object.prototype || proto === null) {
+      // Check all properties, including getters/setters
+      for (const key of Object.getOwnPropertyNames(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, key);
+        if (!descriptor) continue;
+
+        // Check if property has getters/setters (these are functions, not serializable)
+        if (descriptor.get || descriptor.set) {
+          return false;
+        }
+
+        // Check the value
+        if (!isV8Serializable(descriptor.value)) {
+          return false;
+        }
+      }
+
+      // Also check symbol properties
+      for (const symbol of Object.getOwnPropertySymbols(value)) {
+        const descriptor = Object.getOwnPropertyDescriptor(value, symbol);
+        if (descriptor && !isV8Serializable(descriptor.value)) {
+          return false;
+        }
+      }
+
+      return true;
     }
 
     // Other object types are not supported
@@ -116,6 +138,75 @@ export function isV8Serializable(value: unknown): value is V8Serializable {
   }
 
   return false;
+}
+
+/**
+ * Find the first non-serializable property in an object (for debugging).
+ */
+function findNonSerializableProperty(value: unknown): { path: string; reason: string } | null {
+  const visited = new WeakSet<object>();
+
+  function check(obj: unknown, path: string): { path: string; reason: string } | null {
+    if (obj === null || obj === undefined || typeof obj !== 'object') {
+      return null;
+    }
+
+    if (visited.has(obj as object)) {
+      return null; // Already checked (prevent infinite recursion)
+    }
+    visited.add(obj as object);
+
+    // Check for functions
+    if (typeof obj === 'function') {
+      return { path, reason: 'value is a function' };
+    }
+
+    // For plain objects, recursively check properties
+    const proto = Object.getPrototypeOf(obj);
+    if (proto === Object.prototype || proto === null) {
+      for (const key of Object.getOwnPropertyNames(obj)) {
+        const descriptor = Object.getOwnPropertyDescriptor(obj, key);
+        if (!descriptor) continue;
+
+        if (descriptor.get || descriptor.set) {
+          return { path: path ? `${path}.${key}` : key, reason: 'property has getter/setter' };
+        }
+
+        if (descriptor.value !== undefined && typeof descriptor.value === 'function') {
+          return { path: path ? `${path}.${key}` : key, reason: 'property is a function' };
+        }
+
+        const result = check(descriptor.value, path ? `${path}.${key}` : key);
+        if (result) return result;
+      }
+    } else if (Array.isArray(obj)) {
+      for (let i = 0; i < obj.length; i++) {
+        const result = check(obj[i], `${path}[${i}]`);
+        if (result) return result;
+      }
+    } else if (
+      !(
+        obj instanceof Date ||
+        obj instanceof RegExp ||
+        obj instanceof Error ||
+        Buffer?.isBuffer(obj) ||
+        obj instanceof ArrayBuffer ||
+        ArrayBuffer.isView(obj) ||
+        obj instanceof Map ||
+        obj instanceof Set
+      )
+    ) {
+      // Check if it's a class instance (not a known serializable type)
+      const typeName = obj.constructor?.name || 'Object';
+      if (typeName !== 'Object') {
+        return { path, reason: `instance of ${typeName} class` };
+      }
+    }
+
+    return null;
+  }
+
+  return check(value, '');
 }
 
 /**
@@ -137,8 +228,13 @@ export function validateV8Serializable(
         ? value.constructor?.name || 'Object'
         : type;
 
+    const nonSerializable = findNonSerializableProperty(value);
+    const detailMessage = nonSerializable
+      ? ` (property '${nonSerializable.path}' is ${nonSerializable.reason})`
+      : '';
+
     throw new SerializationError(value, context, {
-      error: `Value of type '${typeName}' is not V8-serializable. Supported types include primitives, Buffer, ArrayBuffer, DataView, TypedArray, Map, Set, BigInt, Date, RegExp, Error, and plain objects/arrays.`
+      error: `Value of type '${typeName}' is not V8-serializable. Supported types include primitives, Buffer, ArrayBuffer, DataView, TypedArray, Map, Set, BigInt, Date, RegExp, Error, and plain objects/arrays.${detailMessage}`
     });
   }
 }
@@ -167,6 +263,113 @@ export function validateV8SerializableArray(
       });
     }
   }
+}
+
+/**
+ * Sanitize a value by converting to plain objects and removing non-V8-serializable properties.
+ * Recursively processes objects, arrays, and nested structures.
+ *
+ * This is useful for configuration objects that may contain functions,
+ * class instances, or other non-serializable properties that aren't needed in the child process.
+ *
+ * @param value - The value to sanitize
+ * @returns A new value with all non-serializable properties removed
+ *
+ * @example
+ * ```typescript
+ * const config = {
+ *   data: 'hello',
+ *   handler: () => {},  // Will be removed
+ *   nested: {
+ *     value: 42,
+ *     method: () => {}  // Will be removed
+ *   }
+ * };
+ *
+ * const sanitized = sanitizeForV8(config);
+ * // Result: { data: 'hello', nested: { value: 42 } }
+ * ```
+ */
+export function sanitizeForV8(value: unknown, seen: WeakSet<object> = new WeakSet()): any {
+  const sanitize = (val: unknown): any => {
+    if (val === null || typeof val !== 'object') {
+      return val;
+    }
+
+    // Circular reference guard
+    if (seen.has(val as object)) {
+      return '[Circular]';
+    }
+    seen.add(val as object);
+
+    // Handle Date, RegExp, Error as-is
+    if (
+      val instanceof Date ||
+      val instanceof RegExp ||
+      val instanceof Error ||
+      Buffer.isBuffer(val) ||
+      val instanceof ArrayBuffer ||
+      ArrayBuffer.isView(val)
+    ) {
+      return val;
+    }
+
+    // Map - recursively sanitize keys and values
+    if (val instanceof Map) {
+      const sanitized = new Map();
+      for (const [k, v] of val.entries()) {
+        sanitized.set(sanitize(k), sanitize(v));
+      }
+      return sanitized;
+    }
+
+    // Set - recursively sanitize elements
+    if (val instanceof Set) {
+      const sanitized = new Set();
+      for (const item of val.values()) {
+        sanitized.add(sanitize(item));
+      }
+      return sanitized;
+    }
+
+    // Arrays - recursively sanitize elements
+    if (Array.isArray(val)) {
+      return val.map((item) => sanitize(item));
+    }
+
+    // Plain objects - convert to plain object and recursively sanitize
+    // Filter out functions and recursively process values
+    return Object.fromEntries(
+      Object.entries(val)
+        .filter(([, v]) => typeof v !== 'function')
+        .map(([k, v]) => [k, sanitize(v)])
+    );
+  };
+
+  return sanitize(value);
+}
+
+/**
+ * Sanitize an array of values by removing non-V8-serializable properties from each.
+ *
+ * @param values - Array of values to sanitize
+ * @returns New array with sanitized values
+ *
+ * @example
+ * ```typescript
+ * const args = [
+ *   { config: true, handler: () => {} },
+ *   { value: 42 }
+ * ];
+ * const sanitized = sanitizeForV8Array(args);
+ * // Result: [{ config: true }, { value: 42 }]
+ * ```
+ */
+export function sanitizeForV8Array(
+  values: unknown[],
+  seen: WeakSet<object> = new WeakSet()
+): any[] {
+  return values.map((v) => sanitizeForV8(v, seen));
 }
 
 /**

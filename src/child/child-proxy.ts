@@ -70,7 +70,7 @@ export class ChildProxy {
 
         // Filter out function assignments - they cannot be serialized over IPC
         // This includes method assignments and EventEmitter listener manipulation
-        if (typeof value !== 'function') {
+        if (typeof value !== 'function' && !prop.startsWith('_') && !prop.startsWith('$')) {
           // Send property set to parent (only for non-function values)
           const message: PropertySet = {
             type: 'PROPERTY_SET',
@@ -132,6 +132,9 @@ export class ChildProxy {
     const props = new Map<string, any>();
 
     for (const key in this.target) {
+      if (key.startsWith('_') || key.startsWith('$')) {
+        continue;
+      }
       // Skip EventEmitter internal properties (these contain listener functions)
       if (
         key.startsWith('_') &&
@@ -157,7 +160,7 @@ export class ChildProxy {
       const beforeValue = before.get(prop);
 
       // Only send if the value actually changed
-      if (beforeValue !== afterValue) {
+      if (beforeValue !== afterValue && !prop.startsWith('_') && !prop.startsWith('$')) {
         const message: PropertySet = {
           type: 'PROPERTY_SET',
           prop,

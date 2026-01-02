@@ -43,6 +43,26 @@ describe('EventEmitter Integration', () => {
 
       expect(received).toEqual({ a: 42, b: 'test', c: true });
     });
+
+    it('should not forward private-like events prefixed with _ or $', async () => {
+      await using worker = await procxy(EventWorker);
+
+      const received: string[] = [];
+
+      worker.on('_secret', (token: string) => {
+        received.push(`secret:${token}`);
+      });
+
+      worker.on('$cache', (data: string) => {
+        received.push(`cache:${data}`);
+      });
+
+      worker.emitPrivateEvents();
+
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      expect(received).toEqual([]);
+    });
   });
 
   describe('multiple listeners', () => {

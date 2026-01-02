@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'child_process';
 import type { EventEmitter } from 'events';
-import type { Jsonifiable, ArrayValues, UnionToIntersection } from 'type-fest';
+import type { Jsonifiable, ArrayValues, UnionToIntersection, Constructor } from 'type-fest';
 import type { SerializationMode } from './options.js';
 import type { V8Serializable } from '../shared/serialization.js';
 
@@ -12,6 +12,28 @@ import type { V8Serializable } from '../shared/serialization.js';
 export type Procxiable<Mode extends SerializationMode> = Mode extends 'advanced'
   ? V8Serializable
   : Jsonifiable;
+
+/**
+ * Validate that a type is serializable for the given mode.
+ * If not, produces a descriptive type error.
+ */
+type ValidateProcxiable<T, Mode extends SerializationMode> =
+  T extends Procxiable<Mode>
+    ? T
+    : {
+        error: 'Type is not serializable';
+        expected: Procxiable<Mode>;
+        received: T;
+      };
+
+/**
+ * Constrain constructor arguments to be serializable based on the mode.
+ * Enforces that all constructor args must be Procxiable<Mode> and produces errors if not.
+ */
+export type SerializableConstructorArgs<T, Mode extends SerializationMode> =
+  ConstructorParameters<Constructor<T>> extends infer Args extends readonly any[]
+    ? { [K in keyof Args]: ValidateProcxiable<Args[K], Mode> }
+    : never;
 
 /**
  * Check if a type is procxiable (serializable) for the given mode.

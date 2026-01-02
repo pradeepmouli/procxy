@@ -1,9 +1,11 @@
 import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
+import { CircularJsonWorker } from '../fixtures/circular-json-worker.js';
 import { PropertyWorker } from '../fixtures/property-worker.js';
 
 const propertyWorkerPath = resolve(process.cwd(), 'tests/fixtures/property-worker.ts');
+const circularJsonWorkerPath = resolve(process.cwd(), 'tests/fixtures/circular-json-worker.ts');
 
 describe('Property Synchronization', () => {
   it('should synchronize public property writes from child to parent', async () => {
@@ -87,5 +89,27 @@ describe('Property Synchronization', () => {
     // Child sets again
     await proxy.setName('Grace');
     expect(proxy.name).toBe('Grace');
+  });
+
+  it('should not forward property_set for private-like properties', async () => {
+    await using proxy = await procxy(PropertyWorker, propertyWorkerPath);
+
+    const { secret, cache } = await proxy.setPrivateState('token');
+    expect(secret).toBe('token');
+    expect(cache).toBe('cache:token');
+
+    // Parent side should not see these private-like properties in its property store
+    expect(typeof (proxy as any)._secret).toBe('function');
+    expect(() => (proxy as any).$cache).toThrow();
+  });
+
+  it('should sanitize circular property updates in json serialization mode', async () => {
+    await using proxy = await procxy(CircularJsonWorker, circularJsonWorkerPath, {
+      serialization: 'json'
+    });
+
+    await proxy.setCircular();
+
+    expect(proxy.payload).toEqual({ self: '[Circular]' });
   });
 });

@@ -110,5 +110,46 @@ export type ProcxyOptions<
        * It enables special handling for supported handle types.
        */
       supportHandles?: SupportHandles;
+
+      /**
+       * Automatically sanitize constructor arguments to remove non-V8-serializable properties.
+       * When enabled, properties that cannot be serialized (functions, getters, etc.) are
+       * automatically stripped from objects before being sent to the child process.
+       *
+       * Sanitization is lazy: it only happens if the initial validation fails, avoiding
+       * unnecessary overhead for objects that are already V8-serializable.
+       *
+       * **Type Safety**: Constructor arguments are now constrained to V8Serializable types
+       * at compile time. However, TypeScript cannot deeply validate nested object properties
+       * due to structural typing (objects with methods still match `{ [key: string]: any }`).
+       * Use this option as a runtime safety net for edge cases like:
+       * - Objects with hidden getters/setters
+       * - Third-party library objects with methods
+       * - Configuration objects from external sources
+       *
+       * @default false
+       *
+       * @example
+       * ```typescript
+       * // TypeScript will catch this:
+       * await procxy(MyClass, './module.js', {
+       *   serialization: 'advanced'
+       * } as const, () => {}); // ❌ Type error: function not V8Serializable
+       *
+       * // But nested properties may not be caught:
+       * await procxy(MyClass, './module.js', {
+       *   serialization: 'advanced',
+       *   sanitizeV8: true  // Runtime safety for nested props
+       * } as const, { config: { handler: () => {} } }); // ✓ Compiles, sanitized at runtime
+       * ```
+       *
+       * @remarks
+       * - When false (default): validation fails if any property is non-serializable
+       * - When true: non-serializable properties are automatically removed on validation failure
+       * - Only applies to constructor arguments
+       * - Method arguments still require all properties to be serializable
+       * - TypeScript enforces top-level arg types but not deep object properties
+       */
+      sanitizeV8?: boolean;
     }
   : { serialization?: 'json' });

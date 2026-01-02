@@ -4,10 +4,14 @@ import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Constructor, Jsonifiable } from 'type-fest';
-import type { Procxy } from '../types/procxy.js';
+import type { Procxy, SerializableConstructorArgs } from '../types/procxy.js';
 import type { ProcxyOptions } from '../types/options.js';
 import { resolveConstructorModule } from '../shared/module-resolver.js';
-import { validateJsonifiableArray, validateV8SerializableArray } from '../shared/serialization.js';
+import {
+  validateJsonifiableArray,
+  validateV8SerializableArray,
+  sanitizeForV8Array
+} from '../shared/serialization.js';
 import { createParentProxy } from './parent-proxy.js';
 import { IPCClient } from './ipc-client.js';
 import { ChildCrashedError, OptionsValidationError, TimeoutError } from '../shared/errors.js';
@@ -255,7 +259,7 @@ export async function procxy<
   modulePathOrOptions?: string | ProcxyOptions<M, SH>,
   options?: ProcxyOptions<M, SH>,
   ...constructorArgs: T[keyof T] extends Constructor<any>
-    ? ConstructorParameters<T[keyof T]>
+    ? SerializableConstructorArgs<T[keyof T], M>
     : never
 ): Promise<T[C] extends Constructor<infer U> ? Procxy<U, M, SH> : never>;
 export async function procxy<
@@ -266,7 +270,7 @@ export async function procxy<
   Class: Constructor<T>,
   modulePath: string,
   options: ProcxyOptions<M, SH>,
-  ...constructorArgs: ConstructorParameters<Constructor<T>>
+  ...constructorArgs: SerializableConstructorArgs<T, M>
 ): Promise<Procxy<T, M, SH>>;
 export async function procxy<
   T extends object,
@@ -275,7 +279,7 @@ export async function procxy<
 >(
   Class: Constructor<T>,
   options: ProcxyOptions<M, SH>,
-  ...constructorArgs: ConstructorParameters<Constructor<T>>
+  ...constructorArgs: SerializableConstructorArgs<T, M>
 ): Promise<Procxy<T, M, SH>>;
 export async function procxy<
   T extends object,
@@ -284,7 +288,7 @@ export async function procxy<
 >(
   Class: Constructor<T>,
   modulePath: string,
-  ...constructorArgs: ConstructorParameters<Constructor<T>>
+  ...constructorArgs: SerializableConstructorArgs<T, M>
 ): Promise<Procxy<T, M, SH>>;
 export async function procxy<
   T extends object,
@@ -292,7 +296,7 @@ export async function procxy<
   SH extends boolean = false
 >(
   Class: Constructor<T>,
-  ...constructorArgs: ConstructorParameters<Constructor<T>>
+  ...constructorArgs: SerializableConstructorArgs<T, M>
 ): Promise<Procxy<T, M, SH>>;
 
 export async function procxy<
@@ -363,7 +367,19 @@ export async function procxy<
   if (serializationMode === 'json') {
     validateJsonifiableArray(actualConstructorArgs, 'constructor arguments');
   } else if (resolvedOptions?.serialization === 'advanced') {
-    validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
+    // Lazy sanitization: only sanitize if validation fails
+    if (resolvedOptions.sanitizeV8) {
+      try {
+        validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
+      } catch (error) {
+        // Validation failed - try sanitizing and re-validating
+        actualConstructorArgs = sanitizeForV8Array(actualConstructorArgs);
+        validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
+      }
+    } else {
+      validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
+    }
+
     const supportHandles = resolvedOptions?.supportHandles ?? false;
 
     // Warn if handle passing is requested on Windows

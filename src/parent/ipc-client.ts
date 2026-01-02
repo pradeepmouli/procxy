@@ -173,9 +173,13 @@ export class IPCClient extends EventEmitter {
       return;
     }
 
+    const eventName = typeof event === 'symbol' ? event.toString() : event;
+    if (eventName.startsWith('_') || eventName.startsWith('$')) {
+      return;
+    }
+
     this.subscribedEvents.add(event);
 
-    const eventName = typeof event === 'symbol' ? event.toString() : event;
     const message: EventSubscribe = {
       type: 'EVENT_SUBSCRIBE',
       eventName

@@ -4,7 +4,9 @@
 export class PropertyWorker {
   public counter = 0;
   public name = '';
+  public $cache?: string;
   private _value = 0;
+  private _secret?: string;
 
   /**
    * Increment counter property.
@@ -53,5 +55,15 @@ export class PropertyWorker {
    */
   getInternalValue(): number {
     return this._value;
+  }
+
+  setPrivateState(secret: string): { secret: string | undefined; cache: string | undefined } {
+    this._secret = secret;
+    this.$cache = `cache:${secret}`;
+    return { secret: this._secret, cache: this.$cache };
+  }
+
+  getPrivateState(): { secret: string | undefined; cache: string | undefined } {
+    return { secret: this._secret, cache: this.$cache };
   }
 }

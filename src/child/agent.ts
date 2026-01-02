@@ -12,7 +12,12 @@ import type {
 } from '../shared/protocol.js';
 import type { SerializationMode } from '../types/options.js';
 import { ModuleResolutionError } from '../shared/errors.js';
-import { validateJsonifiableArray, validateV8SerializableArray } from '../shared/serialization.js';
+import {
+  validateJsonifiableArray,
+  validateV8SerializableArray,
+  sanitizeForV8,
+  sanitizeForV8Array
+} from '../shared/serialization.js';
 import { ChildProxy } from './child-proxy.js';
 
 // Handle registry for received handles (sockets, servers, etc.)
@@ -20,10 +25,46 @@ const handleRegistry = new Map<string, any>();
 
 let childProxy: ChildProxy | undefined;
 let serializationMode: SerializationMode = 'json'; // Default to json mode
+let sendFailureCount = 0;
+let sanitizeRetryCount = 0;
+
+function sanitizeMessageForParent(message: ChildToParentMessage): ChildToParentMessage {
+  const seen = new WeakSet<object>();
+
+  switch (message.type) {
+    case 'EVENT':
+      return { ...message, args: sanitizeForV8Array(message.args, seen) };
+    case 'PROPERTY_SET':
+      return { ...message, value: sanitizeForV8(message.value, seen) };
+    case 'CALLBACK_INVOKE':
+      return { ...message, args: sanitizeForV8Array(message.args, seen) };
+    case 'RESULT':
+      return { ...message, value: sanitizeForV8(message.value, seen) as any };
+    default:
+      return message;
+  }
+}
 
 function sendToParent(message: ChildToParentMessage): void {
-  if (process.send) {
+  if (!process.send) return;
+
+  try {
     process.send(message);
+  } catch (error) {
+    sendFailureCount++;
+    try {
+      const sanitized = sanitizeMessageForParent(message);
+      process.send(sanitized);
+      sanitizeRetryCount++;
+    } catch (fallbackError) {
+      sendFailureCount++; // count the second failure as well
+      console.warn('[procxy][child] Dropping message after serialization failure', {
+        messageType: (message as any)?.type,
+        sendFailures: sendFailureCount,
+        sanitizeRetries: sanitizeRetryCount,
+        error: (fallbackError as any)?.message ?? String(fallbackError)
+      });
+    }
   }
 }
 
