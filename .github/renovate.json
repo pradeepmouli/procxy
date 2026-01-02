@@ -1,0 +1,54 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base", ":dependencyDashboard=false"],
+  "enabledManagers": ["pnpm", "github-actions"],
+  "assignees": ["maintainers"],
+  "labels": ["dependencies", "automated"],
+  "schedule": ["after 09:00 on Monday"],
+  "timezone": "UTC",
+  "prConcurrentLimit": 10,
+  "prHourlyLimit": 2,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "rangeStrategy": "bump",
+  "packageRules": [
+    {
+      "description": "Group patch updates",
+      "matchManagers": ["pnpm"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "patch updates"
+    },
+    {
+      "description": "Group TypeScript and types",
+      "matchManagers": ["pnpm"],
+      "matchPackagePatterns": ["^typescript$", "^@types/", "^ts-.*", "^tsx$"],
+      "groupName": "typescript"
+    },
+    {
+      "description": "Group testing tools",
+      "matchManagers": ["pnpm"],
+      "matchPackagePatterns": ["^vitest$", "^@vitest/"],
+      "groupName": "testing"
+    },
+    {
+      "description": "Group linting and formatting",
+      "matchManagers": ["pnpm"],
+      "matchPackagePatterns": ["^oxlint$", "^oxfmt$"],
+      "groupName": "code quality"
+    },
+    {
+      "description": "Group changesets packages",
+      "matchManagers": ["pnpm"],
+      "matchPackagePatterns": ["^@changesets/"],
+      "groupName": "changesets"
+    },
+    {
+      "description": "GitHub Actions updates use ci semantics",
+      "matchManagers": ["github-actions"],
+      "labels": ["dependencies", "github-actions", "automated"],
+      "semanticCommitType": "ci",
+      "semanticCommitScope": "deps"
+    }
+  ]
+}

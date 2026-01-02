@@ -39,6 +39,7 @@ export class ChildProxy {
     }
   >();
   private proxiedTarget: any;
+  private disposeSent = false;
 
   constructor(
     private readonly target: any,
@@ -303,7 +304,7 @@ export class ChildProxy {
    * Clean up the target instance if it implements disposable protocol.
    * Calls Symbol.asyncDispose or Symbol.dispose if available.
    */
-  async dispose(): Promise<void> {
+  async disposableCleanup(): Promise<void> {
     // Try async dispose first
     if (typeof this.target[Symbol.asyncDispose] === 'function') {
       await this.target[Symbol.asyncDispose]();
@@ -317,6 +318,21 @@ export class ChildProxy {
     }
 
     // No disposable implementation - nothing to do
+  }
+
+  /**
+   * Signal to parent that child wants to dispose/shutdown.
+   * Sends a DISPOSE message to parent, which will handle termination.
+   * Idempotent: multiple calls will only send one message.
+   */
+  dispose(): void {
+    // Only send dispose once (idempotent)
+    if (this.disposeSent) {
+      return;
+    }
+
+    this.disposeSent = true;
+    this.send({ type: 'DISPOSE' });
   }
 
   /**

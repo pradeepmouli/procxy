@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'child_process';
 import type { EventEmitter } from 'events';
-import type { Jsonifiable, ArrayValues, UnionToIntersection } from 'type-fest';
+import type { Jsonifiable, ArrayValues, UnionToIntersection, Jsonify } from 'type-fest';
 import type { SerializationMode } from './options.js';
 import type { V8Serializable } from '../shared/serialization.js';
 
@@ -126,6 +126,19 @@ type ProcxiablePropertyKeys<T, Mode extends SerializationMode> = {
       ? K
       : never;
 }[keyof T];
+
+/**
+ * Shallow procxiable subset of an object.
+ * Picks only non-method properties whose values can be sent across the wire for the given mode.
+ * Does not transform methods or recurse; intended to mirror type-fest's Jsonify utility for procxiable data.
+ */
+export type Procxify<T, Mode extends SerializationMode = 'json'> = {
+  [K in keyof T as T[K] extends (...args: any[]) => any
+    ? never
+    : IsProcxiable<T[K], Mode> extends true
+      ? K
+      : never]: T[K];
+};
 
 /**
  * Get readonly properties from the type (excluding methods), mode-aware.

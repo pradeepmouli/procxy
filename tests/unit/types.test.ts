@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { Procxy } from '../../src/types/procxy.js';
+import type { Procxy, Procxify } from '../../src/types/procxy.js';
 
 // Test fixture classes for type checking
 class Calculator {
@@ -32,6 +32,8 @@ class TypedService {
   getObject(): { name: string; value: number } {
     return { name: 'test', value: 123 };
   }
+
+  meta: { version: number } = { version: 1 };
 
   acceptMultipleArgs(str: string, num: number, bool: boolean): string {
     return `${str}-${num}-${bool}`;
@@ -166,6 +168,108 @@ describe('Type Safety Tests', () => {
       type TestSum = ProxiedService extends { sum: (...args: any[]) => any } ? true : false;
       const test: TestSum = true;
       expect(test).toBe(true);
+    });
+
+    it('should extract procxiable properties with Procxify (json mode)', () => {
+      class WithProps {
+        name = 'abc';
+        count = 3;
+        data: { ok: boolean } = { ok: true };
+        buffer: Buffer = Buffer.from('x');
+        doWork(): void {}
+      }
+
+      type Props = Procxify<WithProps>;
+
+      const hasName: keyof Props = 'name';
+      const hasCount: keyof Props = 'count';
+      const hasData: keyof Props = 'data';
+
+      expect(hasName).toBe('name');
+      expect(hasCount).toBe('count');
+      expect(hasData).toBe('data');
+    });
+
+    it('should include advanced-only values in Procxify when mode is advanced', () => {
+      class WithAdvanced {
+        buffer: Buffer = Buffer.from('x');
+        map: Map<string, number> = new Map([['a', 1]]);
+        set: Set<number> = new Set([1, 2]);
+        name = 'hi';
+        fn(): void {}
+      }
+
+      type PropsAdvanced = Procxify<WithAdvanced, 'advanced'>;
+
+      const hasBuffer: keyof PropsAdvanced = 'buffer';
+      const hasMap: keyof PropsAdvanced = 'map';
+      const hasSet: keyof PropsAdvanced = 'set';
+      const hasName: keyof PropsAdvanced = 'name';
+
+      expect(hasBuffer).toBe('buffer');
+      expect(hasMap).toBe('map');
+      expect(hasSet).toBe('set');
+      expect(hasName).toBe('name');
+    });
+
+    it('should exclude methods with non-procxiable return values in json mode', () => {
+      class WithNonJsonMethods {
+        getBuffer(): Buffer {
+          return Buffer.from('x');
+        }
+
+        getMap(): Map<string, number> {
+          return new Map([['a', 1]]);
+        }
+
+        getPrimitive(): number {
+          return 42;
+        }
+      }
+
+      type ProxiedJson = Procxy<WithNonJsonMethods, 'json'>;
+
+      type HasBuffer = 'getBuffer' extends keyof ProxiedJson ? true : false;
+      type HasMap = 'getMap' extends keyof ProxiedJson ? true : false;
+      type HasPrimitive = 'getPrimitive' extends keyof ProxiedJson ? true : false;
+
+      const hasBuffer: HasBuffer = false as HasBuffer;
+      const hasMap: HasMap = false as HasMap;
+      const hasPrimitive: HasPrimitive = true as HasPrimitive;
+
+      expect(hasBuffer).toBe(false);
+      expect(hasMap).toBe(false);
+      expect(hasPrimitive).toBe(true);
+    });
+
+    it('should include methods with procxiable return values in advanced mode', () => {
+      class WithAdvancedMethods {
+        getBuffer(): Buffer {
+          return Buffer.from('x');
+        }
+
+        getMap(): Map<string, number> {
+          return new Map([['a', 1]]);
+        }
+
+        getPrimitive(): number {
+          return 42;
+        }
+      }
+
+      type ProxiedAdvanced = Procxy<WithAdvancedMethods, 'advanced'>;
+
+      type HasBuffer = 'getBuffer' extends keyof ProxiedAdvanced ? true : false;
+      type HasMap = 'getMap' extends keyof ProxiedAdvanced ? true : false;
+      type HasPrimitive = 'getPrimitive' extends keyof ProxiedAdvanced ? true : false;
+
+      const hasBuffer: HasBuffer = true as HasBuffer;
+      const hasMap: HasMap = true as HasMap;
+      const hasPrimitive: HasPrimitive = true as HasPrimitive;
+
+      expect(hasBuffer).toBe(true);
+      expect(hasMap).toBe(true);
+      expect(hasPrimitive).toBe(true);
     });
   });
 });

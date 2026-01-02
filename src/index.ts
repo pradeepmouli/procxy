@@ -174,3 +174,46 @@ export type {
   HandleMessage,
   HandleAck
 } from './shared/protocol.js';
+
+/**
+ * Type utilities for working with the isomorphism between T and Procxy<T>.
+ *
+ * These utilities enable bidirectional type mapping and introspection:
+ * - UnwrapProcxy: Extract T from Procxy<T>
+ * - IsProcxy: Check if a type is a Procxy type
+ * - ProcxyIsomorphism: Demonstrate the bidirectional mapping
+ * - ChangeProcxyMode: Convert between serialization modes
+ * - VerifyIsomorphism: Compile-time verification of the isomorphism
+ *
+ * @example
+ * ```typescript
+ * import { Procxy, UnwrapProcxy, ProcxyIsomorphism } from 'procxy';
+ *
+ * class Calculator {
+ *   add(a: number, b: number): number { return a + b; }
+ * }
+ *
+ * // Forward: T → Procxy<T>
+ * type ProxiedCalc = Procxy<Calculator>;
+ *
+ * // Backward: Procxy<T> → T
+ * type OriginalCalc = UnwrapProcxy<ProxiedCalc>; // Calculator
+ *
+ * // Isomorphism verification
+ * type Iso = ProcxyIsomorphism<Calculator>;
+ * type Forward = Iso['forward']; // Procxy<Calculator>
+ * type Backward = Iso['backward']; // Calculator
+ * ```
+ */
+export type {
+  UnwrapProcxy,
+  IsProcxy,
+  GetProcxyMode,
+  HasHandleSupport,
+  ChangeProcxyMode,
+  ToggleProcxyHandles,
+  ProcxyIsomorphism,
+  VerifyIsomorphism,
+  GetProcxyMethods,
+  GetProcxyLifecycleMethods
+} from './types/isomorphism.js';

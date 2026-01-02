@@ -189,6 +189,15 @@ export interface HandleAck {
 }
 
 /**
+ * Dispose signal sent from child to parent to initiate graceful termination.
+ * Child calls this when it needs to shut down and requests parent to terminate it.
+ */
+export interface ChildDispose {
+  type: 'DISPOSE';
+  // No payload - idempotent signal
+}
+
+/**
  * Union type of all IPC messages sent from parent to child.
  */
 export type ParentToChildMessage =
@@ -214,4 +223,5 @@ export type ChildToParentMessage =
   | CallbackInvoke
   | PropertyGet
   | PropertySet
-  | HandleAck;
+  | HandleAck
+  | ChildDispose;

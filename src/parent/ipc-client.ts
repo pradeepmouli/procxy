@@ -305,6 +305,12 @@ export class IPCClient extends EventEmitter {
       this.emit('init_failure', this.toError(message.error));
       return;
     }
+
+    if (message.type === 'DISPOSE') {
+      // Child initiated disposal - terminate gracefully
+      void this.terminate();
+      return;
+    }
   }
 
   /**
