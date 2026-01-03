@@ -1,0 +1,5 @@
+---
+"procxy": minor
+---
+
+resolver fixes

@@ -6,6 +6,7 @@
   },
   "changesets": [
     "fix-typescript-eventemitter",
+    "polite-rules-shout",
     "sixty-roses-jump",
     "slow-humans-drive",
     "wild-crabs-wait",
