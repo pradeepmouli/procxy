@@ -1,0 +1,5 @@
+---
+"procxy": minor
+---
+
+serialization fixes

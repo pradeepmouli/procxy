@@ -38,7 +38,9 @@ function isProcxyOptions(obj: unknown): obj is ProcxyOptions {
     'env',
     'cwd',
     'args',
-    'supportHandles'
+    'supportHandles',
+    'interleaveOutput',
+    'sanitizeV8'
   ];
 
   // Check if the object has at least one known ProcxyOptions property
@@ -110,8 +112,14 @@ function pickAgentPath(): string {
 
 const requireFromHere = createRequire(import.meta.url);
 
-function pickExecArgv(agentPath: string): string[] {
-  if (!agentPath.endsWith('.ts')) return [];
+function pickExecArgv(agentPath: string, targetModulePath: string): string[] {
+  // Use tsx if either the agent or target module is TypeScript
+  // Check for .ts file on disk (since module resolver returns .js paths for ESM compatibility)
+  const targetIsTsx =
+    targetModulePath.endsWith('.ts') || existsSync(targetModulePath.replace(/\.js$/, '.ts'));
+  const needsTsx = agentPath.endsWith('.ts') || targetIsTsx;
+
+  if (!needsTsx) return [];
 
   // Resolve tsx loader absolutely so custom cwd values do not break resolution
   const tsxImportPath = requireFromHere.resolve('tsx/esm');
@@ -406,7 +414,7 @@ export async function procxy<
   const retries = resolvedOptions?.retries ?? DEFAULT_RETRIES;
 
   const agentPath = pickAgentPath();
-  const execArgv = pickExecArgv(agentPath);
+  const execArgv = pickExecArgv(agentPath, resolvedModulePath);
 
   const forkOptions: ForkOptions = {
     stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
@@ -419,6 +427,16 @@ export async function procxy<
   const child = fork(agentPath, toArgStrings(resolvedOptions?.args), forkOptions);
 
   const ipcClient = new IPCClient(child, timeout, retries);
+
+  // Set up output forwarding if requested
+  if (resolvedOptions?.interleaveOutput) {
+    if (child.stdout) {
+      child.stdout.pipe(process.stdout);
+    }
+    if (child.stderr) {
+      child.stderr.pipe(process.stderr);
+    }
+  }
 
   const initMessage: InitMessage = {
     type: 'INIT',

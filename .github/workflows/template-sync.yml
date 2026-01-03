@@ -4,9 +4,6 @@ on:
   # Manually trigger the workflow
   workflow_dispatch:
   # Run on push to master branch
-  push:
-    branches:
-      - master
   # Run on schedule (weekly on Mondays at 9 AM UTC)
   schedule:
     - cron: '0 9 * * 1'

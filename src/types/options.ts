@@ -90,6 +90,15 @@ export type ProcxyOptions<
    *
    * 'json' mode is faster for simple objects but cannot handle these types.
    */
+
+  /**
+   * Forward child process stdout and stderr to parent's stdout and stderr.
+   * When enabled, all console.log(), console.error(), and other output from the child
+   * process will be displayed in the parent process in real-time.
+   *
+   * @default false
+   */
+  interleaveOutput?: boolean;
 } & (Mode extends 'advanced'
   ? {
       serialization: 'advanced';

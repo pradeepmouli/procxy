@@ -1,9 +1,6 @@
 import { EventEmitter } from 'events';
 import type { EventMessage } from '../shared/protocol.js';
-
-function isPrivateEventName(name: string): boolean {
-  return name.startsWith('_') || name.startsWith('$');
-}
+import { isProxiableEventName } from '../shared/property-utils.js';
 
 /**
  * Event bridge that forwards EventEmitter events from child to parent.
@@ -51,7 +48,7 @@ export class EventBridge {
 
       // Only forward if this event is subscribed by the parent
       const eventName = typeof event === 'symbol' ? event.toString() : event;
-      if (!isPrivateEventName(eventName) && this.subscribedEvents.has(eventName)) {
+      if (isProxiableEventName(eventName) && this.subscribedEvents.has(eventName)) {
         try {
           this.sendToParent({
             type: 'EVENT',
@@ -72,7 +69,7 @@ export class EventBridge {
    * Subscribe to an event (start forwarding it to parent).
    */
   subscribeEvent(eventName: string): void {
-    if (isPrivateEventName(eventName)) {
+    if (!isProxiableEventName(eventName)) {
       return;
     }
 

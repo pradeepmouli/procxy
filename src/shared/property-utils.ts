@@ -17,6 +17,7 @@ export function isValidIdentifier(name: string): boolean {
  * A property is proxiable if:
  * - It has a valid JavaScript identifier name
  * - It doesn't start with '$' (reserved for procxy internal properties)
+ * - It doesn't start with '_' (private/internal properties)
  * - Its value is not a function
  *
  * @param key - Property name
@@ -24,5 +25,24 @@ export function isValidIdentifier(name: string): boolean {
  * @returns true if the property should be proxied/synced
  */
 export function isProxiableProperty(key: string, value: unknown): boolean {
-  return isValidIdentifier(key) && !key.startsWith('$') && typeof value !== 'function';
+  return (
+    isValidIdentifier(key) &&
+    !key.startsWith('$') &&
+    !key.startsWith('_') &&
+    typeof value !== 'function'
+  );
+}
+
+/**
+ * Check if an event name should be forwarded across IPC.
+ *
+ * An event is proxiable if:
+ * - It doesn't start with '$' (reserved for procxy internal events)
+ * - It doesn't start with '_' (private/internal events)
+ *
+ * @param eventName - Event name
+ * @returns true if the event should be forwarded
+ */
+export function isProxiableEventName(eventName: string): boolean {
+  return !eventName.startsWith('$') && !eventName.startsWith('_');
 }

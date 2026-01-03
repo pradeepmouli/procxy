@@ -70,10 +70,8 @@ export class ChildProxy {
           return false;
         }
 
-        // Filter out function assignments - they cannot be serialized over IPC
-        // This includes method assignments and EventEmitter listener manipulation
-        if (typeof value !== 'function') {
-          // Send property set to parent (only for non-function values)
+        // Send property set to parent if it's a proxiable property
+        if (isProxiableProperty(prop, value)) {
           const message: PropertySet = {
             type: 'PROPERTY_SET',
             prop,

@@ -1,7 +1,34 @@
 import { fileURLToPath } from 'url';
 import { existsSync, readFileSync } from 'fs';
-import { dirname, resolve } from 'path';
+import { dirname, extname, resolve } from 'path';
+import { createRequire } from 'module';
 import { ModuleResolutionError } from './errors.js';
+
+/**
+ * Lazy-loaded debug logger.
+ * Uses debug package if available (enable with DEBUG=procxy:resolver),
+ * falls back to PROCXY_DEBUG_STACK=1 env check, or no-ops.
+ */
+let debugLog: (msg: string) => void;
+
+function getDebugLogger(): (msg: string) => void {
+  if (debugLog) return debugLog;
+
+  // Try to use debug package if available (optional dependency)
+  try {
+    const createDebug = require('debug');
+    debugLog = createDebug('procxy:resolver');
+  } catch {
+    // Fallback to env-based logging
+    if (process.env['PROCXY_DEBUG_STACK'] === '1') {
+      debugLog = (msg: string) => console.warn(`[procxy] ${msg}`);
+    } else {
+      debugLog = () => {}; // no-op
+    }
+  }
+
+  return debugLog;
+}
 
 /**
  * Module path resolution utilities for Procxy.
@@ -23,6 +50,7 @@ import { ModuleResolutionError } from './errors.js';
  * @returns Object with resolved modulePath and className
  * @throws ModuleResolutionError if module path cannot be determined
  */
+
 export function resolveConstructorModule(
   _constructor: Function,
   className: string,
@@ -79,6 +107,9 @@ function detectCallerPathFromStackTrace(_constructor?: Function): string | undef
   const err = new Error('resolveModulePath', { cause: _constructor });
   Error.captureStackTrace(err, detectCallerPathFromStackTrace);
 
+  const debug = getDebugLogger();
+  debug('module resolver stack:\n' + (err.stack ?? '(no stack)'));
+
   const stack = err.stack?.split('\n') ?? [];
 
   // Find the first frame that is not from procxy internals
@@ -101,13 +132,17 @@ function detectCallerPathFromStackTrace(_constructor?: Function): string | undef
       continue;
     }
 
-    // Skip procxy library internal frames (src/ directory only)
+    // Skip procxy library internal frames (src/ or dist/ directories)
     // Be precise to avoid skipping user files in projects named "procxy"
     if (
       filePath.includes('/src/parent/') ||
       filePath.includes('/src/child/') ||
       filePath.includes('/src/shared/') ||
       filePath.includes('/src/types/') ||
+      filePath.includes('/dist/parent/') ||
+      filePath.includes('/dist/child/') ||
+      filePath.includes('/dist/shared/') ||
+      filePath.includes('/dist/types/') ||
       filePath.includes('module-resolver')
     ) {
       continue;
@@ -128,6 +163,28 @@ function detectCallerPathFromStackTrace(_constructor?: Function): string | undef
   return undefined;
 }
 
+function normalizeModuleExtension(modulePath: string): {
+  jsPath: string;
+  tsPath: string;
+} {
+  const ext = extname(modulePath);
+  if (ext.includes('ts')) {
+    return {
+      tsPath: modulePath,
+      jsPath: modulePath.replace(/\.ts$/, '.js')
+    };
+  } else if (ext.includes('js')) {
+    return {
+      jsPath: modulePath,
+      tsPath: modulePath.replace(/\.js$/, '.ts')
+    };
+  }
+  return {
+    jsPath: modulePath + '.js',
+    tsPath: modulePath + '.ts'
+  };
+}
+
 /**
  * Parses the caller's source file to find where a class is imported from or defined.
  *
@@ -142,78 +199,108 @@ function detectCallerPathFromStackTrace(_constructor?: Function): string | undef
  * @returns Resolved absolute path to the module, or undefined if not found
  */
 function parseCallerFileForClassPath(callerPath: string, className: string): string | undefined {
-  try {
-    const source = readFileSync(callerPath, 'utf-8');
-    const callerDir = dirname(callerPath);
+  const tryParse = (pathToParse: string): string | undefined => {
+    try {
+      const debug = getDebugLogger();
+      debug(`parsing caller file: ${pathToParse}`);
+      const source = readFileSync(pathToParse, 'utf-8');
+      debug(`file content (first 2000 chars):\n${source.slice(0, 2000)}`);
+      const callerDir = dirname(pathToParse);
+      const requireFromCaller = createRequire(pathToParse);
 
-    // Patterns to match import/require statements
-    const patterns = [
-      // ESM named import: import { ClassName } from './path'
-      new RegExp(`import\\s+{[^}]*\\b${className}\\b[^}]*}\\s+from\\s+['"]([^'"]+)['"]`, 'g'),
+      // Patterns to match import/require statements
+      const patterns = [
+        // ESM named import: import { ClassName } from './path'
+        new RegExp(`import\\s+{[^}]*\\b${className}\\b[^}]*}\\s+from\\s+['"]([^'"]+)['"]`, 'g'),
 
-      // ESM default import: import ClassName from './path'
-      new RegExp(`import\\s+${className}\\s+from\\s+['"]([^'"]+)['"]`, 'g'),
+        // ESM default import: import ClassName from './path'
+        new RegExp(`import\\s+${className}\\s+from\\s+['"]([^'"]+)['"]`, 'g'),
 
-      // ESM namespace import as: import * as name from './path' (less common for classes)
-      new RegExp(
-        `import\\s+\\*\\s+as\\s+\\w+\\s+from\\s+['"]([^'"]+)['"].*\\b${className}\\b`,
-        'g'
-      ),
+        // ESM namespace import as: import * as name from './path' (less common for classes)
+        new RegExp(
+          `import\\s+\\*\\s+as\\s+\\w+\\s+from\\s+['"]([^'"]+)['"].*\\b${className}\\b`,
+          'g'
+        ),
 
-      // CommonJS require: const { ClassName } = require('./path')
-      new RegExp(
-        `(?:const|let|var)\\s+{[^}]*\\b${className}\\b[^}]*}\\s*=\\s*require\\(['"]([^'"]+)['"]\\)`,
-        'g'
-      ),
+        // CommonJS require: const { ClassName } = require('./path')
+        new RegExp(
+          `(?:const|let|var)\\s+{[^}]*\\b${className}\\b[^}]*}\\s*=\\s*require\\(['"]([^'"]+)['"]\\)`,
+          'g'
+        ),
 
-      // CommonJS require default: const ClassName = require('./path')
-      new RegExp(`(?:const|let|var)\\s+${className}\\s*=\\s*require\\(['"]([^'"]+)['"]\\)`, 'g')
-    ];
+        // CommonJS require default: const ClassName = require('./path')
+        new RegExp(`(?:const|let|var)\\s+${className}\\s*=\\s*require\\(['"]([^'"]+)['"]\\)`, 'g')
+      ];
 
-    for (const pattern of patterns) {
-      const matches = [...source.matchAll(pattern)];
-      for (const match of matches) {
-        const importPath = match[1];
-        if (importPath) {
-          // Resolve relative to caller's directory
-          const resolvedPath = resolve(callerDir, importPath);
-
-          // Add .ts/.js extension if not present
-          if (!importPath.match(/\.(ts|js|mts|cts|mjs|cjs)$/)) {
-            // Check for .ts file first (TypeScript), fall back to .js if .ts doesn't exist
-            const tsPath = resolvedPath + '.ts';
-
-            // Prefer .ts if it exists, otherwise check for .js
-            if (existsSync(tsPath)) {
-              return tsPath;
+      for (const pattern of patterns) {
+        const matches = [...source.matchAll(pattern)];
+        for (const match of matches) {
+          const importPath = match[1];
+          if (importPath) {
+            // Handle bare module specifiers via Node resolution from caller context
+            const isBareSpecifier = !importPath.startsWith('.') && !importPath.startsWith('/');
+            if (isBareSpecifier) {
+              try {
+                return requireFromCaller.resolve(importPath);
+              } catch {
+                // Fall through to relative resolution
+              }
             }
 
-            const jsPath = resolvedPath + '.js';
-            if (existsSync(jsPath)) {
-              return jsPath;
+            // Resolve relative to caller's directory
+            let resolvedPath = resolve(callerDir, importPath);
+
+            // Normalize extensions for TypeScript ESM compatibility
+            // TypeScript ESM imports use .js extensions, but files are .ts
+            // Return .js path to match import statements (tsx/ts-node maps to .ts at runtime)
+            const paths = normalizeModuleExtension(resolvedPath);
+
+            // Prefer .js path for ESM compatibility (tsx handles .js -> .ts mapping)
+            // Fall back to .ts if only .ts exists, then to resolved path as last resort
+            const debug = getDebugLogger();
+            if (existsSync(paths.jsPath)) {
+              debug(`resolved module: ${paths.jsPath} (from ${className})`);
+              return paths.jsPath;
+            } else if (existsSync(paths.tsPath)) {
+              debug(`resolved module: ${paths.jsPath} via .ts (from ${className})`);
+              return paths.jsPath; // Return .js even if only .ts exists - let tsx handle it
             }
 
-            // If neither exists, return .ts (maintains behavior for tsx execution)
-            return tsPath;
+            // If neither exists, return the .js path (matches import statement convention)
+            debug(`resolved module (fallback): ${paths.jsPath} (from ${className})`);
+            return paths.jsPath;
           }
-
-          return resolvedPath;
         }
       }
-    }
 
-    // Check if class is defined in the same file
-    const classDefPattern = new RegExp(`(?:export\\s+)?class\\s+${className}\\b`);
-    if (classDefPattern.test(source)) {
-      // Class is defined in the caller file itself
-      return callerPath;
-    }
+      // Check if class is defined in the same file
+      const classDefPattern = new RegExp(`(?:export\\s+)?class\\s+${className}\\b`);
+      if (classDefPattern.test(source)) {
+        // Class is defined in the caller file itself
+        const debug = getDebugLogger();
+        debug(`resolved module: ${pathToParse} (class defined in same file)`);
+        return pathToParse;
+      }
 
-    return undefined;
-  } catch {
-    // File read or parse error - fall back to undefined
-    return undefined;
+      return undefined;
+    } catch {
+      // File read or parse error - fall back to undefined
+      return undefined;
+    }
+  };
+
+  // Try the original caller path first
+  const primary = tryParse(callerPath);
+  if (primary) return primary;
+
+  // Fallback: if caller is in a build output (bin/dist), map to src/.ts sibling and retry
+  if (callerPath.includes('/bin/') || callerPath.includes('/dist/')) {
+    const tsCandidate = callerPath.replace(/\/bin\//, '/src/').replace(/\.js$/, '.ts');
+    const fallback = tryParse(tsCandidate);
+    if (fallback) return fallback;
   }
+
+  return undefined;
 }
 
 /**

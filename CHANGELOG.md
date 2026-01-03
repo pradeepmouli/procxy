@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.7
+
+### Minor Changes
+
+- serialization fixes
+
 ## 0.1.0-alpha.6
 
 ### Minor Changes
