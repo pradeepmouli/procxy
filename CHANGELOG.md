@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.9
+
+### Patch Changes
+
+- caching implemented for module resolution
+
 ## 0.1.0-alpha.8
 
 ### Minor Changes
