@@ -8,6 +8,9 @@ importers:
 
   .:
     optionalDependencies:
+      debug:
+        specifier: ^4.3.7
+        version: 4.4.3
       pino:
         specifier: ^10.1.0
         version: 10.1.0
@@ -40,8 +43,8 @@ importers:
         specifier: ^1.36.0
         version: 1.36.0
       tinypool:
-        specifier: ^2.0.0
-        version: 2.0.0
+        specifier: ^2.1.0
+        version: 2.1.0
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -1265,6 +1268,10 @@ packages:
 
   tinypool@2.0.0:
     resolution: {integrity: sha512-/RX9RzeH2xU5ADE7n2Ykvmi9ED3FBGPAjw9u3zucrNNaEBIO0HPSYgL0NT7+3p147ojeSdaVu08F6hjpv31HJg==}
+    engines: {node: ^20.0.0 || >=22.0.0}
+
+  tinypool@2.1.0:
+    resolution: {integrity: sha512-Pugqs6M0m7Lv1I7FtxN4aoyToKg1C4tu+/381vH35y8oENM/Ai7f7C4StcoK4/+BSw9ebcS8jRiVrORFKCALLw==}
     engines: {node: ^20.0.0 || >=22.0.0}
 
   tinyrainbow@3.0.3:
@@ -2554,6 +2561,8 @@ snapshots:
       picomatch: 4.0.3
 
   tinypool@2.0.0: {}
+
+  tinypool@2.1.0: {}
 
   tinyrainbow@3.0.3: {}
 
