@@ -22,6 +22,30 @@ const DEFAULT_RETRIES = 3;
 const MIN_INIT_TIMEOUT_MS = 1000;
 
 /**
+ * Deduplication cache: tracks in-flight procxy creations to avoid duplicate child spawning.
+ * Key format: "ClassName:modulePath"
+ * Value: Promise that resolves to the initialized Procxy proxy
+ */
+const inFlightDedup = new Map<string, Promise<unknown>>();
+
+function makeDedupKey(className: string, modulePath: string): string {
+  return `${className}:${modulePath}`;
+}
+
+function getDebugLogger() {
+  // Reuse debug logging from module-resolver pattern
+  try {
+    const createDebug = require('debug');
+    return createDebug('procxy:dedup');
+  } catch {
+    if (process.env['PROCXY_DEBUG_DEDUP'] === '1') {
+      return (msg: string) => console.warn(`[procxy:dedup] ${msg}`);
+    }
+    return () => {}; // no-op
+  }
+}
+
+/**
  * Check if an object is likely a ProcxyOptions object.
  * This checks for known ProcxyOptions properties to distinguish from plain constructor arguments.
  */
@@ -410,6 +434,18 @@ export async function procxy<
   const resolvedModulePath = moduleResolution.modulePath.startsWith('file://')
     ? fileURLToPath(moduleResolution.modulePath)
     : resolve(moduleResolution.modulePath);
+
+  // Check deduplication cache: if another procxy() is creating the same target, return that promise
+  const dedupKey = makeDedupKey(moduleResolution.className, resolvedModulePath);
+  const debug = getDebugLogger();
+
+  if (inFlightDedup.has(dedupKey)) {
+    debug(`dedup hit: ${dedupKey}`);
+    return inFlightDedup.get(dedupKey) as any;
+  }
+
+  debug(`dedup miss: ${dedupKey}`);
+
   const timeout = resolvedOptions?.timeout ?? DEFAULT_TIMEOUT_MS;
   const retries = resolvedOptions?.retries ?? DEFAULT_RETRIES;
 
@@ -450,5 +486,15 @@ export async function procxy<
   await waitForInitialization(ipcClient, timeout);
 
   // Cast through any to work around TypeScript's conditional type narrowing limitations
-  return createParentProxy(ipcClient) as any;
+  const proxy = createParentProxy(ipcClient) as any;
+
+  // Store in dedup cache and clean up on completion/error
+  const dedupPromise = Promise.resolve(proxy).finally(() => {
+    debug(`dedup cleanup: ${dedupKey}`);
+    inFlightDedup.delete(dedupKey);
+  });
+
+  inFlightDedup.set(dedupKey, dedupPromise);
+
+  return proxy;
 }
