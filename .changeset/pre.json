@@ -5,6 +5,7 @@
     "procxy": "0.1.0-alpha.1"
   },
   "changesets": [
+    "brown-forks-make",
     "fix-typescript-eventemitter",
     "polite-rules-shout",
     "sixty-roses-jump",
