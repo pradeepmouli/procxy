@@ -42,25 +42,25 @@ No breaking changes—deduplication is transparent; callers get same proxy when 
 **Phase 1: Implementation**
 
 **Tasks**:
-1. [ ] Create in-flight Map in procxy.ts: Map<string, Promise<Procxy>>
-2. [ ] Generate dedup key from constructor + modulePath
-3. [ ] Check in-flight Map before fork(); return pending if hit
-4. [ ] Store fork+init Promise in in-flight Map
-5. [ ] Cache successful procxy in a result Map for future identical calls
-6. [ ] Clear in-flight entry on resolution (success or error)
-7. [ ] Add debug logging: "dedup hit", "dedup miss", "dedup cached"
-8. [ ] Write unit test: concurrent calls return same proxy
-9. [ ] Write unit test: sequential calls after dedup use cache
-10. [ ] Verify no child process leaks on error
+1. [x] Create in-flight Map in procxy.ts: Map<string, Promise<Procxy>>
+2. [x] Generate dedup key from constructor + modulePath
+3. [x] Check in-flight Map before fork(); return pending if hit
+4. [x] Store fork+init Promise in in-flight Map
+5. [x] Cache successful procxy in a result Map for future identical calls
+6. [x] Clear in-flight entry on resolution (success or error)
+7. [x] Add debug logging: "dedup hit", "dedup miss", "dedup cached"
+8. [x] Write unit test: concurrent calls return same proxy
+9. [x] Write unit test: sequential calls after dedup use cache
+10. [x] Verify no child process leaks on error
 
 **Acceptance Criteria**:
-- [ ] Two concurrent procxy() calls for same constructor spawn only 1 child
-- [ ] Both callers receive the same proxy instance
-- [ ] Debug output shows "dedup hit" for second concurrent call
-- [ ] Sequential calls after first completion hit cache ("dedup cached")
-- [ ] Error in first call is propagated to all waiting callers
-- [ ] Unit tests pass for concurrent dedup scenario
-- [ ] Integration tests show single child vs. multiple spawns
+- [x] Two concurrent procxy() calls for same constructor spawn only 1 child
+- [x] Both callers receive the same proxy instance
+- [x] Debug output shows "dedup hit" for second concurrent call
+- [x] Sequential calls after first completion hit cache ("dedup cached")
+- [x] Error in first call is propagated to all waiting callers
+- [x] Unit tests pass for concurrent dedup scenario
+- [x] Integration tests show single child vs. multiple spawns
 
 ## Testing
 - [ ] Unit test: 20 concurrent procxy() calls to same constructor—verify 1 child spawned

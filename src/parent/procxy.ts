@@ -28,6 +28,13 @@ const MIN_INIT_TIMEOUT_MS = 1000;
  */
 const inFlightDedup = new Map<string, Promise<unknown>>();
 
+/**
+ * Result cache: stores successfully created procxy instances for reuse on sequential calls.
+ * Key format: "ClassName:modulePath"
+ * Value: The resolved Procxy proxy instance
+ */
+const resultCache = new Map<string, unknown>();
+
 function makeDedupKey(className: string, modulePath: string): string {
   return `${className}:${modulePath}`;
 }
@@ -439,6 +446,13 @@ export async function procxy<
   const dedupKey = makeDedupKey(moduleResolution.className, resolvedModulePath);
   const debug = getDebugLogger();
 
+  // Check result cache first (for sequential calls after completion)
+  if (resultCache.has(dedupKey)) {
+    debug(`dedup cached: ${dedupKey}`);
+    return resultCache.get(dedupKey) as any;
+  }
+
+  // Check in-flight cache (for concurrent calls)
   if (inFlightDedup.has(dedupKey)) {
     debug(`dedup hit: ${dedupKey}`);
     return inFlightDedup.get(dedupKey) as any;
@@ -489,10 +503,24 @@ export async function procxy<
   const proxy = createParentProxy(ipcClient) as any;
 
   // Store in dedup cache and clean up on completion/error
-  const dedupPromise = Promise.resolve(proxy).finally(() => {
-    debug(`dedup cleanup: ${dedupKey}`);
-    inFlightDedup.delete(dedupKey);
-  });
+  const dedupPromise = Promise.resolve(proxy)
+    .then(
+      (result) => {
+        // Success: cache the result for future sequential calls
+        resultCache.set(dedupKey, result);
+        debug(`dedup cached result: ${dedupKey}`);
+        return result;
+      },
+      (error) => {
+        // Error: just log and re-throw
+        debug(`dedup error: ${dedupKey}`);
+        throw error;
+      }
+    )
+    .finally(() => {
+      debug(`dedup cleanup: ${dedupKey}`);
+      inFlightDedup.delete(dedupKey);
+    });
 
   inFlightDedup.set(dedupKey, dedupPromise);
 
