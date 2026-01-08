@@ -52,3 +52,6 @@ temp/
 # OS
 Thumbs.db
 iox-matter-bridge/
+
+# Ignore server directory
+server/*
