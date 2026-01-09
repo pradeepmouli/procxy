@@ -50,11 +50,4 @@ export class DedupCounter {
     this.value += amount;
     return this.value;
   }
-
-  /**
-   * Reset static counter (for testing)
-   */
-  static resetCounter(): void {
-    DedupCounter.instanceCount = 0;
-  }
 }
