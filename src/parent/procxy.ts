@@ -55,7 +55,7 @@ function hashObject(obj: any): string {
     // Create a stable string representation by sorting keys recursively
     const sortedObj = sortKeys(obj);
     const str = JSON.stringify(sortedObj);
-    return createHash('sha256').update(str).digest('hex').substring(0, 16);
+    return createHash('sha256').update(str).digest('hex');
   } catch {
     // If serialization fails, return a random hash to disable deduplication for this case
     return `unstable-${Math.random().toString(36).substring(2, 15)}`;
