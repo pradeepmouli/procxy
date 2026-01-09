@@ -55,3 +55,4 @@ iox-matter-bridge/
 
 # Ignore server directory
 server/*
+initialConfigs.json
