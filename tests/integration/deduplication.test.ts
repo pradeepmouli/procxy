@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { procxy } from '../../src/index.js';
 import { DedupCounter } from '../fixtures/dedup-counter.js';
 import { fileURLToPath } from 'url';
