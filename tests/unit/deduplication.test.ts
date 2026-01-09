@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { hashObject, sortKeys, makeDedupKey } from '../../src/parent/dedup-utils.js';
+import { hashObject, makeDedupKey } from '../../src/parent/dedup-utils.js';
 
 /**
  * Unit tests for procxy deduplication logic.
