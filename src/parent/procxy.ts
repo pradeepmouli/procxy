@@ -53,17 +53,26 @@ function evictOldestCacheEntry(): void {
   }
 }
 
+let cachedDebugLogger: ((msg: string) => void) | null = null;
+
 function getDebugLogger() {
+  if (cachedDebugLogger) {
+    return cachedDebugLogger;
+  }
+
   // Reuse debug logging from module-resolver pattern
   try {
     const createDebug = require('debug');
-    return createDebug('procxy:dedup');
+    cachedDebugLogger = createDebug('procxy:dedup');
   } catch {
     if (process.env['PROCXY_DEBUG_DEDUP'] === '1') {
-      return (msg: string) => console.warn(`[procxy:dedup] ${msg}`);
+      cachedDebugLogger = (msg: string) => console.warn(`[procxy:dedup] ${msg}`);
+    } else {
+      cachedDebugLogger = () => {}; // no-op
     }
-    return () => {}; // no-op
   }
+
+  return cachedDebugLogger;
 }
 
 /**
