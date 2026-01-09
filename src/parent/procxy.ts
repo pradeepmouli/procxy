@@ -467,8 +467,32 @@ export async function procxy<
 
   // Check result cache first (for sequential calls after completion)
   if (resultCache.has(dedupKey)) {
-    debug(`dedup cached: ${dedupKey}`);
-    return resultCache.get(dedupKey) as any;
+    const cached = resultCache.get(dedupKey) as any;
+
+    // If the cached proxy exposes lifecycle information, ensure it is still alive
+    const hasIsTerminated =
+      cached && typeof (cached as any).$isTerminated === 'function';
+    const hasTerminatedFlag = cached && '$terminated' in (cached as any);
+
+    let isTerminated = false;
+    if (hasIsTerminated) {
+      try {
+        isTerminated = !!(cached as any).$isTerminated();
+      } catch {
+        // If the health check itself fails, treat as terminated to avoid reusing it
+        isTerminated = true;
+      }
+    } else if (hasTerminatedFlag) {
+      isTerminated = !!(cached as any).$terminated;
+    }
+
+    if (isTerminated) {
+      debug(`dedup cached (stale, evicting): ${dedupKey}`);
+      resultCache.delete(dedupKey);
+    } else if (cached) {
+      debug(`dedup cached: ${dedupKey}`);
+      return cached;
+    }
   }
 
   // Check in-flight cache (for concurrent calls)
