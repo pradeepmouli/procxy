@@ -6,49 +6,66 @@ import type { ProcxyOptions } from '../types/options.js';
  * Handles special object types (Date, RegExp, Error, Map, Set) appropriately
  */
 export function sortKeys(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
+  const visited = new WeakSet<object>();
+
+  function innerSort(value: any): any {
+    if (value === null || value === undefined) {
+      return value;
+    }
+
+    const valueType = typeof value;
+    if (valueType !== 'object') {
+      return value;
+    }
+
+    // Handle special object types that do not recurse into nested structures
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    if (value instanceof RegExp) {
+      return value.toString();
+    }
+
+    if (value instanceof Error) {
+      return {
+        name: value.name,
+        message: value.message,
+        stack: value.stack
+      };
+    }
+
+    // Detect and handle circular references
+    if (visited.has(value)) {
+      return '[Circular]';
+    }
+    visited.add(value as object);
+
+    if (Array.isArray(value)) {
+      return value.map((item) => innerSort(item));
+    }
+
+    if (value instanceof Map) {
+      return Array.from(value.entries()).map(([k, v]) => [k, innerSort(v)]);
+    }
+
+    if (value instanceof Set) {
+      return Array.from(value.values()).map((v) => innerSort(v));
+    }
+
+    if (typeof value === 'object') {
+      return Object.keys(value)
+        .sort()
+        .reduce((sorted: any, key: string) => {
+          sorted[key] = innerSort((value as any)[key]);
+          return sorted;
+        }, {});
+    }
+
+    return value;
   }
 
-  if (Array.isArray(obj)) {
-    return obj.map((item) => sortKeys(item));
-  }
-
-  // Handle special object types
-  if (obj instanceof Date) {
-    return obj.toISOString();
-  }
-
-  if (obj instanceof RegExp) {
-    return obj.toString();
-  }
-
-  if (obj instanceof Map) {
-    return Array.from(obj.entries()).map(([k, v]) => [k, sortKeys(v)]);
-  }
-
-  if (obj instanceof Set) {
-    return Array.from(obj.values()).map((v) => sortKeys(v));
-  }
-
-  if (obj instanceof Error) {
-    return {
-      name: obj.name,
-      message: obj.message,
-      stack: obj.stack
-    };
-  }
-
-  if (typeof obj === 'object') {
-    return Object.keys(obj)
-      .sort()
-      .reduce((sorted: any, key: string) => {
-        sorted[key] = sortKeys(obj[key]);
-        return sorted;
-      }, {});
-  }
-
-  return obj;
+  return innerSort(obj);
 }
 
 /**
