@@ -3,7 +3,6 @@ import { existsSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
 import type { Constructor, Jsonifiable } from 'type-fest';
 import type { Procxy, SerializableConstructorArgs } from '../types/procxy.js';
 import type { ProcxyOptions } from '../types/options.js';
@@ -17,6 +16,7 @@ import { createParentProxy } from './parent-proxy.js';
 import { IPCClient } from './ipc-client.js';
 import { ChildCrashedError, OptionsValidationError, TimeoutError } from '../shared/errors.js';
 import type { InitMessage } from '../shared/protocol.js';
+import { makeDedupKey } from './dedup-utils.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
@@ -41,77 +41,6 @@ const resultCache = new Map<string, unknown>();
  * Cache eviction: track insertion order for LRU eviction
  */
 const cacheInsertionOrder: string[] = [];
-
-/**
- * Create a stable hash of an object for cache key generation.
- * Returns a consistent hash for the same input, regardless of property order.
- */
-function hashObject(obj: any): string {
-  if (obj === undefined || obj === null) {
-    return 'null';
-  }
-
-  try {
-    // Create a stable string representation by sorting keys recursively
-    const sortedObj = sortKeys(obj);
-    const str = JSON.stringify(sortedObj);
-    return createHash('sha256').update(str).digest('hex');
-  } catch {
-    // If serialization fails, return a random hash to disable deduplication for this case
-    return `unstable-${Math.random().toString(36).substring(2, 15)}`;
-  }
-}
-
-/**
- * Recursively sort object keys for stable hashing
- */
-function sortKeys(obj: any): any {
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    return obj.map((item) => sortKeys(item));
-  }
-
-  if (typeof obj === 'object') {
-    return Object.keys(obj)
-      .sort()
-      .reduce((sorted: any, key: string) => {
-        sorted[key] = sortKeys(obj[key]);
-        return sorted;
-      }, {});
-  }
-
-  return obj;
-}
-
-/**
- * Create a deduplication key that includes constructor args and isolation-affecting options.
- * Options that affect child process behavior (env, cwd, args, serialization) are included
- * to ensure separate child processes are created when these differ.
- */
-function makeDedupKey(
-  className: string,
-  modulePath: string,
-  constructorArgs: any[],
-  options?: ProcxyOptions
-): string {
-  // Extract options that affect child process isolation
-  const isolationOptions = {
-    env: options?.env,
-    cwd: options?.cwd,
-    args: options?.args,
-    serialization: options?.serialization,
-    supportHandles: (options as any)?.supportHandles,
-    sanitizeV8: (options as any)?.sanitizeV8
-  };
-
-  const optionsHash = hashObject(isolationOptions);
-  const argsHash = hashObject(constructorArgs);
-
-  return `${className}:${modulePath}:${optionsHash}:${argsHash}`;
-}
 
 /**
  * Evict oldest entry from result cache when it exceeds MAX_CACHE_SIZE
@@ -597,6 +526,14 @@ export async function procxy<
       const proxy = createParentProxy(ipcClient) as any;
 
       // Success: cache the result for future sequential calls with LRU eviction
+      // Check if key already exists and remove old entry from insertion order
+      if (resultCache.has(dedupKey)) {
+        const oldIndex = cacheInsertionOrder.indexOf(dedupKey);
+        if (oldIndex !== -1) {
+          cacheInsertionOrder.splice(oldIndex, 1);
+        }
+      }
+
       if (resultCache.size >= MAX_CACHE_SIZE) {
         evictOldestCacheEntry();
       }

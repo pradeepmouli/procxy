@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createHash } from 'node:crypto';
+import { hashObject, sortKeys, makeDedupKey } from '../../src/parent/dedup-utils.js';
 
 /**
  * Unit tests for procxy deduplication logic.
@@ -7,68 +7,6 @@ import { createHash } from 'node:crypto';
  */
 
 describe('Procxy Deduplication Unit Tests', () => {
-  /**
-   * Hash object helper (mirrors the implementation in procxy.ts)
-   */
-  function sortKeys(obj: any): any {
-    if (obj === null || obj === undefined) {
-      return obj;
-    }
-
-    if (Array.isArray(obj)) {
-      return obj.map((item) => sortKeys(item));
-    }
-
-    if (typeof obj === 'object') {
-      return Object.keys(obj)
-        .sort()
-        .reduce((sorted: any, key: string) => {
-          sorted[key] = sortKeys(obj[key]);
-          return sorted;
-        }, {});
-    }
-
-    return obj;
-  }
-
-  function hashObject(obj: any): string {
-    if (obj === undefined || obj === null) {
-      return 'null';
-    }
-
-    try {
-      const sortedObj = sortKeys(obj);
-      const str = JSON.stringify(sortedObj);
-      return createHash('sha256').update(str).digest('hex').substring(0, 16);
-    } catch {
-      return `unstable-${Math.random().toString(36).substring(2, 15)}`;
-    }
-  }
-
-  /**
-   * Make dedup key helper (mirrors the implementation in procxy.ts)
-   */
-  function makeDedupKey(
-    className: string,
-    modulePath: string,
-    constructorArgs: any[],
-    options?: any
-  ): string {
-    const isolationOptions = {
-      env: options?.env,
-      cwd: options?.cwd,
-      args: options?.args,
-      serialization: options?.serialization,
-      supportHandles: options?.supportHandles,
-      sanitizeV8: options?.sanitizeV8
-    };
-
-    const optionsHash = hashObject(isolationOptions);
-    const argsHash = hashObject(constructorArgs);
-
-    return `${className}:${modulePath}:${optionsHash}:${argsHash}`;
-  }
-
   describe('hashObject', () => {
     it('should return same hash for identical objects', () => {
       const obj1 = { a: 1, b: 2, c: 3 };
@@ -112,6 +50,65 @@ describe('Procxy Deduplication Unit Tests', () => {
 
       expect(hashObject(arr1)).toBe(hashObject(arr2));
       expect(hashObject(arr1)).not.toBe(hashObject(arr3));
+    });
+
+    it('should handle Date objects', () => {
+      const date1 = new Date('2024-01-01T00:00:00.000Z');
+      const date2 = new Date('2024-01-01T00:00:00.000Z');
+      const date3 = new Date('2024-01-02T00:00:00.000Z');
+
+      expect(hashObject(date1)).toBe(hashObject(date2));
+      expect(hashObject(date1)).not.toBe(hashObject(date3));
+    });
+
+    it('should handle RegExp objects', () => {
+      const regex1 = /test/gi;
+      const regex2 = /test/gi;
+      const regex3 = /test/i;
+
+      expect(hashObject(regex1)).toBe(hashObject(regex2));
+      expect(hashObject(regex1)).not.toBe(hashObject(regex3));
+    });
+
+    it('should handle Map objects', () => {
+      const map1 = new Map([
+        ['a', 1],
+        ['b', 2]
+      ]);
+      const map2 = new Map([
+        ['a', 1],
+        ['b', 2]
+      ]);
+      const map3 = new Map([
+        ['a', 1],
+        ['b', 3]
+      ]);
+
+      expect(hashObject(map1)).toBe(hashObject(map2));
+      expect(hashObject(map1)).not.toBe(hashObject(map3));
+    });
+
+    it('should handle Set objects', () => {
+      const set1 = new Set([1, 2, 3]);
+      const set2 = new Set([1, 2, 3]);
+      const set3 = new Set([1, 2, 4]);
+
+      expect(hashObject(set1)).toBe(hashObject(set2));
+      expect(hashObject(set1)).not.toBe(hashObject(set3));
+    });
+
+    it('should handle Error objects', () => {
+      const err1 = new Error('test message');
+      const err2 = new Error('test message');
+      const err3 = new Error('different message');
+
+      // Errors with same message should hash the same (stack might differ, but name and message are same)
+      expect(hashObject({ name: err1.name, message: err1.message })).toBe(
+        hashObject({ name: err2.name, message: err2.message })
+      );
+      expect(hashObject({ name: err1.name, message: err1.message })).not.toBe(
+        hashObject({ name: err3.name, message: err3.message })
+      );
     });
   });
 
@@ -167,8 +164,24 @@ describe('Procxy Deduplication Unit Tests', () => {
       expect(key1).not.toBe(key2);
     });
 
+    it('should generate different keys for different supportHandles values', () => {
+      const key1 = makeDedupKey('MyClass', '/path/to/module', [1], { supportHandles: true } as any);
+      const key2 = makeDedupKey('MyClass', '/path/to/module', [1], {
+        supportHandles: false
+      } as any);
+
+      expect(key1).not.toBe(key2);
+    });
+
+    it('should generate different keys for different sanitizeV8 values', () => {
+      const key1 = makeDedupKey('MyClass', '/path/to/module', [1], { sanitizeV8: true } as any);
+      const key2 = makeDedupKey('MyClass', '/path/to/module', [1], { sanitizeV8: false } as any);
+
+      expect(key1).not.toBe(key2);
+    });
+
     it('should ignore non-isolation options like timeout and retries', () => {
-      // These options don't affect child process isolation, so they shouldn't affect the key
+      // These options affect parent behavior, not child process state/environment
       const key1 = makeDedupKey('MyClass', '/path/to/module', [1], { timeout: 1000 });
       const key2 = makeDedupKey('MyClass', '/path/to/module', [1], { timeout: 5000 });
 

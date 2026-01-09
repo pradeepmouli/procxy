@@ -14,11 +14,6 @@ const dedupCounterPath = join(__dirname, '../fixtures/dedup-counter.ts');
  * Verifies that concurrent procxy() calls for the same target avoid duplicate child spawning.
  */
 describe('Procxy Deduplication Integration', () => {
-  beforeEach(async () => {
-    // Note: We can't easily reset the counter across child processes
-    // so each test uses different constructor args or options to get fresh instances
-  });
-
   it('should deduplicate concurrent procxy calls with identical params', async () => {
     // Create multiple concurrent procxy calls with identical parameters
     // They should all return the same proxy instance (same child process)
@@ -225,6 +220,52 @@ describe('Procxy Deduplication Integration', () => {
       const pid2 = await proxy2.getProcessId();
 
       // Different serialization mode = different child processes
+      expect(pid1).not.toBe(pid2);
+    } finally {
+      await proxy1.$terminate();
+      await proxy2.$terminate();
+    }
+  });
+
+  it('should NOT deduplicate different supportHandles values', async () => {
+    // Different supportHandles values should create separate instances
+    // Use unique values to avoid cache collision
+    const proxy1 = await procxy(
+      DedupCounter,
+      dedupCounterPath,
+      { supportHandles: true } as any,
+      5001
+    );
+    const proxy2 = await procxy(
+      DedupCounter,
+      dedupCounterPath,
+      { supportHandles: false } as any,
+      5001
+    );
+
+    try {
+      const pid1 = await proxy1.getProcessId();
+      const pid2 = await proxy2.getProcessId();
+
+      // Different supportHandles = different child processes
+      expect(pid1).not.toBe(pid2);
+    } finally {
+      await proxy1.$terminate();
+      await proxy2.$terminate();
+    }
+  });
+
+  it('should NOT deduplicate different sanitizeV8 values', async () => {
+    // Different sanitizeV8 values should create separate instances
+    // Use unique values to avoid cache collision
+    const proxy1 = await procxy(DedupCounter, dedupCounterPath, { sanitizeV8: true } as any, 6001);
+    const proxy2 = await procxy(DedupCounter, dedupCounterPath, { sanitizeV8: false } as any, 6001);
+
+    try {
+      const pid1 = await proxy1.getProcessId();
+      const pid2 = await proxy2.getProcessId();
+
+      // Different sanitizeV8 = different child processes
       expect(pid1).not.toBe(pid2);
     } finally {
       await proxy1.$terminate();
