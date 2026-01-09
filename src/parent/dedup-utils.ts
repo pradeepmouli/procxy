@@ -46,11 +46,15 @@ export function sortKeys(obj: any): any {
     }
 
     if (value instanceof Map) {
-      return Array.from(value.entries()).map(([k, v]) => [k, innerSort(v)]);
+      return Array.from(value.entries())
+        .sort(([k1], [k2]) => String(k1).localeCompare(String(k2)))
+        .map(([k, v]) => [k, innerSort(v)]);
     }
 
     if (value instanceof Set) {
-      return Array.from(value.values()).map((v) => innerSort(v));
+      return Array.from(value.values())
+        .map((v) => innerSort(v))
+        .sort((a, b) => String(a).localeCompare(String(b)));
     }
 
     if (typeof value === 'object') {
