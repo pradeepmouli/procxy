@@ -54,7 +54,11 @@ export function sortKeys(obj: any): any {
     if (value instanceof Set) {
       return Array.from(value.values())
         .map((v) => innerSort(v))
-        .sort((a, b) => String(a).localeCompare(String(b)));
+        .sort((a, b) => {
+          const s1 = JSON.stringify(a);
+          const s2 = JSON.stringify(b);
+          return s1 < s2 ? -1 : s1 > s2 ? 1 : 0;
+        });
     }
 
     if (typeof value === 'object') {
