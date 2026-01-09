@@ -52,13 +52,38 @@ function hashObject(obj: any): string {
   }
 
   try {
-    // Create a stable string representation by sorting keys
-    const str = JSON.stringify(obj, Object.keys(obj).sort());
+    // Create a stable string representation by sorting keys recursively
+    const sortedObj = sortKeys(obj);
+    const str = JSON.stringify(sortedObj);
     return createHash('sha256').update(str).digest('hex').substring(0, 16);
   } catch {
     // If serialization fails, return a random hash to disable deduplication for this case
     return `unstable-${Math.random().toString(36).substring(2, 15)}`;
   }
+}
+
+/**
+ * Recursively sort object keys for stable hashing
+ */
+function sortKeys(obj: any): any {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map((item) => sortKeys(item));
+  }
+
+  if (typeof obj === 'object') {
+    return Object.keys(obj)
+      .sort()
+      .reduce((sorted: any, key: string) => {
+        sorted[key] = sortKeys(obj[key]);
+        return sorted;
+      }, {});
+  }
+
+  return obj;
 }
 
 /**
