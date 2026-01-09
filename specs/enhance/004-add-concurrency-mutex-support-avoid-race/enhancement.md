@@ -78,10 +78,10 @@ No breaking changes—deduplication is transparent; callers get same proxy when 
 - [ ] Child process count verified in concurrent scenario
 
 ## Notes
-- Dedup key format: `${constructor.name}:${modulePath}` (simple, readable)
+- Dedup key format: `${constructor.name}:${modulePath}:${optionsFingerprint}` where `optionsFingerprint` is a stable representation (for example, a hash) of all ProcxyOptions that affect child behavior and isolation, including at least `env`, `cwd`, child `args`, and any serialization/transport flags. If any of these options differ, deduplication **must not** be applied and a separate child process must be created.
 - In-flight Map clears entry on resolution or rejection (Promise.finally)
-- Cache is optional; can be enabled via future option if needed
-- Alternative: Allow explicit singleton mode via ProcxyOptions in future
+- Cache is optional; any future cache **must** use the same full dedup key (including the options fingerprint) so that processes with different `env`, `cwd`, `args`, or serialization/transport settings are never collapsed into a single shared child.
+- Alternative: Allow explicit singleton mode via ProcxyOptions in future, with the same requirement that singleton scope is defined in terms of the full dedup key (constructor, modulePath, and optionsFingerprint).
 ## Implementation Summary
 
 ✅ **Completed Tasks**:
