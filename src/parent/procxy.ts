@@ -559,13 +559,6 @@ export async function procxy<
       const proxy = createParentProxy(ipcClient) as any;
 
       // Success: cache the result for future sequential calls with LRU eviction
-      // Check if key already exists and remove old entry from insertion order
-      if (resultCache.has(dedupKey)) {
-        const oldIndex = cacheInsertionOrder.indexOf(dedupKey);
-        if (oldIndex !== -1) {
-          cacheInsertionOrder.splice(oldIndex, 1);
-        }
-      }
 
       if (resultCache.size >= MAX_CACHE_SIZE) {
         evictOldestCacheEntry();
