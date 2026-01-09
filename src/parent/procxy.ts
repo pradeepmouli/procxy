@@ -512,8 +512,9 @@ export async function procxy<
         return result;
       },
       (error) => {
-        // Error: just log and re-throw
+        // Error: clear any cached result, log and re-throw
         debug(`dedup error: ${dedupKey}`);
+        resultCache.delete(dedupKey);
         throw error;
       }
     )
