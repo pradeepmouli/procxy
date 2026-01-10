@@ -46,11 +46,23 @@ export function sortKeys(obj: any): any {
     }
 
     if (value instanceof Map) {
-      return Array.from(value.entries()).map(([k, v]) => [k, innerSort(v)]);
+      return Array.from(value.entries())
+        .sort(([k1], [k2]) => {
+          const s1 = JSON.stringify(k1);
+          const s2 = JSON.stringify(k2);
+          return s1 < s2 ? -1 : s1 > s2 ? 1 : 0;
+        })
+        .map(([k, v]) => [k, innerSort(v)]);
     }
 
     if (value instanceof Set) {
-      return Array.from(value.values()).map((v) => innerSort(v));
+      return Array.from(value.values())
+        .map((v) => innerSort(v))
+        .sort((a, b) => {
+          const s1 = JSON.stringify(a);
+          const s2 = JSON.stringify(b);
+          return s1 < s2 ? -1 : s1 > s2 ? 1 : 0;
+        });
     }
 
     if (typeof value === 'object') {
