@@ -55,7 +55,7 @@ function evictOldestCacheEntry(): void {
 
 let cachedDebugLogger: ((msg: string) => void) | null = null;
 
-function getDebugLogger() {
+function getDebugLogger(): (msg: string) => void {
   if (cachedDebugLogger) {
     return cachedDebugLogger;
   }
@@ -72,7 +72,7 @@ function getDebugLogger() {
     }
   }
 
-  return cachedDebugLogger;
+  return cachedDebugLogger!;
 }
 
 /**
@@ -479,8 +479,7 @@ export async function procxy<
     const cached = resultCache.get(dedupKey) as any;
 
     // If the cached proxy exposes lifecycle information, ensure it is still alive
-    const hasIsTerminated =
-      cached && typeof (cached as any).$isTerminated === 'function';
+    const hasIsTerminated = cached && typeof (cached as any).$isTerminated === 'function';
     const hasTerminatedFlag = cached && '$terminated' in (cached as any);
 
     let isTerminated = false;
