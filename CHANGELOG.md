@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.10
+
+### Patch Changes
+
+- implemented deduplication for singleton procxies
+
 ## 0.1.0-alpha.9
 
 ### Patch Changes

@@ -16,10 +16,64 @@ import { createParentProxy } from './parent-proxy.js';
 import { IPCClient } from './ipc-client.js';
 import { ChildCrashedError, OptionsValidationError, TimeoutError } from '../shared/errors.js';
 import type { InitMessage } from '../shared/protocol.js';
+import { makeDedupKey } from './dedup-utils.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
 const MIN_INIT_TIMEOUT_MS = 1000;
+const MAX_CACHE_SIZE = 100;
+
+/**
+ * Deduplication cache: tracks in-flight procxy creations to avoid duplicate child spawning.
+ * Key format: "ClassName:modulePath:optionsHash:argsHash"
+ * Value: Promise that resolves to the initialized Procxy proxy
+ */
+const inFlightDedup = new Map<string, Promise<unknown>>();
+
+/**
+ * Result cache: stores successfully created procxy instances for reuse on sequential calls.
+ * Key format: "ClassName:modulePath:optionsHash:argsHash"
+ * Value: The resolved Procxy proxy instance
+ */
+const resultCache = new Map<string, unknown>();
+
+/**
+ * Cache eviction: track insertion order for LRU eviction
+ */
+const cacheInsertionOrder: string[] = [];
+
+/**
+ * Evict oldest entry from result cache when it exceeds MAX_CACHE_SIZE
+ */
+function evictOldestCacheEntry(): void {
+  if (cacheInsertionOrder.length > 0) {
+    const oldestKey = cacheInsertionOrder.shift()!;
+    resultCache.delete(oldestKey);
+    getDebugLogger()(`cache evicted: ${oldestKey}`);
+  }
+}
+
+let cachedDebugLogger: ((msg: string) => void) | null = null;
+
+function getDebugLogger(): (msg: string) => void {
+  if (cachedDebugLogger) {
+    return cachedDebugLogger;
+  }
+
+  // Reuse debug logging from module-resolver pattern
+  try {
+    const createDebug = require('debug');
+    cachedDebugLogger = createDebug('procxy:dedup');
+  } catch {
+    if (process.env['PROCXY_DEBUG_DEDUP'] === '1') {
+      cachedDebugLogger = (msg: string) => console.warn(`[procxy:dedup] ${msg}`);
+    } else {
+      cachedDebugLogger = () => {}; // no-op
+    }
+  }
+
+  return cachedDebugLogger!;
+}
 
 /**
  * Check if an object is likely a ProcxyOptions object.
@@ -410,6 +464,53 @@ export async function procxy<
   const resolvedModulePath = moduleResolution.modulePath.startsWith('file://')
     ? fileURLToPath(moduleResolution.modulePath)
     : resolve(moduleResolution.modulePath);
+
+  // Create deduplication key including constructor args and isolation-affecting options
+  const dedupKey = makeDedupKey(
+    moduleResolution.className,
+    resolvedModulePath,
+    actualConstructorArgs,
+    resolvedOptions as ProcxyOptions | undefined
+  );
+  const debug = getDebugLogger();
+
+  // Check result cache first (for sequential calls after completion)
+  if (resultCache.has(dedupKey)) {
+    const cached = resultCache.get(dedupKey) as any;
+
+    // If the cached proxy exposes lifecycle information, ensure it is still alive
+    const hasIsTerminated = cached && typeof (cached as any).$isTerminated === 'function';
+    const hasTerminatedFlag = cached && '$terminated' in (cached as any);
+
+    let isTerminated = false;
+    if (hasIsTerminated) {
+      try {
+        isTerminated = !!(cached as any).$isTerminated();
+      } catch {
+        // If the health check itself fails, treat as terminated to avoid reusing it
+        isTerminated = true;
+      }
+    } else if (hasTerminatedFlag) {
+      isTerminated = !!(cached as any).$terminated;
+    }
+
+    if (isTerminated) {
+      debug(`dedup cached (stale, evicting): ${dedupKey}`);
+      resultCache.delete(dedupKey);
+    } else if (cached) {
+      debug(`dedup cached: ${dedupKey}`);
+      return cached;
+    }
+  }
+
+  // Check in-flight cache (for concurrent calls)
+  if (inFlightDedup.has(dedupKey)) {
+    debug(`dedup hit: ${dedupKey}`);
+    return inFlightDedup.get(dedupKey) as any;
+  }
+
+  debug(`dedup miss: ${dedupKey}`);
+
   const timeout = resolvedOptions?.timeout ?? DEFAULT_TIMEOUT_MS;
   const retries = resolvedOptions?.retries ?? DEFAULT_RETRIES;
 
@@ -424,31 +525,67 @@ export async function procxy<
     serialization: serializationMode
   };
 
-  const child = fork(agentPath, toArgStrings(resolvedOptions?.args), forkOptions);
+  // Create the promise and store it in inFlightDedup BEFORE spawning the child
+  // This prevents race conditions where concurrent calls miss the in-flight entry
+  const dedupPromise = (async () => {
+    try {
+      const child = fork(agentPath, toArgStrings(resolvedOptions?.args), forkOptions);
 
-  const ipcClient = new IPCClient(child, timeout, retries);
+      const ipcClient = new IPCClient(child, timeout, retries);
 
-  // Set up output forwarding if requested
-  if (resolvedOptions?.interleaveOutput) {
-    if (child.stdout) {
-      child.stdout.pipe(process.stdout);
+      // Set up output forwarding if requested
+      if (resolvedOptions?.interleaveOutput) {
+        if (child.stdout) {
+          child.stdout.pipe(process.stdout);
+        }
+        if (child.stderr) {
+          child.stderr.pipe(process.stderr);
+        }
+      }
+
+      const initMessage: InitMessage = {
+        type: 'INIT',
+        modulePath: resolvedModulePath,
+        className: moduleResolution.className,
+        constructorArgs: [...actualConstructorArgs],
+        serialization: serializationMode
+      };
+
+      child.send(initMessage);
+      await waitForInitialization(ipcClient, timeout);
+
+      // Cast through any to work around TypeScript's conditional type narrowing limitations
+      const proxy = createParentProxy(ipcClient) as any;
+
+      // Success: cache the result for future sequential calls with LRU eviction
+
+      if (resultCache.size >= MAX_CACHE_SIZE) {
+        evictOldestCacheEntry();
+      }
+      resultCache.set(dedupKey, proxy);
+      cacheInsertionOrder.push(dedupKey);
+      debug(`dedup cached result: ${dedupKey}`);
+
+      return proxy;
+    } catch (error) {
+      // Error: clear any cached result, log and re-throw
+      debug(`dedup error: ${dedupKey}`);
+      resultCache.delete(dedupKey);
+      // Remove from insertion order if it was added
+      const index = cacheInsertionOrder.indexOf(dedupKey);
+      if (index !== -1) {
+        cacheInsertionOrder.splice(index, 1);
+      }
+      throw error;
+    } finally {
+      // Always cleanup in-flight entry
+      debug(`dedup cleanup: ${dedupKey}`);
+      inFlightDedup.delete(dedupKey);
     }
-    if (child.stderr) {
-      child.stderr.pipe(process.stderr);
-    }
-  }
+  })();
 
-  const initMessage: InitMessage = {
-    type: 'INIT',
-    modulePath: resolvedModulePath,
-    className: moduleResolution.className,
-    constructorArgs: [...actualConstructorArgs],
-    serialization: serializationMode
-  };
+  // Store the promise BEFORE any async work happens to prevent race conditions
+  inFlightDedup.set(dedupKey, dedupPromise);
 
-  child.send(initMessage);
-  await waitForInitialization(ipcClient, timeout);
-
-  // Cast through any to work around TypeScript's conditional type narrowing limitations
-  return createParentProxy(ipcClient) as any;
+  return dedupPromise as any;
 }
