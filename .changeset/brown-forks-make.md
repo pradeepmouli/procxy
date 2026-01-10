@@ -2,4 +2,4 @@
 "procxy": patch
 ---
 
-implemented deduplication for singleton procxies
+implemented deduplication for singleton Procxies

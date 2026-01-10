@@ -17,7 +17,7 @@ import {
 } from '../shared/serialization.js';
 import { EventBridge } from './event-bridge.js';
 import { randomUUID } from 'node:crypto';
-import { isProxiableProperty } from '../shared/property-utils.js';
+import { isProcxiableProperty } from '../shared/property-utils.js';
 
 /**
  * Child-side proxy handler that invokes methods on the target instance
@@ -70,8 +70,8 @@ export class ChildProxy {
           return false;
         }
 
-        // Send property set to parent if it's a proxiable property
-        if (isProxiableProperty(prop, value)) {
+        // Send property set to parent if it's a procxiable property
+        if (isProcxiableProperty(prop, value)) {
           const message: PropertySet = {
             type: 'PROPERTY_SET',
             prop,
@@ -143,7 +143,7 @@ export class ChildProxy {
 
       const value = this.target[key];
 
-      if (isProxiableProperty(key, value)) {
+      if (isProcxiableProperty(key, value)) {
         props.set(key, value);
         // Auto-track new properties discovered during method execution
         this.trackedProperties.add(key);
@@ -195,7 +195,7 @@ export class ChildProxy {
     for (const key in this.target) {
       const value = this.target[key];
 
-      if (isProxiableProperty(key, value)) {
+      if (isProcxiableProperty(key, value)) {
         properties[key] = value;
         // Auto-track all initial properties
         this.trackedProperties.add(key);

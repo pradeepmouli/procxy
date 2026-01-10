@@ -4,7 +4,7 @@
 
 ### Patch Changes
 
-- implemented deduplication for singleton procxies
+- Implemented deduplication for singleton Procxies
 
 ## 0.1.0-alpha.9
 

@@ -24,14 +24,14 @@ const MIN_INIT_TIMEOUT_MS = 1000;
 const MAX_CACHE_SIZE = 100;
 
 /**
- * Deduplication cache: tracks in-flight procxy creations to avoid duplicate child spawning.
+ * Deduplication cache: tracks in-flight Procxy creations to avoid duplicate child spawning.
  * Key format: "ClassName:modulePath:optionsHash:argsHash"
  * Value: Promise that resolves to the initialized Procxy proxy
  */
 const inFlightDedup = new Map<string, Promise<unknown>>();
 
 /**
- * Result cache: stores successfully created procxy instances for reuse on sequential calls.
+ * Result cache: stores successfully created Procxy instances for reuse on sequential calls.
  * Key format: "ClassName:modulePath:optionsHash:argsHash"
  * Value: The resolved Procxy proxy instance
  */

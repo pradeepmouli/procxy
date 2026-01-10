@@ -2,4 +2,4 @@
 "procxy": minor
 ---
 
-dedupe support for singleton procxies
+dedupe support for singleton Procxies

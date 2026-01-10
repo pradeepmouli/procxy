@@ -256,7 +256,7 @@ export type {
 export { isProcxy, isAdvancedMode, isHandleSupported } from './types/isomorphism.js';
 
 /**
- * Type utility for extracting procxiable properties from an object.
+ * Type utility for extracting Procxiable properties from an object.
  *
  * Procxify picks only non-method properties that can be serialized across the IPC boundary
  * based on the serialization mode. This is useful for typing data transfer objects.

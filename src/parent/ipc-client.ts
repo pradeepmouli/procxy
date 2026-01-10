@@ -21,7 +21,7 @@ import type {
 import { TimeoutError, ChildCrashedError } from '../shared/errors.js';
 import { EventEmitter } from 'node:events';
 import { CallbackRegistry, serializeWithCallbacks } from '../shared/serialization.js';
-import { isProxiableEventName } from '../shared/property-utils.js';
+import { isProcxiableEventName } from '../shared/property-utils.js';
 /**
  * Pending request tracking.
  */
@@ -176,7 +176,7 @@ export class IPCClient extends EventEmitter {
     }
 
     const eventName = typeof event === 'symbol' ? event.toString() : event;
-    if (!isProxiableEventName(eventName)) {
+    if (!isProcxiableEventName(eventName)) {
       return;
     }
 
