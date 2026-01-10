@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-alpha.11
+
+### Minor Changes
+
+- db137ee: dedupe support for singleton Procxies
+
 ## 0.1.0-alpha.10
 
 ### Patch Changes
