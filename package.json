@@ -68,7 +68,7 @@
     "@changesets/cli": "^2.29.8",
     "@types/node": "^25.0.3",
     "@typescript/native-preview": "7.0.0-dev.20260103.1",
-    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/coverage-v8": "^4.0.17",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "oxfmt": "^0.21.0",
@@ -78,7 +78,7 @@
     "type-fest": "^5.3.1",
     "typedoc": "^0.28.15",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.17"
   },
   "engines": {
     "node": ">=20.0.0",
