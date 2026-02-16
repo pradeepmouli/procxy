@@ -478,20 +478,22 @@ export async function procxy<
   if (resultCache.has(dedupKey)) {
     const cached = resultCache.get(dedupKey) as any;
 
-    // If the cached proxy exposes lifecycle information, ensure it is still alive
-    const hasIsTerminated = cached && typeof (cached as any).$isTerminated === 'function';
-    const hasTerminatedFlag = cached && '$terminated' in (cached as any);
-
+    // If the cached proxy exposes lifecycle information, ensure it is still alive.
+    // Parent proxies intentionally reserve unknown "$*" members, so probing internal
+    // lifecycle helpers (e.g. $isTerminated) throws. Use $process state instead.
     let isTerminated = false;
-    if (hasIsTerminated) {
-      try {
-        isTerminated = !!(cached as any).$isTerminated();
-      } catch {
-        // If the health check itself fails, treat as terminated to avoid reusing it
-        isTerminated = true;
+    try {
+      const cachedProcess = cached && (cached as any).$process;
+      if (cachedProcess && typeof cachedProcess === 'object') {
+        isTerminated =
+          cachedProcess.killed === true ||
+          cachedProcess.connected === false ||
+          cachedProcess.exitCode !== null ||
+          cachedProcess.signalCode !== null;
       }
-    } else if (hasTerminatedFlag) {
-      isTerminated = !!(cached as any).$terminated;
+    } catch {
+      // If lifecycle probe fails, treat as terminated to avoid reusing stale proxies.
+      isTerminated = true;
     }
 
     if (isTerminated) {

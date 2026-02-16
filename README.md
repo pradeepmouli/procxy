@@ -232,7 +232,7 @@ interface ProcxyOptions {
   cwd?: string;                      // Working directory for child process
   args?: Jsonifiable[];              // Additional command line arguments
   serialization?: 'json' | 'advanced'; // Serialization mode (default: 'json')
-  supportHandles?: boolean;          // Enable handle passing for sockets (advanced mode only)
+  supportHandles?: boolean;          // Enable handle passing for sockets (advanced mode + Node.js runtime)
 }
 ```
 
@@ -624,7 +624,7 @@ console.log(result);  // 56088n
 | Date | ⚠️ (as string) | ✅ (as Date) |
 | RegExp | ⚠️ (as object) | ✅ (as RegExp) |
 | Error | ⚠️ (partial) | ✅ (full props) |
-| Handle Passing (sockets) | ❌ | ✅ (with `supportHandles`) |
+| Handle Passing (sockets) | ❌ | ✅ (with `supportHandles` on Node.js) |
 | Performance | Faster for simple objects | Slightly slower |
 
 ### Handle Passing
@@ -664,6 +664,7 @@ server.listen(8080);
 **Platform Support:**
 - ✅ **Unix/Linux/macOS**: Full support for socket transfer
 - ⚠️ **Windows**: Limited support - some handle types may not work correctly
+- ⚠️ **Bun**: `supportHandles` / `$sendHandle()` is not supported; use Node.js runtime for handle passing
 
 See [examples/advanced-serialization/socket-transfer.ts](./examples/advanced-serialization/socket-transfer.ts) for a complete example.
 

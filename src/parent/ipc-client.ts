@@ -493,6 +493,12 @@ export class IPCClient extends EventEmitter {
       throw new Error('Child process has been terminated');
     }
 
+    if (process.versions?.['bun']) {
+      throw new Error(
+        'Handle passing is not currently supported on Bun. Use Node.js for supportHandles, or disable supportHandles in ProcxyOptions.'
+      );
+    }
+
     // Determine handle type
     let handleType: 'socket' | 'server' | 'dgram' | 'fd';
     if (typeof handle === 'number') {
