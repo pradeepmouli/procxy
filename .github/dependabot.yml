@@ -1,5 +1,4 @@
 version: 2
-
 updates:
   # Enable version updates for npm
   - package-ecosystem: 'npm'
@@ -7,45 +6,51 @@ updates:
     schedule:
       interval: 'weekly'
       day: 'monday'
-      time: '09:00'
-    open-pull-requests-limit: 10
-    assignees:
-      - 'maintainers'
-    commit-message:
-      prefix: 'chore'
-      include: 'scope'
-    labels:
-      - 'dependencies'
-      - 'automated'
-    versioning-strategy: increase
+      time: '03:00'
+    open-pull-requests-limit: 5
     groups:
-      # Group patch updates
-      patch-updates:
-        patterns:
-          - '*'
-        update-types:
-          - 'patch'
-      # Group TypeScript and related tools
+      # Group TypeScript and related packages
       typescript:
         patterns:
           - 'typescript'
+          - '@typescript/*'
           - '@types/*'
-          - 'ts-*'
-          - 'tsx'
-      # Group testing tools
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group testing frameworks
       testing:
         patterns:
           - 'vitest'
           - '@vitest/*'
-      # Group linting and formatting
+          - '@testing-library/*'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group code quality tools
       code-quality:
         patterns:
           - 'oxlint'
           - 'oxfmt'
-      # Group changesets
-      changesets:
+          - 'lint-staged'
+        update-types:
+          - 'minor'
+          - 'patch'
+      # Group build tools
+      build-tools:
         patterns:
-          - '@changesets/*'
+          - 'vite'
+          - 'tsx'
+          - 'tsconfig'
+        update-types:
+          - 'minor'
+          - 'patch'
+    labels:
+      - 'dependencies'
+      - 'automated'
+    commit-message:
+      prefix: 'chore(deps)'
+      include: 'scope'
 
   # Enable version updates for GitHub Actions
   - package-ecosystem: 'github-actions'
@@ -53,11 +58,11 @@ updates:
     schedule:
       interval: 'weekly'
       day: 'monday'
-      time: '09:00'
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: 'ci'
+      time: '03:00'
+    open-pull-requests-limit: 3
     labels:
       - 'dependencies'
       - 'github-actions'
-      - 'automated'
+    commit-message:
+      prefix: 'ci'
+      include: 'scope'
