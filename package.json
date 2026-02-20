@@ -84,17 +84,9 @@
     "pre-commit": "pnpm lint-staged",
     "pre-push": "pnpm run type-check"
   },
-  "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,md}": [
-      "oxfmt . --no-error-on-unmatched-pattern"
-    ],
-    "*.{ts,tsx,js,jsx}": [
-      "oxlint --fix"
-    ]
-  },
   "engines": {
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.15.0"
+  "packageManager": "pnpm@10.6.2"
 }
