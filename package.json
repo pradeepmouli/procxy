@@ -51,7 +51,7 @@
     "format": "oxfmt src",
     "format:check": "oxfmt --check src",
     "type-check": "tsgo --noEmit -p tsconfig.json",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
     "changeset": "changeset",
@@ -59,7 +59,8 @@
     "release": "pnpm build && changeset publish",
     "prepare": "simple-git-hooks",
     "changeset:version": "changeset version",
-    "changeset:publish": "pnpm run build && changeset publish"
+    "changeset:publish": "pnpm run build && changeset publish",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "optionalDependencies": {
     "debug": "^4.4.3",
