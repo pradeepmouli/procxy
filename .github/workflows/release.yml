@@ -39,28 +39,44 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Build
+        run: pnpm build
 
-      - name: Version and publish
-        run: |
-          CHANGESET_COUNT=$(find .changeset -maxdepth 1 -name '*.md' ! -name 'README.md' | wc -l)
-
-          if [ "$CHANGESET_COUNT" -gt 0 ]; then
-            echo "Found $CHANGESET_COUNT changesets, proceeding with publishing..."
-
-            pnpm changeset:version
-
-            git add -A
-            git commit -m "chore: version packages" || echo "No version changes to commit"
-            git push origin master
-
-            pnpm changeset:publish
-          else
-            echo "No changesets found, skipping publication"
-          fi
+      - name: Create Release Pull Request or Publish
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm changeset:version
+          publish: pnpm changeset:publish
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
+
+      - name: Enable auto-merge on version PR
+        if: steps.changesets.outputs.hasChangesets == 'true'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: pulls } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:changeset-release/master`
+            });
+            if (pulls.length === 0) { console.log('No version PR found'); return; }
+            const pr = pulls[0];
+            try {
+              await github.graphql(`
+                mutation($id: ID!) {
+                  enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: SQUASH }) {
+                    pullRequest { number }
+                  }
+                }
+              `, { id: pr.node_id });
+              console.log(`Auto-merge enabled on PR #${pr.number}`);
+            } catch(e) {
+              console.log('Auto-merge not available:', e.message);
+            }
