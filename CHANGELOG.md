@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.1.0
+
+### Minor Changes
+
+- [`db137ee`](https://github.com/pradeepmouli/procxy/commit/db137ee8f70f2c54f04c96047b609584ea5a2e68) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - dedupe support for singleton Procxies
+
+- [`ef04c66`](https://github.com/pradeepmouli/procxy/commit/ef04c664f432b3ee8ff214f6829d10f4dad4d512) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - resolver fixes
+
+- [`7cca250`](https://github.com/pradeepmouli/procxy/commit/7cca25008fd44b497ffc9549fbf8ca5c69c87d68) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - pkg cleanup
+
+- [#15](https://github.com/pradeepmouli/procxy/pull/15) [`77e11e5`](https://github.com/pradeepmouli/procxy/commit/77e11e5c51bbce80f599ca99687cfcf21848bbea) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - added support for passing sockets
+
+- [#12](https://github.com/pradeepmouli/procxy/pull/12) [`a055d25`](https://github.com/pradeepmouli/procxy/commit/a055d25c9c2792a7862a2f4c7b0e4027e6a32d91) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - advanced serialization support
+
+- [`65a993f`](https://github.com/pradeepmouli/procxy/commit/65a993f7f748b99da2710d93160607e9b41ab8ca) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - serialization fixes
+
+### Patch Changes
+
+- [#27](https://github.com/pradeepmouli/procxy/pull/27) [`d3bd789`](https://github.com/pradeepmouli/procxy/commit/d3bd7895bd0627b673aac4b42bc49dc162804330) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - implemented deduplication for singleton Procxies
+
+- [#20](https://github.com/pradeepmouli/procxy/pull/20) [`ef9091c`](https://github.com/pradeepmouli/procxy/commit/ef9091c08a1f56ae08f179991d40f2e195377104) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - Fix module resolution and EventEmitter support in subprocess mode
+
+  - **Module Resolution**: Fixed `.ts`/`.js` extension resolution to support both TypeScript source files and compiled JavaScript output. The resolver now checks for both extensions and falls back appropriately, enabling procxy to work in both development (tsx) and production (compiled) environments.
+
+  - **EventEmitter Support**: Enhanced child proxy to properly handle classes extending EventEmitter by filtering out function assignments during property synchronization. This prevents "could not be cloned" errors when EventEmitter's internal event handling setup tries to assign functions across IPC boundaries.
+
+  These fixes enable classes that extend EventEmitter to run in subprocess mode and ensure compatibility with various execution environments.
+
+- [`e4e47c0`](https://github.com/pradeepmouli/procxy/commit/e4e47c0249069c1dccedbd8958c2325104938bc2) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - Fix proxy reuse stability and Bun compatibility messaging:
+
+  - Fix dedup cache liveness checks to use `$process` state instead of probing reserved proxy internals.
+  - Make `$sendHandle()` fail fast on Bun with a clear runtime error instead of waiting for an IPC timeout.
+  - Document that handle passing requires the Node.js runtime.
+
+- [`ad6a883`](https://github.com/pradeepmouli/procxy/commit/ad6a88349f6dde4ca69acb4dcb2817022f21a62f) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - caching implemented for module resolution
+
 ## 0.1.0-alpha.12
 
 ### Patch Changes
