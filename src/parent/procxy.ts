@@ -414,7 +414,7 @@ export async function procxy<
     if (resolvedOptions.sanitizeV8) {
       try {
         validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
-      } catch (error) {
+      } catch {
         // Validation failed - sanitize to strip non-serializable content
         actualConstructorArgs = sanitizeForV8Array(actualConstructorArgs);
       }

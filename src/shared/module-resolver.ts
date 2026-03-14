@@ -48,7 +48,7 @@ export function resolveConstructorModule(
 
   // If explicit modulePath provided, use it directly
   if (explicitModulePath) {
-    if (_constructor) {
+    if (typeof _constructor === 'function') {
       constructorModuleCache.set(_constructor, explicitModulePath);
     }
     return {
@@ -70,7 +70,7 @@ export function resolveConstructorModule(
   const callerPath = detectCallerPathFromStackTrace(_constructor);
 
   // Cache check: constructor
-  if (_constructor && constructorModuleCache.has(_constructor)) {
+  if (typeof _constructor === 'function' && constructorModuleCache.has(_constructor)) {
     const cachedModule = constructorModuleCache.get(_constructor) as string;
     debug(`cache hit (constructor): ${cachedModule}`);
     return { modulePath: cachedModule, className };
@@ -82,7 +82,7 @@ export function resolveConstructorModule(
     const cachedModule = callerClassModuleCache.get(cacheKey);
     if (cachedModule) {
       debug(`cache hit (caller,class): ${cachedModule}`);
-      if (_constructor) {
+      if (typeof _constructor === 'function') {
         constructorModuleCache.set(_constructor, cachedModule);
       }
       return { modulePath: cachedModule, className };
@@ -93,7 +93,7 @@ export function resolveConstructorModule(
     // Try to parse the caller file to find where the class is imported from
     const detectedPath = parseCallerFileForClassPath(callerPath, className);
     if (detectedPath) {
-      if (_constructor) {
+      if (typeof _constructor === 'function') {
         constructorModuleCache.set(_constructor, detectedPath);
       }
       const cacheKey = makeCallerClassKey(callerPath, className);

@@ -25,7 +25,8 @@ describe('EventEmitter Integration', () => {
         worker.on('complete', (data: { duration: number; steps: number }) => {
           resolve(data);
         });
-        worker.startTask(100);
+        // Catch rejection from terminate() racing with the task
+        worker.startTask(100).catch(() => {});
       });
 
       expect(completeData).toEqual({ duration: 100, steps: 5 });
@@ -38,7 +39,7 @@ describe('EventEmitter Integration', () => {
         worker.on('multi', (a: number, b: string, c: boolean) => {
           resolve({ a, b, c });
         });
-        worker.emitMultiArgs(42, 'test', true);
+        worker.emitMultiArgs(42, 'test', true).catch(() => {});
       });
 
       expect(received).toEqual({ a: 42, b: 'test', c: true });

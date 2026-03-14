@@ -50,7 +50,7 @@ function sendToParent(message: ChildToParentMessage): void {
 
   try {
     process.send(message);
-  } catch (error) {
+  } catch {
     try {
       const sanitized = sanitizeMessageForParent(message);
       process.send(sanitized);
