@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- [#49](https://github.com/pradeepmouli/procxy/pull/49) [`29b1b5b`](https://github.com/pradeepmouli/procxy/commit/29b1b5bda62c84a4ba4b93443ad412a3150d960e) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - - fix: address code quality, reuse, and efficiency issues across source
+  - docs: add comment explaining YAML separator workaround in auto-approve workflow
+
 ## 0.1.0
 
 ### Minor Changes
