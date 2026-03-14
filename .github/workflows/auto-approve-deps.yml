@@ -36,6 +36,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            // Literal '---' in a YAML block scalar is parsed as a document separator; use a variable to avoid that.
             const sep = '---';
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
