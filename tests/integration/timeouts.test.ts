@@ -13,7 +13,8 @@ describe('Configurable Timeouts', () => {
       // Create worker with 500ms timeout
       await using worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 500,
-        retries: 0 // Disable retries for this test
+        retries: 0, // Disable retries for this test
+        env: { TIMEOUT_TEST_1: '1' }
       });
 
       // Try to call method that takes 1000ms (exceeds timeout)
@@ -23,7 +24,8 @@ describe('Configurable Timeouts', () => {
     it('should include method name and timeout duration in TimeoutError', async () => {
       await using worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 300,
-        retries: 0
+        retries: 0,
+        env: { TIMEOUT_TEST_2: '1' }
       });
       try {
         await worker.doWork(1000, 'test');
@@ -47,18 +49,19 @@ describe('Configurable Timeouts', () => {
   describe('retry mechanism', () => {
     it('should retry failed calls up to configured retry count', async () => {
       await using worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
-        timeout: 200,
-        retries: 3 // 1 initial attempt + 3 retries = 4 total attempts
+        timeout: 100,
+        retries: 3, // 1 initial attempt + 3 retries = 4 total attempts
+        env: { RETRY_TEST: '1' } // Unique env to avoid dedup cache sharing
       });
-      // Method that takes 300ms will timeout on all attempts
-      // Should retry 3 times before giving up
+      // Method that takes 5000ms will reliably timeout on all 4 attempts
+      // (each 100ms timeout is far shorter than the 5s method duration)
       const start = Date.now();
-      await expect(worker.doWork(300, 'test')).rejects.toThrow(TimeoutError);
+      await expect(worker.doWork(5000, 'test')).rejects.toThrow(TimeoutError);
       const elapsed = Date.now() - start;
 
-      // Should take at least 4 * 200ms = 800ms (4 attempts)
+      // Should take at least 4 * 100ms = 400ms (4 attempts)
       // Allow some tolerance for timing variations
-      expect(elapsed).toBeGreaterThanOrEqual(700);
+      expect(elapsed).toBeGreaterThanOrEqual(350);
     });
 
     it('should succeed if retry succeeds before max retries', async () => {
@@ -74,8 +77,9 @@ describe('Configurable Timeouts', () => {
     it('should use default retry count if not specified', async () => {
       // Default retries is 3
       await using worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
-        timeout: 150 // Slightly longer to avoid init timeout
+        timeout: 150, // Slightly longer to avoid init timeout
         // No retries specified - should default to 3
+        env: { TIMEOUT_TEST_DEFAULT_RETRY: '1' }
       });
       // Should retry with default count (3)
       const start = Date.now();
@@ -114,7 +118,8 @@ describe('Configurable Timeouts', () => {
     it('should handle mix of successful and timeout calls', async () => {
       await using worker = await procxy(AsyncWorker, ASYNC_WORKER_PATH, {
         timeout: 200,
-        retries: 0
+        retries: 0,
+        env: { TIMEOUT_TEST_MIX: '1' }
       });
       // Make concurrent calls - some fast, some slow
       const results = await Promise.allSettled([

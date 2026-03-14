@@ -41,7 +41,6 @@ export class ChildProxy {
   >();
   private proxiedTarget: any;
   private disposeSent = false;
-  private trackedProperties: Set<string> = new Set(); // Auto-tracked properties for sync
 
   constructor(
     private readonly target: any,
@@ -127,26 +126,15 @@ export class ChildProxy {
   /**
    * Capture all procxyable properties from the target.
    * Only includes properties that can be synced to parent (valid identifiers, not reserved, not functions).
-   * Auto-tracks any new properties found.
    */
   private capturePublicProperties(): Map<string, any> {
     const props = new Map<string, any>();
 
     for (const key in this.target) {
-      // Skip EventEmitter internal properties (these contain listener functions)
-      if (
-        key.startsWith('_') &&
-        (key === '_events' || key === '_eventsCount' || key === '_maxListeners')
-      ) {
-        continue;
-      }
-
       const value = this.target[key];
 
       if (isProcxiableProperty(key, value)) {
         props.set(key, value);
-        // Auto-track new properties discovered during method execution
-        this.trackedProperties.add(key);
       }
     }
 
@@ -174,35 +162,11 @@ export class ChildProxy {
   }
 
   /**
-   * Start tracking a property for updates.
-   *
-   * NOTE: Currently unused. Properties are automatically tracked during initialization
-   * (via captureInitialProperties) and method execution (via capturePublicProperties).
-   * Kept for potential future manual property tracking use cases.
-   */
-  trackProperty(prop: string): void {
-    this.trackedProperties.add(prop);
-  }
-
-  /**
    * Capture initial properties from constructor for bulk initialization.
-   * Returns a map of property name -> value for all procxyable properties.
-   * Automatically tracks all captured properties.
+   * Returns a plain object of property name -> value for all procxyable properties.
    */
   captureInitialProperties(): Record<string, any> {
-    const properties: Record<string, any> = {};
-
-    for (const key in this.target) {
-      const value = this.target[key];
-
-      if (isProcxiableProperty(key, value)) {
-        properties[key] = value;
-        // Auto-track all initial properties
-        this.trackedProperties.add(key);
-      }
-    }
-
-    return properties;
+    return Object.fromEntries(this.capturePublicProperties());
   }
 
   /**

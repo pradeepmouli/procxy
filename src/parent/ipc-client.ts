@@ -51,6 +51,8 @@ export class IPCClient extends EventEmitter {
   private readonly retries: number;
   private isTerminated = false;
   private readonly subscribedEvents = new Set<string | symbol>();
+  private readonly boundHandleMessage: (message: ChildToParentMessage) => void;
+  private readonly boundHandleExit: (code: number | null, signal: NodeJS.Signals | null) => void;
 
   constructor(
     private readonly childProcess: ChildProcess,
@@ -61,11 +63,15 @@ export class IPCClient extends EventEmitter {
     this.timeout = timeout;
     this.retries = retries;
 
+    // Store bound references so they can be removed later
+    this.boundHandleMessage = this.handleMessage.bind(this);
+    this.boundHandleExit = this.handleExit.bind(this);
+
     // Set up message handler
-    this.childProcess.on('message', this.handleMessage.bind(this));
+    this.childProcess.on('message', this.boundHandleMessage);
 
     // Set up exit handler
-    this.childProcess.on('exit', this.handleExit.bind(this));
+    this.childProcess.on('exit', this.boundHandleExit);
 
     // Override EventEmitter methods to track subscriptions
     this.setupEventTracking();
@@ -571,7 +577,7 @@ export class IPCClient extends EventEmitter {
    */
   async terminate(): Promise<void> {
     // Remove message listener to prevent memory leaks
-    this.childProcess.off('message', this.handleMessage);
+    this.childProcess.off('message', this.boundHandleMessage);
 
     if (this.isTerminated) {
       return;
