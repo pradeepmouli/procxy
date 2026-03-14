@@ -51,13 +51,12 @@ function sendToParent(message: ChildToParentMessage): void {
   try {
     process.send(message);
   } catch (error) {
-    sendFailureCount++;
     try {
       const sanitized = sanitizeMessageForParent(message);
       process.send(sanitized);
       sanitizeRetryCount++;
     } catch (fallbackError) {
-      sendFailureCount++; // count the second failure as well
+      sendFailureCount++;
       console.warn('[procxy][child] Dropping message after serialization failure', {
         messageType: (message as any)?.type,
         sendFailures: sendFailureCount,

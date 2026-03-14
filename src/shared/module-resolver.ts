@@ -3,13 +3,7 @@ import { existsSync, readFileSync } from 'fs';
 import { dirname, extname, resolve } from 'path';
 import { createRequire } from 'module';
 import { ModuleResolutionError } from './errors.js';
-
-/**
- * Lazy-loaded debug logger.
- * Uses debug package if available (enable with DEBUG=procxy:resolver),
- * falls back to PROCXY_DEBUG_STACK=1 env check, or no-ops.
- */
-let debugLog: (msg: string) => void;
+import { createDebugLogger } from './debug.js';
 
 // Cache resolved module paths to avoid repeated stack/parse work
 const constructorModuleCache = new WeakMap<Function, string>();
@@ -19,24 +13,7 @@ function makeCallerClassKey(callerPath: string, className: string): string {
   return `${callerPath}::${className}`;
 }
 
-function getDebugLogger(): (msg: string) => void {
-  if (debugLog) return debugLog;
-
-  // Try to use debug package if available (optional dependency)
-  try {
-    const createDebug = require('debug');
-    debugLog = createDebug('procxy:resolver');
-  } catch {
-    // Fallback to env-based logging
-    if (process.env['PROCXY_DEBUG_STACK'] === '1') {
-      debugLog = (msg: string) => console.warn(`[procxy] ${msg}`);
-    } else {
-      debugLog = () => {}; // no-op
-    }
-  }
-
-  return debugLog;
-}
+const getDebugLogger = createDebugLogger('procxy:resolver', 'PROCXY_DEBUG_STACK');
 
 /**
  * Module path resolution utilities for Procxy.

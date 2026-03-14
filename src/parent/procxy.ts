@@ -17,6 +17,7 @@ import { IPCClient } from './ipc-client.js';
 import { ChildCrashedError, OptionsValidationError, TimeoutError } from '../shared/errors.js';
 import type { InitMessage } from '../shared/protocol.js';
 import { makeDedupKey } from './dedup-utils.js';
+import { createDebugLogger } from '../shared/debug.js';
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const DEFAULT_RETRIES = 3;
@@ -53,27 +54,7 @@ function evictOldestCacheEntry(): void {
   }
 }
 
-let cachedDebugLogger: ((msg: string) => void) | null = null;
-
-function getDebugLogger(): (msg: string) => void {
-  if (cachedDebugLogger) {
-    return cachedDebugLogger;
-  }
-
-  // Reuse debug logging from module-resolver pattern
-  try {
-    const createDebug = require('debug');
-    cachedDebugLogger = createDebug('procxy:dedup');
-  } catch {
-    if (process.env['PROCXY_DEBUG_DEDUP'] === '1') {
-      cachedDebugLogger = (msg: string) => console.warn(`[procxy:dedup] ${msg}`);
-    } else {
-      cachedDebugLogger = () => {}; // no-op
-    }
-  }
-
-  return cachedDebugLogger!;
-}
+const getDebugLogger = createDebugLogger('procxy:dedup', 'PROCXY_DEBUG_DEDUP');
 
 /**
  * Check if an object is likely a ProcxyOptions object.
@@ -434,9 +415,8 @@ export async function procxy<
       try {
         validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
       } catch (error) {
-        // Validation failed - try sanitizing and re-validating
+        // Validation failed - sanitize to strip non-serializable content
         actualConstructorArgs = sanitizeForV8Array(actualConstructorArgs);
-        validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
       }
     } else {
       validateV8SerializableArray(actualConstructorArgs, 'constructor arguments');
@@ -499,6 +479,10 @@ export async function procxy<
     if (isTerminated) {
       debug(`dedup cached (stale, evicting): ${dedupKey}`);
       resultCache.delete(dedupKey);
+      const idx = cacheInsertionOrder.indexOf(dedupKey);
+      if (idx !== -1) {
+        cacheInsertionOrder.splice(idx, 1);
+      }
     } else if (cached) {
       debug(`dedup cached: ${dedupKey}`);
       return cached;
