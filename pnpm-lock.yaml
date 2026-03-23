@@ -48,8 +48,8 @@ importers:
         specifier: ^0.28.17
         version: 0.28.17(typescript@5.9.3)
       typedoc-plugin-to-skills:
-        specifier: ^0.3.2
-        version: 0.3.2(typedoc@0.28.17(typescript@5.9.3))
+        specifier: ^0.4.0
+        version: 0.4.0(typedoc@0.28.17(typescript@5.9.3))
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -728,8 +728,8 @@ packages:
   '@to-skills/core@0.4.1':
     resolution: {integrity: sha512-u7Lb+mtfcDot+cWzMUKFz6Iu/KemdFAtQgSolR4oiPCkVVLl4y6K5kStWjZUhkVbgnXAPzPanmB6Y6e1QT5N7A==}
 
-  '@to-skills/typedoc@0.4.2':
-    resolution: {integrity: sha512-tAG1VJgBKo8Vu7pkWShbdr1X5+ERDLBJYJvVjx/Ti6YEsquS9yt0Ifc3t8HLzHEgkHj4k2j1SS5dwuTVqZ1INg==}
+  '@to-skills/typedoc@0.5.0':
+    resolution: {integrity: sha512-UvdJnuxnyl8xnJ9dmyaXW+VZKullHB3xqmXha/1xWqqEj0JMSuGiKUfMuYH2sJKsSVmI39CUF4dwvLZO/QmJiw==}
     peerDependencies:
       typedoc: '>=0.28.0'
 
@@ -1479,8 +1479,8 @@ packages:
     resolution: {integrity: sha512-PlBfpQwiUvGViBNX84Yxwjsdhd1TUlXr6zjX7eoirtCPIr08NAmxwa+fcYBTeRQxHo9YC9wwF3m9i700sHma8g==}
     engines: {node: '>=20'}
 
-  typedoc-plugin-to-skills@0.3.2:
-    resolution: {integrity: sha512-9ShpiBj7W2IM+XnSaZL/RDIDZmlgsngu01l/kE9LE/V4eTPzd0RCDuSCNCxlXIhTZ3cftf5DYynxGrLBDII9QQ==}
+  typedoc-plugin-to-skills@0.4.0:
+    resolution: {integrity: sha512-AdXvnf+484qwzcdJ0h5TsBL+pTCHV6fkz+3wGxFYCJqMeI5spNLdMSGHxbu6rF1rsjmUsZmcbVE+80THd0OO6A==}
     peerDependencies:
       typedoc: '>=0.28.0'
 
@@ -2132,7 +2132,7 @@ snapshots:
 
   '@to-skills/core@0.4.1': {}
 
-  '@to-skills/typedoc@0.4.2(typedoc@0.28.17(typescript@5.9.3))':
+  '@to-skills/typedoc@0.5.0(typedoc@0.28.17(typescript@5.9.3))':
     dependencies:
       '@to-skills/core': 0.4.1
       typedoc: 0.28.17(typescript@5.9.3)
@@ -2903,9 +2903,9 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
-  typedoc-plugin-to-skills@0.3.2(typedoc@0.28.17(typescript@5.9.3)):
+  typedoc-plugin-to-skills@0.4.0(typedoc@0.28.17(typescript@5.9.3)):
     dependencies:
-      '@to-skills/typedoc': 0.4.2(typedoc@0.28.17(typescript@5.9.3))
+      '@to-skills/typedoc': 0.5.0(typedoc@0.28.17(typescript@5.9.3))
       typedoc: 0.28.17(typescript@5.9.3)
 
   typedoc@0.28.17(typescript@5.9.3):
