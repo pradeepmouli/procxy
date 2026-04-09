@@ -94,22 +94,47 @@ Socket | Server | Socket | number
 ### `InitMessage`
 Initialization message sent from parent to child on startup.
 Contains module path, class name, constructor arguments, and serialization mode.
+**Properties:**
+- `type: "INIT"` — 
+- `modulePath: string` — 
+- `className: string` — 
+- `constructorArgs: Jsonifiable[]` — 
+- `serialization: SerializationMode` (optional) — 
 
 ### `Request`
 Method invocation request sent from parent to child.
 Includes unique ID for request/response correlation.
+**Properties:**
+- `id: string` — 
+- `type: "CALL"` — 
+- `prop: string` — 
+- `args: Jsonifiable[]` — 
 
 ### `Response`
 Method invocation response sent from child to parent.
 Either contains return value (RESULT) or error information (ERROR).
+**Properties:**
+- `id: string` — 
+- `type: "RESULT" | "ERROR"` — 
+- `value: Jsonifiable` (optional) — 
+- `error: ErrorInfo` (optional) — 
 
 ### `ErrorInfo`
 Error information serialized in Response messages.
 Preserves error message, stack trace, name, and optional code.
+**Properties:**
+- `message: string` — 
+- `stack: string` (optional) — 
+- `name: string` — 
+- `code: string` (optional) — 
 
 ### `EventMessage`
 Event message sent from child to parent for EventEmitter events.
 Forwards events emitted in child to listeners in parent.
+**Properties:**
+- `type: "EVENT"` — 
+- `eventName: string` — 
+- `args: Jsonifiable[]` — 
 
 ### `ParentToChildMessage`
 Union type of all IPC messages sent from parent to child.
@@ -127,9 +152,18 @@ Response | EventMessage | InitSuccess | InitProperties | InitFailure | DisposeRe
 Handle transmission message sent from parent to child.
 Notifies child that a handle (socket, server, file descriptor) is being sent.
 The actual handle is passed separately via Node.js child.send(message, handle).
+**Properties:**
+- `type: "HANDLE"` — 
+- `handleId: string` — 
+- `handleType: "socket" | "server" | "dgram" | "fd"` — 
 
 ### `HandleAck`
 Handle acknowledgment sent from child to parent after handle is received.
+**Properties:**
+- `type: "HANDLE_ACK"` — 
+- `handleId: string` — 
+- `received: boolean` — 
+- `error: string` (optional) — 
 
 ### `UnwrapProcxy`
 Extract the original type T from Procxy<T, Mode, SupportHandles>.

@@ -14,7 +14,24 @@ procxy<T, C, M, SH>(className: keyof T, modulePathOrOptions?: string | ProcxyOpt
 - `modulePathOrOptions: string | ProcxyOptions<M, SH>` (optional) — 
 - `options: ProcxyOptions<M, SH>` (optional) — Optional ProcxyOptions for process configuration
 - `constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never` — Constructor arguments (must be JSON-serializable)
-**Returns:** `Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>`
+**Returns:** `Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>` — A Promise that resolves to a Procxy<T> proxy object
+**Throws:** If constructor arguments are not JSON-serializable (FR-019, FR-022)
+**See:** - Procxy for the proxy type definition
+ - ProcxyOptions for available configuration options
+ - https://github.com/pradeepmouli/procxy#readme | Procxy Documentation
+**Overloads:**
+```ts
+procxy<T, M, SH>(Class: Constructor<T>, modulePath: string, options: ProcxyOptions<M, SH>, constructorArgs: ValidateProcxiable<any, M>[]): Promise<Procxy<T, M, SH>>
+```
+```ts
+procxy<T, M, SH>(Class: Constructor<T>, options: ProcxyOptions<M, SH>, constructorArgs: ValidateProcxiable<any, M>[]): Promise<Procxy<T, M, SH>>
+```
+```ts
+procxy<T, M, SH>(Class: Constructor<T>, modulePath: string, constructorArgs: ValidateProcxiable<any, M>[]): Promise<Procxy<T, M, SH>>
+```
+```ts
+procxy<T, M, SH>(Class: Constructor<T>, constructorArgs: ValidateProcxiable<any, M>[]): Promise<Procxy<T, M, SH>>
+```
 ```typescript
 import { procxy } from 'procxy';
 
@@ -85,7 +102,7 @@ sanitizeForV8(value: unknown, seen: WeakSet<object>): any
 **Parameters:**
 - `value: unknown` — The value to sanitize
 - `seen: WeakSet<object>` — default: `...` — 
-**Returns:** `any`
+**Returns:** `any` — A new value with all non-serializable properties removed
 ```typescript
 const config = {
   data: 'hello',
@@ -108,7 +125,7 @@ sanitizeForV8Array(values: unknown[], seen: WeakSet<object>): any[]
 **Parameters:**
 - `values: unknown[]` — Array of values to sanitize
 - `seen: WeakSet<object>` — default: `...` — 
-**Returns:** `any[]`
+**Returns:** `any[]` — New array with sanitized values
 ```typescript
 const args = [
   { config: true, handler: () => {} },

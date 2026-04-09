@@ -3,6 +3,7 @@
 ## `ProcxyError`
 Base error class for all Procxy-related errors.
 Extends Error and adds context information.
+*extends `Error`*
 ```ts
 constructor(message: string, context?: Record<string, unknown>): ProcxyError
 ```
@@ -70,6 +71,7 @@ a();
 ## `TimeoutError`
 Thrown when a method call exceeds the configured timeout.
 The child process is not killed, only the Promise is rejected.
+*extends `ProcxyError`*
 ```ts
 constructor(methodName: string, timeoutMs: number, context?: Record<string, unknown>): TimeoutError
 ```
@@ -139,6 +141,7 @@ a();
 ## `ModuleResolutionError`
 Thrown when the module path cannot be determined from the constructor.
 This occurs when automatic stack trace detection fails and no explicit modulePath is provided.
+*extends `ProcxyError`*
 ```ts
 constructor(className: string, reason: string, context?: Record<string, unknown>): ModuleResolutionError
 ```
@@ -208,6 +211,7 @@ a();
 ## `ChildCrashedError`
 Thrown when a child process crashes or exits unexpectedly.
 All pending method calls are rejected with this error.
+*extends `ProcxyError`*
 ```ts
 constructor(exitCode?: number | null, signal?: string | null, context?: Record<string, unknown>): ChildCrashedError
 ```
@@ -277,6 +281,7 @@ a();
 ## `SerializationError`
 Thrown when constructor arguments or method arguments are not JSON-serializable.
 Only values that pass JSON.stringify() are supported.
+*extends `ProcxyError`*
 ```ts
 constructor(value: unknown, context_: string, context?: Record<string, unknown>): SerializationError
 ```
@@ -346,6 +351,7 @@ a();
 ## `OptionsValidationError`
 Thrown when ProcxyOptions validation fails.
 E.g., cwd does not exist, env contains non-string values, etc.
+*extends `ProcxyError`*
 ```ts
 constructor(optionName: string, optionValue: unknown, reason: string, context?: Record<string, unknown>): OptionsValidationError
 ```
