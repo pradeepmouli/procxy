@@ -1,6 +1,8 @@
 # Classes
 
-## `ProcxyError`
+## errors
+
+### `ProcxyError`
 Base error class for all Procxy-related errors.
 Extends Error and adds context information.
 *extends `Error`*
@@ -17,11 +19,11 @@ will affect any stack trace captured _after_ the value has been changed.
 
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
-- `context: Record<string, unknown>` (optional) — 
-- `name: string` — 
-- `message: string` — 
-- `stack: string` (optional) — 
-- `cause: unknown` (optional) — 
+- `context: Record<string, unknown>` (optional)
+- `name: string`
+- `message: string`
+- `stack: string` (optional)
+- `cause: unknown` (optional)
 **Methods:**
 - `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -66,9 +68,9 @@ function c() {
 
 a();
 ```
-- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any`
 
-## `TimeoutError`
+### `TimeoutError`
 Thrown when a method call exceeds the configured timeout.
 The child process is not killed, only the Promise is rejected.
 *extends `ProcxyError`*
@@ -85,13 +87,13 @@ will affect any stack trace captured _after_ the value has been changed.
 
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
-- `methodName: string` — 
-- `timeoutMs: number` — 
-- `context: Record<string, unknown>` (optional) — 
-- `name: string` — 
-- `message: string` — 
-- `stack: string` (optional) — 
-- `cause: unknown` (optional) — 
+- `methodName: string`
+- `timeoutMs: number`
+- `context: Record<string, unknown>` (optional)
+- `name: string`
+- `message: string`
+- `stack: string` (optional)
+- `cause: unknown` (optional)
 **Methods:**
 - `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -136,9 +138,9 @@ function c() {
 
 a();
 ```
-- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any`
 
-## `ModuleResolutionError`
+### `ModuleResolutionError`
 Thrown when the module path cannot be determined from the constructor.
 This occurs when automatic stack trace detection fails and no explicit modulePath is provided.
 *extends `ProcxyError`*
@@ -155,13 +157,13 @@ will affect any stack trace captured _after_ the value has been changed.
 
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
-- `className: string` — 
-- `reason: string` — 
-- `context: Record<string, unknown>` (optional) — 
-- `name: string` — 
-- `message: string` — 
-- `stack: string` (optional) — 
-- `cause: unknown` (optional) — 
+- `className: string`
+- `reason: string`
+- `context: Record<string, unknown>` (optional)
+- `name: string`
+- `message: string`
+- `stack: string` (optional)
+- `cause: unknown` (optional)
 **Methods:**
 - `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -206,9 +208,9 @@ function c() {
 
 a();
 ```
-- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any`
 
-## `ChildCrashedError`
+### `ChildCrashedError`
 Thrown when a child process crashes or exits unexpectedly.
 All pending method calls are rejected with this error.
 *extends `ProcxyError`*
@@ -225,13 +227,13 @@ will affect any stack trace captured _after_ the value has been changed.
 
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
-- `exitCode: number | null` (optional) — 
-- `signal: string | null` (optional) — 
-- `context: Record<string, unknown>` (optional) — 
-- `name: string` — 
-- `message: string` — 
-- `stack: string` (optional) — 
-- `cause: unknown` (optional) — 
+- `exitCode: number | null` (optional)
+- `signal: string | null` (optional)
+- `context: Record<string, unknown>` (optional)
+- `name: string`
+- `message: string`
+- `stack: string` (optional)
+- `cause: unknown` (optional)
 **Methods:**
 - `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -276,9 +278,9 @@ function c() {
 
 a();
 ```
-- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any`
 
-## `SerializationError`
+### `SerializationError`
 Thrown when constructor arguments or method arguments are not JSON-serializable.
 Only values that pass JSON.stringify() are supported.
 *extends `ProcxyError`*
@@ -295,13 +297,13 @@ will affect any stack trace captured _after_ the value has been changed.
 
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
-- `value: unknown` — 
-- `context_: string` — 
-- `context: Record<string, unknown>` (optional) — 
-- `name: string` — 
-- `message: string` — 
-- `stack: string` (optional) — 
-- `cause: unknown` (optional) — 
+- `value: unknown`
+- `context_: string`
+- `context: Record<string, unknown>` (optional)
+- `name: string`
+- `message: string`
+- `stack: string` (optional)
+- `cause: unknown` (optional)
 **Methods:**
 - `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -346,9 +348,9 @@ function c() {
 
 a();
 ```
-- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any`
 
-## `OptionsValidationError`
+### `OptionsValidationError`
 Thrown when ProcxyOptions validation fails.
 E.g., cwd does not exist, env contains non-string values, etc.
 *extends `ProcxyError`*
@@ -365,14 +367,14 @@ will affect any stack trace captured _after_ the value has been changed.
 
 If set to a non-number value, or set to a negative number, stack traces will
 not capture any frames.
-- `optionName: string` — 
-- `optionValue: unknown` — 
-- `reason: string` — 
-- `context: Record<string, unknown>` (optional) — 
-- `name: string` — 
-- `message: string` — 
-- `stack: string` (optional) — 
-- `cause: unknown` (optional) — 
+- `optionName: string`
+- `optionValue: unknown`
+- `reason: string`
+- `context: Record<string, unknown>` (optional)
+- `name: string`
+- `message: string`
+- `stack: string` (optional)
+- `cause: unknown` (optional)
 **Methods:**
 - `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
 a string representing the location in the code at which
@@ -417,4 +419,4 @@ function c() {
 
 a();
 ```
-- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any`

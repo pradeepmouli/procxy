@@ -1,72 +1,29 @@
 ---
 name: procxy
-description: Procxy - A TypeScript library for transparent process-based proxy of class instances.
+description: "Type-safe process-based proxy for Node.js - Run class instances in isolated child processes with full TypeScript support Use when working with proxy, ipc, child-process, process, isolation, worker, eventemitter, type-safe, async, rpc, concurrency."
 license: MIT
 ---
 
 # procxy
 
-Procxy - A TypeScript library for transparent process-based proxy of class instances.
-
-
-
-## Overview
-
-Procxy enables you to run class instances in isolated child processes while interacting
-with them as if they were local objects. All method calls become async and are transparently
-forwarded over IPC.
-
-## Key Features
-
-- 🎯 **Type-Safe**: Full TypeScript support with IntelliSense
-- ⚡ **Fast**: <10ms overhead per method call
-- 🔄 **Event Support**: Transparent EventEmitter forwarding
-- 🛡️ **Error Handling**: Complete error propagation with stack traces
-- 🧹 **Lifecycle**: Automatic cleanup with disposable protocol support
-- ⚙️ **Configurable**: Timeouts, retries, custom env/cwd
-
-## Quick Start
-
-```typescript
-import { procxy } from 'procxy';
-
-class Calculator {
-  add(a: number, b: number) { return a + b; }
-}
-
-// Create remote instance
-const calc = await procxy(Calculator, './calculator.js');
-
-// Call methods (now async)
-const result = await calc.add(5, 3); // 8
-
-// Clean up
-await calc.$terminate();
-```
-
-## Using Disposables (Recommended)
-
-```typescript
-// Automatic cleanup with await using
-await using calc = await procxy(Calculator, './calculator.js');
-const result = await calc.add(5, 3);
-// Automatically terminated when scope exits
-```
+Type-safe process-based proxy for Node.js - Run class instances in isolated child processes with full TypeScript support
 
 ## When to Use
 
-- Calling `procxy()`, `sanitizeForV8()`, `sanitizeForV8Array()`, `isProcxy()`, `isAdvancedMode()`, and 1 more
-- Instantiating or extending `ProcxyError`, `TimeoutError`, `ModuleResolutionError`
-- Typing with `Procxy`, `ProcxyOptions`, `SerializationMode`, `V8Serializable`, `Procxiable`
+- Working with proxy, ipc, child-process, process, isolation, worker, eventemitter, type-safe, async, rpc, concurrency
+- API surface: 6 functions, 6 classes, 30 types
 - See also: - Procxy for the proxy type definition
  - ProcxyOptions for available configuration options
  - https://github.com/pradeepmouli/procxy#readme | Procxy Documentation
 
 ## Quick Reference
 
-**6 functions** — `procxy`, `sanitizeForV8`, `sanitizeForV8Array`, `isProcxy`, `isAdvancedMode`, `isHandleSupported`
-**6 classes** — `ProcxyError`, `TimeoutError`, `ModuleResolutionError`, `ChildCrashedError`, `SerializationError`, `OptionsValidationError`
-**30 types** — `Procxy`, `ProcxyOptions`, `SerializationMode`, `V8Serializable`, `Procxiable`, `IsProcxiable`, `SerializableConstructorArgs`, `PassableHandle`, `InitMessage`, `Request`, `Response`, `ErrorInfo`, `EventMessage`, `ParentToChildMessage`, `ChildToParentMessage`, `HandleMessage`, `HandleAck`, `UnwrapProcxy`, `IsProcxy`, `IsProcxyIsomorphic`, `GetProcxyMode`, `HasHandleSupport`, `ChangeProcxyMode`, `ToggleProcxyHandles`, `ProcxyIsomorphism`, `VerifyIsomorphism`, `GetProcxyMethods`, `GetProcxyLifecycleMethods`, `MaybeProxy`, `Procxify`
+**procxy:** `procxy`, `Procxy`, `Procxiable`, `IsProcxiable`, `SerializableConstructorArgs`, `PassableHandle`, `Procxify`
+**serialization:** `sanitizeForV8`, `sanitizeForV8Array`, `V8Serializable`
+**isomorphism:** `isProcxy`, `isAdvancedMode`, `isHandleSupported`, `UnwrapProcxy`, `IsProcxy`, `IsProcxyIsomorphic`, `GetProcxyMode`, `HasHandleSupport`, `ChangeProcxyMode`, `ToggleProcxyHandles`, `ProcxyIsomorphism`, `VerifyIsomorphism`, `GetProcxyMethods`, `GetProcxyLifecycleMethods`, `MaybeProxy`
+**errors:** `ProcxyError`, `TimeoutError`, `ModuleResolutionError`, `ChildCrashedError`, `SerializationError`, `OptionsValidationError`
+**options:** `ProcxyOptions`, `SerializationMode`
+**protocol:** `InitMessage`, `Request`, `Response`, `ErrorInfo`, `EventMessage`, `ParentToChildMessage`, `ChildToParentMessage`, `HandleMessage`, `HandleAck`
 
 ## Links
 

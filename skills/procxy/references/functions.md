@@ -1,6 +1,8 @@
 # Functions
 
-## `procxy`
+## procxy
+
+### `procxy`
 Create a proxy for a remote object instance running in a child process.
 
 This function spawns a child process via `fork()`, instantiates the specified class
@@ -10,8 +12,8 @@ over IPC. All methods become async and return Promises.
 procxy<T, C, M, SH>(className: keyof T, modulePathOrOptions?: string | ProcxyOptions<M, SH>, options?: ProcxyOptions<M, SH>, constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never): Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>
 ```
 **Parameters:**
-- `className: keyof T` — 
-- `modulePathOrOptions: string | ProcxyOptions<M, SH>` (optional) — 
+- `className: keyof T`
+- `modulePathOrOptions: string | ProcxyOptions<M, SH>` (optional)
 - `options: ProcxyOptions<M, SH>` (optional) — Optional ProcxyOptions for process configuration
 - `constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never` — Constructor arguments (must be JSON-serializable)
 **Returns:** `Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>` — A Promise that resolves to a Procxy<T> proxy object
@@ -90,7 +92,9 @@ console.log('Child PID:', worker.$process.pid);
 await worker.$terminate(); // Kills child and rejects pending calls
 ```
 
-## `sanitizeForV8`
+## serialization
+
+### `sanitizeForV8`
 Sanitize a value by converting to plain objects and removing non-V8-serializable properties.
 Recursively processes objects, arrays, and nested structures.
 
@@ -101,7 +105,7 @@ sanitizeForV8(value: unknown, seen: WeakSet<object>): any
 ```
 **Parameters:**
 - `value: unknown` — The value to sanitize
-- `seen: WeakSet<object>` — default: `...` — 
+- `seen: WeakSet<object>` — default: `...`
 **Returns:** `any` — A new value with all non-serializable properties removed
 ```typescript
 const config = {
@@ -117,14 +121,14 @@ const sanitized = sanitizeForV8(config);
 // Result: { data: 'hello', nested: { value: 42 } }
 ```
 
-## `sanitizeForV8Array`
+### `sanitizeForV8Array`
 Sanitize an array of values by removing non-V8-serializable properties from each.
 ```ts
 sanitizeForV8Array(values: unknown[], seen: WeakSet<object>): any[]
 ```
 **Parameters:**
 - `values: unknown[]` — Array of values to sanitize
-- `seen: WeakSet<object>` — default: `...` — 
+- `seen: WeakSet<object>` — default: `...`
 **Returns:** `any[]` — New array with sanitized values
 ```typescript
 const args = [
@@ -135,7 +139,9 @@ const sanitized = sanitizeForV8Array(args);
 // Result: [{ config: true }, { value: 42 }]
 ```
 
-## `isProcxy`
+## isomorphism
+
+### `isProcxy`
 Runtime utilities for working with Procxy instances.
 
 These functions provide runtime checks for Procxy instances:
@@ -146,7 +152,7 @@ These functions provide runtime checks for Procxy instances:
 isProcxy<T>(obj: MaybeProxy<T>): obj is Procxy<T, any, any>
 ```
 **Parameters:**
-- `obj: MaybeProxy<T>` — 
+- `obj: MaybeProxy<T>`
 **Returns:** `obj is Procxy<T, any, any>`
 ```typescript
 import { procxy, isProcxy, isAdvancedMode } from 'procxy';
@@ -162,7 +168,7 @@ if (isAdvancedMode(calc)) {
 }
 ```
 
-## `isAdvancedMode`
+### `isAdvancedMode`
 Runtime utilities for working with Procxy instances.
 
 These functions provide runtime checks for Procxy instances:
@@ -173,7 +179,7 @@ These functions provide runtime checks for Procxy instances:
 isAdvancedMode<T, H>(proxy: Procxy<T, any, H>): proxy is Procxy<T, "advanced", H>
 ```
 **Parameters:**
-- `proxy: Procxy<T, any, H>` — 
+- `proxy: Procxy<T, any, H>`
 **Returns:** `proxy is Procxy<T, "advanced", H>`
 ```typescript
 import { procxy, isProcxy, isAdvancedMode } from 'procxy';
@@ -189,7 +195,7 @@ if (isAdvancedMode(calc)) {
 }
 ```
 
-## `isHandleSupported`
+### `isHandleSupported`
 Runtime utilities for working with Procxy instances.
 
 These functions provide runtime checks for Procxy instances:
@@ -200,7 +206,7 @@ These functions provide runtime checks for Procxy instances:
 isHandleSupported<T, H>(proxy: Procxy<T, any, H>): proxy is Procxy<T, "advanced", true>
 ```
 **Parameters:**
-- `proxy: Procxy<T, any, H>` — 
+- `proxy: Procxy<T, any, H>`
 **Returns:** `proxy is Procxy<T, "advanced", true>`
 ```typescript
 import { procxy, isProcxy, isAdvancedMode } from 'procxy';

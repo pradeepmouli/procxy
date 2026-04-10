@@ -1,6 +1,6 @@
 # Types & Enums
 
-## Types
+## procxy
 
 ### `Procxy`
 Procxy<T, Mode> — The proxy type that wraps a remote object instance.
@@ -31,29 +31,6 @@ If T extends EventEmitter<E>, the proxy also extends EventEmitter<E> with typed 
 Note: .emit() is not available on the proxy; events originate from the child.
 ```ts
 { [K in keyof ProcxiableMethods<T, Mode>]: ProcxiableMethods<T, Mode>[K] extends (args: infer A) => infer R ? (args: A) => Promise<Awaited<R>> : never } & ReadonlyProperties<T, Mode> & { $terminate: any; $process: ChildProcess; [dispose]: any; [asyncDispose]: any } & (SupportHandles extends true ? { $sendHandle: any } : {}) & (T extends EventEmitter<infer E> ? E extends Record<string | symbol, any[]> ? { on: any; once: any; off: any; removeListener: any } : { on: any; once: any; off: any; removeListener: any } : T extends EventEmitter ? { on: any; once: any; off: any; removeListener: any } : {})
-```
-
-### `ProcxyOptions`
-Configuration options for procxy() function.
-
-Allows fine-grained control over child process creation, timeouts, and module resolution.
-```ts
-{ modulePath?: string; args?: [...Jsonifiable[]]; env?: Record<string, string>; cwd?: string; timeout?: number; retries?: number; interleaveOutput?: boolean } & (Mode extends "advanced" ? { serialization: "advanced"; supportHandles?: SupportHandles; sanitizeV8?: boolean } : { serialization?: "json" })
-```
-
-### `SerializationMode`
-Serialization mode for IPC messages.
-- 'json': JSON serialization (default, backward compatible)
-- 'advanced': V8 structured clone algorithm (supports Buffer, Map, Set, BigInt, etc.)
-```ts
-"json" | "advanced"
-```
-
-### `V8Serializable`
-Types that are serializable with V8 structured clone algorithm.
-This includes all JSON-serializable types plus additional V8-specific types.
-```ts
-Jsonifiable | Buffer | ArrayBuffer | DataView | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array | Map<any, any> | Set<any> | Error | RegExp | bigint | Date | { [key: string]: V8Serializable | undefined } | ReadonlyArray<V8Serializable>
 ```
 
 ### `Procxiable`
@@ -91,50 +68,87 @@ Supported handle types:
 Socket | Server | Socket | number
 ```
 
+### `Procxify`
+Shallow procxiable subset of an object.
+Picks only non-method properties whose values can be sent across the wire for the given mode.
+Does not transform methods or recurse; intended to mirror type-fest's Jsonify utility for procxiable data.
+```ts
+{ [K in keyof T as T[K] extends (args: any[]) => any ? never : IsProcxiable<T[K], Mode> extends true ? K : never]: T[K] }
+```
+
+## options
+
+### `ProcxyOptions`
+Configuration options for procxy() function.
+
+Allows fine-grained control over child process creation, timeouts, and module resolution.
+```ts
+{ modulePath?: string; args?: [...Jsonifiable[]]; env?: Record<string, string>; cwd?: string; timeout?: number; retries?: number; interleaveOutput?: boolean } & (Mode extends "advanced" ? { serialization: "advanced"; supportHandles?: SupportHandles; sanitizeV8?: boolean } : { serialization?: "json" })
+```
+
+### `SerializationMode`
+Serialization mode for IPC messages.
+- 'json': JSON serialization (default, backward compatible)
+- 'advanced': V8 structured clone algorithm (supports Buffer, Map, Set, BigInt, etc.)
+```ts
+"json" | "advanced"
+```
+
+## serialization
+
+### `V8Serializable`
+Types that are serializable with V8 structured clone algorithm.
+This includes all JSON-serializable types plus additional V8-specific types.
+```ts
+Jsonifiable | Buffer | ArrayBuffer | DataView | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array | Map<any, any> | Set<any> | Error | RegExp | bigint | Date | { [key: string]: V8Serializable | undefined } | ReadonlyArray<V8Serializable>
+```
+
+## protocol
+
 ### `InitMessage`
 Initialization message sent from parent to child on startup.
 Contains module path, class name, constructor arguments, and serialization mode.
 **Properties:**
-- `type: "INIT"` — 
-- `modulePath: string` — 
-- `className: string` — 
-- `constructorArgs: Jsonifiable[]` — 
-- `serialization: SerializationMode` (optional) — 
+- `type: "INIT"`
+- `modulePath: string`
+- `className: string`
+- `constructorArgs: Jsonifiable[]`
+- `serialization: SerializationMode` (optional)
 
 ### `Request`
 Method invocation request sent from parent to child.
 Includes unique ID for request/response correlation.
 **Properties:**
-- `id: string` — 
-- `type: "CALL"` — 
-- `prop: string` — 
-- `args: Jsonifiable[]` — 
+- `id: string`
+- `type: "CALL"`
+- `prop: string`
+- `args: Jsonifiable[]`
 
 ### `Response`
 Method invocation response sent from child to parent.
 Either contains return value (RESULT) or error information (ERROR).
 **Properties:**
-- `id: string` — 
-- `type: "RESULT" | "ERROR"` — 
-- `value: Jsonifiable` (optional) — 
-- `error: ErrorInfo` (optional) — 
+- `id: string`
+- `type: "RESULT" | "ERROR"`
+- `value: Jsonifiable` (optional)
+- `error: ErrorInfo` (optional)
 
 ### `ErrorInfo`
 Error information serialized in Response messages.
 Preserves error message, stack trace, name, and optional code.
 **Properties:**
-- `message: string` — 
-- `stack: string` (optional) — 
-- `name: string` — 
-- `code: string` (optional) — 
+- `message: string`
+- `stack: string` (optional)
+- `name: string`
+- `code: string` (optional)
 
 ### `EventMessage`
 Event message sent from child to parent for EventEmitter events.
 Forwards events emitted in child to listeners in parent.
 **Properties:**
-- `type: "EVENT"` — 
-- `eventName: string` — 
-- `args: Jsonifiable[]` — 
+- `type: "EVENT"`
+- `eventName: string`
+- `args: Jsonifiable[]`
 
 ### `ParentToChildMessage`
 Union type of all IPC messages sent from parent to child.
@@ -153,17 +167,19 @@ Handle transmission message sent from parent to child.
 Notifies child that a handle (socket, server, file descriptor) is being sent.
 The actual handle is passed separately via Node.js child.send(message, handle).
 **Properties:**
-- `type: "HANDLE"` — 
-- `handleId: string` — 
-- `handleType: "socket" | "server" | "dgram" | "fd"` — 
+- `type: "HANDLE"`
+- `handleId: string`
+- `handleType: "socket" | "server" | "dgram" | "fd"`
 
 ### `HandleAck`
 Handle acknowledgment sent from child to parent after handle is received.
 **Properties:**
-- `type: "HANDLE_ACK"` — 
-- `handleId: string` — 
-- `received: boolean` — 
-- `error: string` (optional) — 
+- `type: "HANDLE_ACK"`
+- `handleId: string`
+- `received: boolean`
+- `error: string` (optional)
+
+## isomorphism
 
 ### `UnwrapProcxy`
 Extract the original type T from Procxy<T, Mode, SupportHandles>.
@@ -249,12 +265,4 @@ These utilities enable bidirectional type mapping and introspection:
 - Procxify: Extract procxiable properties from an object type
 ```ts
 T | Procxy<T, any, any>
-```
-
-### `Procxify`
-Shallow procxiable subset of an object.
-Picks only non-method properties whose values can be sent across the wire for the given mode.
-Does not transform methods or recurse; intended to mirror type-fest's Jsonify utility for procxiable data.
-```ts
-{ [K in keyof T as T[K] extends (args: any[]) => any ? never : IsProcxiable<T[K], Mode> extends true ? K : never]: T[K] }
 ```
