@@ -15,6 +15,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "removeComments": true,
     "importHelpers": true,
 
