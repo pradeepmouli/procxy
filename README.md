@@ -12,6 +12,8 @@
 
 > **⚠️ Pre-1.0 software** — APIs are subject to change between minor versions. Pin to exact versions in production. See the [CHANGELOG](./CHANGELOG.md) for breaking changes between releases.
 
+📚 **Documentation:** <https://pradeepmouli.github.io/procxy/>
+
 Run class instances in isolated child processes while interacting with them as if they were local objects. All method calls become async and are transparently forwarded over IPC with full TypeScript support.
 
 ## ✨ Features

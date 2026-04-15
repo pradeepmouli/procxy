@@ -54,6 +54,8 @@
     "clean": "rm -rf dist tsconfig.tsbuildinfo",
     "docs": "typedoc",
     "docs:watch": "typedoc --watch",
+    "docs:dev": "pnpm --filter procxy-docs dev",
+    "docs:build": "pnpm --filter procxy-docs build",
     "changeset": "changeset",
     "version": "changeset version",
     "release": "pnpm build && changeset publish",
