@@ -25,7 +25,7 @@
     "url": "git+https://github.com/pradeepmouli/procxy.git"
   },
   "license": "MIT",
-  "author": "Your Name <your.email@example.com>",
+  "author": "Pradeep Mouli <pmouli@mac.com> (https://github.com/pradeepmouli)",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
