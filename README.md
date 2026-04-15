@@ -2,15 +2,19 @@
 
 > **procxy** */ˈprɒk.si/* — Transparent and type-safe process-based proxy for class instances
 
-[![npm version](https://img.shields.io/npm/v/procxy.svg)](https://www.npmjs.com/package/procxy)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Tests](https://img.shields.io/badge/tests-243%20passing-brightgreen.svg)](./tests)
-[![Coverage](https://img.shields.io/badge/coverage->90%25-brightgreen.svg)](./coverage)
-[![Performance](https://img.shields.io/badge/overhead-<10ms-blueviolet.svg)](./README.md#-performance)
-[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink.svg)](https://github.com/sponsors/pradeepmouli)
-
 > **⚠️ Pre-1.0 software** — APIs are subject to change between minor versions. Pin to exact versions in production. See the [CHANGELOG](./CHANGELOG.md) for breaking changes between releases.
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/procxy"><img src="https://img.shields.io/npm/v/procxy?style=flat-square&label=procxy" alt="npm version" /></a>
+  <a href="https://github.com/pradeepmouli/procxy/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/pradeepmouli/procxy/ci.yml?style=flat-square" alt="ci" /></a>
+  <img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license" />
+  <img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen?style=flat-square" alt="node" />
+  <img src="https://img.shields.io/badge/TypeScript-5.0%2B-blue?style=flat-square" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/tests-243%20passing-brightgreen?style=flat-square" alt="tests" />
+  <img src="https://img.shields.io/badge/coverage-%3E90%25-brightgreen?style=flat-square" alt="coverage" />
+  <img src="https://img.shields.io/badge/overhead-%3C10ms-blueviolet?style=flat-square" alt="performance" />
+  <a href="https://github.com/sponsors/pradeepmouli"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?style=flat-square" alt="sponsor" /></a>
+</p>
 
 📚 **Documentation:** <https://pradeepmouli.github.io/procxy/>
 
