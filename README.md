@@ -10,7 +10,7 @@
 [![Performance](https://img.shields.io/badge/overhead-<10ms-blueviolet.svg)](./README.md#-performance)
 [![GitHub Sponsors](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink.svg)](https://github.com/sponsors/pradeepmouli)
 
-> ⚠️ **Alpha Release** - API may change. Please report issues and provide feedback!
+> **⚠️ Pre-1.0 software** — APIs are subject to change between minor versions. Pin to exact versions in production. See the [CHANGELOG](./CHANGELOG.md) for breaking changes between releases.
 
 Run class instances in isolated child processes while interacting with them as if they were local objects. All method calls become async and are transparently forwarded over IPC with full TypeScript support.
 
