@@ -204,93 +204,93 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
 }
 
 /**
- * Create a proxy for a remote object instance running in a child process.
+ * Spawn a class instance in an isolated child process and return a transparent async proxy.
  *
- * This function spawns a child process via `fork()`, instantiates the specified class
- * in that child, and returns a proxy object that transparently forwards method calls
- * over IPC. All methods become async and return Promises.
+ * @remarks
+ * Uses Node.js `child_process.fork()` to create a dedicated process for the class instance.
+ * All method calls on the returned proxy are serialized, forwarded over IPC, and the result
+ * is sent back — adding roughly 1 ms round-trip overhead per call. The same call signature
+ * is supported in five forms: with/without a module path string, with/without options, and
+ * with/without constructor arguments. Concurrent calls to `procxy()` with identical arguments
+ * are deduplicated: only one child is spawned and subsequent callers receive the same proxy.
+ * Completed proxies are cached with LRU eviction (max 100 entries) so sequential calls also
+ * skip re-spawning, until the child process terminates.
  *
- * @template T - The type of the class to instantiate remotely
- * @param classOrClassName - The class constructor or class name to instantiate in the child process
- * @param modulePath - Path to the module containing the class (required)
- * @param options - Optional {@link ProcxyOptions} for process configuration
- * @param constructorArgs - Constructor arguments (must be JSON-serializable)
- * @returns A Promise that resolves to a {@link Procxy}<T> proxy object
+ * @param classOrClassName - The class constructor, or a string class name when using the module-map overload, whose instance will run in the child process
+ * @param modulePathOrOptions - Path to the module file that exports the class, or a {@link ProcxyOptions} object when omitting a separate path
+ * @param options - {@link ProcxyOptions} when the second argument is a module path string
+ * @param constructorArgs - Arguments forwarded to the class constructor; must be JSON-serializable in `'json'` mode or V8-serializable in `'advanced'` mode
+ * @returns A `Procxy<T>` proxy whose methods are all async and whose read-only properties mirror the child instance
  *
- * @throws {OptionsValidationError} If ProcxyOptions contain invalid values
- * @throws {ModuleResolutionError} If the module path cannot be resolved
- * @throws {ChildCrashedError} If the child process exits during initialization
- * @throws {TimeoutError} If initialization exceeds the configured timeout
- * @throws {TypeError} If constructor arguments are not JSON-serializable (FR-019, FR-022)
+ * @throws {OptionsValidationError} When `timeout`, `retries`, `env`, or `cwd` in options fail validation
+ * @throws {ModuleResolutionError} When no module path is provided and automatic stack-trace detection cannot locate the class's file
+ * @throws {SerializationError} When any constructor argument cannot be serialized under the active mode
+ * @throws {ChildCrashedError} When the child process exits before the INIT handshake completes
+ * @throws {TimeoutError} When the INIT handshake does not complete within the configured `timeout`
+ *
+ * @useWhen
+ * - You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop
+ * - You want EventEmitter events from a worker class forwarded transparently to the parent process
+ * - You need to sandbox third-party code so a crash in the library cannot take down the parent
+ * - You have a class with complex stateful initialization and want to reuse one instance across multiple callers (dedup cache)
+ * - You need to run the same class concurrently across multiple isolated processes without managing fork logic yourself
+ *
+ * @avoidWhen
+ * - Your class holds non-serializable state: closures captured over parent-side objects, WeakMaps, Symbols, or live streams — they do not survive the IPC boundary
+ * - Sub-millisecond latency is required; IPC adds ~1 ms per round-trip even for trivial calls
+ * - Your method return values include class instances with behavior — they are serialized to plain data and arrive without prototype methods
+ * - You need the child to call back into parent-side callbacks synchronously inside a proxied method (deadlock risk)
+ *
+ * @pitfalls
+ * - NEVER pass functions as constructor arguments — V8 serialization silently drops them; use `sanitizeV8: true` only as a last resort and accept the data loss
+ * - NEVER call `$terminate()` from inside a proxied method's implementation in the child — the IPC response for the current call is never sent, hanging the parent indefinitely
+ * - NEVER assume the cached proxy is always fresh — if the child crashes and you hold a reference, subsequent calls throw `ChildCrashedError`; check `$process.exitCode` before reusing across request boundaries
+ * - NEVER mix `'json'` and `'advanced'` mode on the same class across different `procxy()` calls — they produce separate child processes with separate dedup keys; use one mode consistently
+ * - NEVER set `retries` to a high value for non-idempotent methods — each retry re-sends the full IPC call; the method may execute multiple times if the child is slow but alive
  *
  * @example
  * ```typescript
+ * // Basic usage — automatic module path detection
  * import { procxy } from 'procxy';
+ * import { Calculator } from './calculator.js';
  *
- * // Basic usage - no constructor args
- * class Calculator {
- *   add(a: number, b: number): number {
- *     return a + b;
- *   }
- * }
- *
- * const calc = await procxy(Calculator, './calculator.js');
+ * await using calc = await procxy(Calculator);
  * const result = await calc.add(5, 7); // 12
- * await calc.$terminate(); // Clean up
+ * // Child terminates automatically when the block exits
  * ```
  *
  * @example
  * ```typescript
- * // With constructor arguments
- * class Worker {
- *   constructor(public name: string, public threads: number) {}
+ * // CPU-intensive worker with constructor args and custom options
+ * import { procxy } from 'procxy';
+ * import { ImageProcessor } from './image-processor.js';
  *
- *   async process(data: string[]): Promise<string[]> {
- *     // Heavy processing in child process
- *     return data.map(s => s.toUpperCase());
- *   }
- * }
- *
- * const worker = await procxy(Worker, './worker.js', undefined, 'MyWorker', 4);
- * const result = await worker.process(['hello', 'world']);
- * await worker.$terminate();
- * ```
- *
- * @example
- * ```typescript
- * // With options (timeout, retries, custom env)
- * const worker = await procxy(
- *   Worker,
- *   './worker.js',       // Module path is required
- *   {
- *     timeout: 60000,      // 60s timeout per method call
- *     retries: 5,          // Retry failed calls 5 times
- *     cwd: '/tmp',         // Child process working directory
- *     env: {               // Custom environment variables
- *       NODE_ENV: 'production',
- *       API_KEY: process.env.API_KEY
- *     }
- *   },
- *   'MyWorker',            // Constructor arguments follow options
- *   4
+ * const processor = await procxy(
+ *   ImageProcessor,
+ *   './image-processor.js',
+ *   { timeout: 60_000, retries: 1, serialization: 'advanced' } as const,
+ *   { quality: 80, format: 'webp' }  // constructor arg — plain object, no functions
  * );
+ *
+ * const thumbnail = await processor.resize(imageBuffer, 200, 200);
+ * await processor.$terminate();
  * ```
  *
  * @example
  * ```typescript
- * // Lifecycle management
- * const worker = await procxy(Worker, './worker.js');
+ * // EventEmitter forwarding
+ * import { procxy } from 'procxy';
+ * import { LogWatcher } from './log-watcher.js';
  *
- * // Access underlying child process
- * console.log('Child PID:', worker.$process.pid);
- *
- * // Terminate when done
- * await worker.$terminate(); // Kills child and rejects pending calls
+ * const watcher = await procxy(LogWatcher, './log-watcher.js');
+ * watcher.on('line', (text: string) => console.log('[child]', text));
+ * await watcher.start('/var/log/syslog');
+ * // Lines emitted by the child arrive here via IPC event bridge
  * ```
  *
- * @see {@link Procxy} for the proxy type definition
- * @see {@link ProcxyOptions} for available configuration options
- * @see {@link https://github.com/pradeepmouli/procxy#readme | Procxy Documentation}
+ * @category Core
+ * @see {@link Procxy} — proxy type returned by this function
+ * @see {@link ProcxyOptions} — full configuration reference
  */
 export async function procxy<
   T extends Record<string, typeof Object>,

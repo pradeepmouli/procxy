@@ -7,8 +7,29 @@ import { SerializationError } from './errors.js';
  */
 
 /**
- * Types that are serializable with V8 structured clone algorithm.
- * This includes all JSON-serializable types plus additional V8-specific types.
+ * Union of all types that survive Node.js V8 structured-clone serialization across an IPC boundary.
+ *
+ * @remarks
+ * This is the allowed-type set for method arguments and return values when `serialization: 'advanced'`
+ * is active in {@link ProcxyOptions}. It is a superset of `type-fest`'s `Jsonifiable`:
+ *
+ * - All JSON types: primitives, plain objects, arrays, `null`
+ * - Binary: `Buffer`, `ArrayBuffer`, `DataView`, all `TypedArray` variants
+ * - Collections: `Map`, `Set` (keys and values are recursively `V8Serializable`)
+ * - Special primitives: `bigint`
+ * - Built-in objects: `Date`, `RegExp`, `Error` (preserved with their prototype)
+ *
+ * **Not included** (will throw `SerializationError` at runtime):
+ * - Functions / closures
+ * - Symbols
+ * - Class instances with custom prototypes (other than the built-ins above)
+ * - Objects with getter/setter properties
+ * - Circular references (these throw during serialization)
+ *
+ * Use {@link sanitizeForV8} to strip non-serializable properties before sending if your
+ * objects come from external sources that may include methods or getters.
+ *
+ * @category Serialization
  */
 export type V8Serializable =
   | Jsonifiable
@@ -266,29 +287,58 @@ export function validateV8SerializableArray(
 }
 
 /**
- * Sanitize a value by converting to plain objects and removing non-V8-serializable properties.
- * Recursively processes objects, arrays, and nested structures.
+ * Strip non-V8-serializable properties from a value, returning a deep-cloned plain version.
  *
- * This is useful for configuration objects that may contain functions,
- * class instances, or other non-serializable properties that aren't needed in the child process.
+ * @remarks
+ * Performs a recursive walk of the object graph and drops anything that cannot cross the IPC
+ * boundary: functions, getter-only properties, and class instances with custom prototypes
+ * (other than `Date`, `RegExp`, `Error`, `Buffer`, `ArrayBuffer`, `TypedArray`, `Map`, `Set`).
+ * Circular references are replaced with the string `'[Circular]'`.
  *
- * @param value - The value to sanitize
- * @returns A new value with all non-serializable properties removed
+ * The sanitization is intentionally lossy: dropped properties are gone without warning. This
+ * is appropriate as a last-resort safety net for configuration objects sourced from third-party
+ * libraries, but for application data it is better to fix the types at the source.
+ *
+ * Enable automatic sanitization of constructor arguments via `sanitizeV8: true` in
+ * {@link ProcxyOptions}. Sanitization in that context is lazy — it only runs when initial
+ * validation fails, so there is no overhead for objects that are already clean.
+ *
+ * @param value - The value to sanitize; primitives are returned as-is
+ * @param seen - Internal `WeakSet` used for circular-reference tracking; callers should omit this
+ * @returns A new, plain-object copy of `value` with all non-serializable properties removed
+ *
+ * @useWhen
+ * - You are passing a third-party config object as a constructor argument and cannot guarantee it contains no functions
+ * - You need a quick workaround for objects with hidden getters/setters that fail V8 validation
+ *
+ * @avoidWhen
+ * - The dropped properties are load-bearing — sanitization silently loses data with no warning
+ * - You control the data shape — fix the type instead of sanitizing
+ *
+ * @pitfalls
+ * - NEVER rely on sanitized output for equality checks — keys may be missing compared to input
+ * - NEVER use on `Map` or `Set` values that contain functions as keys — those entries are recursively sanitized but not removed
  *
  * @example
  * ```typescript
+ * import { sanitizeForV8 } from 'procxy';
+ *
  * const config = {
  *   data: 'hello',
- *   handler: () => {},  // Will be removed
+ *   handler: () => {},       // dropped — function
  *   nested: {
  *     value: 42,
- *     method: () => {}  // Will be removed
+ *     method: () => {}       // dropped — function
  *   }
  * };
  *
  * const sanitized = sanitizeForV8(config);
  * // Result: { data: 'hello', nested: { value: 42 } }
  * ```
+ *
+ * @category Serialization
+ * @see {@link sanitizeForV8Array} — sanitize an array of values in one call
+ * @see {@link V8Serializable} — the type constraint sanitization produces
  */
 export function sanitizeForV8(value: unknown, seen: WeakSet<object> = new WeakSet()): any {
   const sanitize = (val: unknown): any => {
@@ -350,13 +400,21 @@ export function sanitizeForV8(value: unknown, seen: WeakSet<object> = new WeakSe
 }
 
 /**
- * Sanitize an array of values by removing non-V8-serializable properties from each.
+ * Apply {@link sanitizeForV8} to each element of an array, returning a new sanitized array.
  *
- * @param values - Array of values to sanitize
- * @returns New array with sanitized values
+ * @remarks
+ * Shares a single `WeakSet` circular-reference guard across all elements, so cross-element
+ * circular references are also caught. Used internally by `procxy()` when `sanitizeV8: true`
+ * is set in {@link ProcxyOptions} and constructor-argument validation fails.
+ *
+ * @param values - Array of values to sanitize; each element is processed independently
+ * @param seen - Internal `WeakSet` for circular-reference tracking; callers should omit this
+ * @returns New array where each element has had non-V8-serializable properties stripped
  *
  * @example
  * ```typescript
+ * import { sanitizeForV8Array } from 'procxy';
+ *
  * const args = [
  *   { config: true, handler: () => {} },
  *   { value: 42 }
@@ -364,6 +422,9 @@ export function sanitizeForV8(value: unknown, seen: WeakSet<object> = new WeakSe
  * const sanitized = sanitizeForV8Array(args);
  * // Result: [{ config: true }, { value: 42 }]
  * ```
+ *
+ * @category Serialization
+ * @see {@link sanitizeForV8} — single-value variant
  */
 export function sanitizeForV8Array(
   values: unknown[],

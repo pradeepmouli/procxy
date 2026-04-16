@@ -5,17 +5,24 @@ import type { SerializationMode } from './options.js';
 import type { V8Serializable } from '../shared/serialization.js';
 
 /**
- * Get the serializable type constraint based on the serialization mode.
- * - 'json' mode: Jsonifiable types only
- * - 'advanced' mode: V8Serializable types (includes Buffer, Map, Set, BigInt, etc.)
+ * The serializable type constraint for a given IPC mode.
+ *
+ * @remarks
+ * - `'json'` mode: resolves to `Jsonifiable` (type-fest) — plain objects, arrays, primitives
+ * - `'advanced'` mode: resolves to {@link V8Serializable} — adds Buffer, TypedArray, Map, Set, BigInt, Date, RegExp, Error
+ *
+ * Used as the upper-bound constraint for method parameter and return value types when
+ * computing which methods appear on {@link Procxy}.
+ *
+ * @typeParam Mode - The active serialization mode
+ * @category Types
  */
 export type Procxiable<Mode extends SerializationMode> = Mode extends 'advanced'
   ? V8Serializable
   : Jsonifiable;
 
 /**
- * Validate that a type is serializable for the given mode.
- * If not, produces a descriptive type error.
+ * Validate that a type is serializable for the given mode; produces a descriptive type error if not.
  */
 type ValidateProcxiable<T, Mode extends SerializationMode> =
   T extends Procxiable<Mode>
@@ -27,8 +34,20 @@ type ValidateProcxiable<T, Mode extends SerializationMode> =
       };
 
 /**
- * Constrain constructor arguments to be serializable based on the mode.
- * Enforces that all constructor args must be Procxiable<Mode> and produces errors if not.
+ * Constrain constructor argument types to be serializable under the given mode.
+ *
+ * @remarks
+ * Applies `ValidateProcxiable` to each position of `ConstructorParameters<T>`.
+ * If a constructor argument type is not serializable for the chosen mode, TypeScript
+ * will surface an error with a descriptive `{ error: 'Type is not serializable'; expected: ...; received: ... }` object.
+ *
+ * This provides compile-time safety for constructor arguments passed to `procxy()`.
+ * It does not deeply validate nested object properties (TypeScript structural typing
+ * makes that infeasible); use `sanitizeV8: true` as a runtime fallback for those cases.
+ *
+ * @typeParam T - The class whose constructor parameter types are being constrained
+ * @typeParam Mode - The serialization mode in use
+ * @category Types
  */
 export type SerializableConstructorArgs<T, Mode extends SerializationMode> =
   ConstructorParameters<Constructor<T>> extends infer Args extends readonly any[]
@@ -36,8 +55,20 @@ export type SerializableConstructorArgs<T, Mode extends SerializationMode> =
     : never;
 
 /**
- * Check if a type is procxiable (serializable) for the given mode.
- * Also handles void, undefined, and Function types (callbacks).
+ * Conditional type that resolves to `true` when `T` can cross the IPC boundary in the given mode.
+ *
+ * @remarks
+ * Returns `true` for:
+ * - Any type assignable to `Procxiable<Mode>` (JSON-safe or V8-safe depending on mode)
+ * - `void` — async methods that return nothing are safe
+ * - `undefined` — optional parameters and absent return values
+ * - `Function` — reserved for future callback-proxy support (currently validated at runtime)
+ *
+ * Used internally to filter which methods appear on the {@link Procxy} type.
+ *
+ * @typeParam T - The type to check
+ * @typeParam Mode - The serialization mode
+ * @category Types
  */
 export type IsProcxiable<T, Mode extends SerializationMode> = T extends
   | Procxiable<Mode>
@@ -150,9 +181,38 @@ type ProcxiablePropertyKeys<T, Mode extends SerializationMode> = {
 }[keyof T];
 
 /**
- * Shallow procxiable subset of an object.
- * Picks only non-method properties whose values can be sent across the wire for the given mode.
- * Does not transform methods or recurse; intended to mirror type-fest's Jsonify utility for procxiable data.
+ * Extract only the serializable, non-method properties from a type — the "data shape" of a class.
+ *
+ * @remarks
+ * `Procxify<T>` picks every property of `T` that:
+ * 1. Is not a function (methods are excluded)
+ * 2. Is serializable under `Mode` (passes {@link IsProcxiable})
+ *
+ * This is useful for typing data-transfer objects when you want to accept either a class
+ * instance or a plain representation of its data without committing to the full class type.
+ * It mirrors the role of type-fest's `Jsonify<T>` but respects the active serialization mode.
+ *
+ * Properties are not recursively transformed — they retain their original types. This is a
+ * shallow pick, not a deep transform.
+ *
+ * @typeParam T - Source type to extract properties from
+ * @typeParam Mode - Serialization mode used to filter eligible properties
+ *
+ * @example
+ * ```typescript
+ * import type { Procxify } from 'procxy';
+ *
+ * class User {
+ *   id: number = 0;
+ *   name: string = '';
+ *   greet() { return `Hello ${this.name}`; }
+ * }
+ *
+ * type UserData = Procxify<User>;
+ * // { id: number; name: string }  — greet() excluded because it's a function
+ * ```
+ *
+ * @category Types
  */
 export type Procxify<T, Mode extends SerializationMode = 'json'> = {
   [K in keyof T as T[K] extends (...args: any[]) => any
@@ -171,58 +231,95 @@ type ReadonlyProperties<T, Mode extends SerializationMode> = {
 };
 
 /**
- * Procxy<T, Mode> — The proxy type that wraps a remote object instance.
+ * The proxy type returned by `procxy()` — a transparent async mirror of a remote class instance.
  *
- * All methods of T are transformed to async (returning Promise<ReturnType>).
- * Only methods with serializable parameters and return values are included.
- * The serialization constraint depends on the Mode parameter:
- * - 'json' (default): JSON-serializable types only (primitive, objects, arrays)
- * - 'advanced': V8-serializable types (includes Buffer, TypedArray, Map, Set, BigInt, etc.)
+ * @remarks
+ * `Procxy<T>` transforms `T` for cross-process use:
  *
- * Properties are included as read-only - they can be read but not set from the parent.
- * To modify properties, use methods provided by the child class.
+ * **Methods**: Every method of `T` whose parameters and return value are serializable under
+ * `Mode` is included, with its return type wrapped in `Promise`. Methods with non-serializable
+ * signatures are silently omitted from the proxy type (TypeScript will report a type error if
+ * you try to call them). Async methods are flattened — `Promise<Promise<X>>` becomes
+ * `Promise<X>` via `Awaited<R>`.
  *
- * Special lifecycle methods are prefixed with $ to avoid conflicts:
- * - $terminate(): Explicitly terminates the child process
- * - $process: Access to the underlying ChildProcess instance
+ * **Properties**: Non-method properties that are serializable are included as `readonly`.
+ * They reflect the value the child had at last read; they are not live references.
+ * Setting a property on the proxy has no effect on the child — use a method for that.
  *
- * Disposable Protocol:
- * - [Symbol.dispose](): Synchronously terminate (calls $terminate() but doesn't await)
- * - [Symbol.asyncDispose](): Asynchronously terminate (awaits $terminate())
- * - Enables `using` and `await using` statements for automatic cleanup
+ * **Lifecycle (`$` prefix)**: Four lifecycle members are always present regardless of `T`:
+ * - `$terminate()` — sends `SIGTERM` to the child and waits for it to exit
+ * - `$process` — the raw `ChildProcess` handle; inspect `pid`, `exitCode`, `kill()` etc.
+ * - `[Symbol.dispose]()` — synchronous dispose for `using` (initiates but does not await termination)
+ * - `[Symbol.asyncDispose]()` — async dispose for `await using` (awaits full shutdown)
  *
- * If T extends EventEmitter<E>, the proxy also extends EventEmitter<E> with typed methods:
- * - .on(event, listener)
- * - .once(event, listener)
- * - .off(event, listener)
- * - .removeListener(event, listener)
- * Note: .emit() is not available on the proxy; events originate from the child.
+ * **EventEmitter**: When `T extends EventEmitter<E>`, the proxy gains typed `on`, `once`,
+ * `off`, and `removeListener` methods. Events are forwarded over IPC from child to parent.
+ * Only events whose listener parameters are JSON-serializable are forwarded; events with
+ * `Function` parameters are filtered out at the type level.  `.emit()` is **not** available
+ * on the proxy — events originate in the child only.
  *
- * @template T - The original class/interface type
- * @template Mode - Serialization mode: 'json' (default) or 'advanced'
+ * **Handle passing** (`SupportHandles extends true`): When enabled, a `$sendHandle(handle, id?)`
+ * method is added. The handle (Socket, Server, dgram.Socket, or fd) is transferred to the child
+ * and must not be used in the parent after the call. Full support on Unix; limited on Windows.
+ *
+ * @typeParam T - The original class type whose instance runs in the child process
+ * @typeParam Mode - Serialization mode: `'json'` (default) or `'advanced'`
+ * @typeParam SupportHandles - Literal `true` to add `$sendHandle`; `false` (default) to omit it
+ *
+ * @useWhen
+ * - You need the return type of `procxy()` for a function parameter or variable annotation
+ * - You are building higher-order abstractions over proxied classes and need type-level introspection
+ * - You want to constrain a generic to only accept Procxy instances (`T extends Procxy<any>`)
+ *
+ * @avoidWhen
+ * - You expect property reads to reflect live child state — they don't; properties are snapshotted at the time of each read call
+ *
+ * @pitfalls
+ * - NEVER check `proxy instanceof MyClass` — the proxy is a plain object; instanceof will always be false
+ * - NEVER destructure methods off the proxy (`const { add } = proxy`) — the IPC context is lost and calls will throw
+ * - NEVER call `$terminate()` and then await another method — the child is gone; the call throws `ChildCrashedError`
  *
  * @example
  * ```typescript
- * // Using async disposable (recommended) with default JSON mode
- * await using proxy = await procxy(Calculator, { modulePath });
- * const result = await proxy.add(1, 2);
- * // Automatically cleaned up when block exits
+ * import { procxy, type Procxy } from 'procxy';
+ * import { Calculator } from './calculator.js';
+ *
+ * // Explicit type annotation
+ * let calc: Procxy<Calculator>;
+ * calc = await procxy(Calculator);
+ * const result = await calc.add(1, 2); // Promise<number>
+ * await calc.$terminate();
  * ```
  *
  * @example
  * ```typescript
- * // Using advanced serialization mode for Buffer support
- * await using proxy = await procxy(ImageProcessor, {
- *   modulePath,
- *   serialization: 'advanced'
- * });
- * const buffer = Buffer.from('image data');
- * const processed = await proxy.processImage(buffer);
+ * // await using for automatic cleanup
+ * import { procxy } from 'procxy';
+ * import { Calculator } from './calculator.js';
+ *
+ * await using calc = await procxy(Calculator);
+ * const sum = await calc.add(3, 4); // 7
+ * // calc.$terminate() is called automatically here
  * ```
  *
- * @template T - The original class/interface type
- * @template Mode - Serialization mode: 'json' | 'advanced'
- * @template SupportHandles - Whether handle passing is enabled
+ * @example
+ * ```typescript
+ * // Advanced mode with Buffer support
+ * import { procxy } from 'procxy';
+ * import { ImageResizer } from './image-resizer.js';
+ *
+ * await using resizer = await procxy(
+ *   ImageResizer,
+ *   './image-resizer.js',
+ *   { serialization: 'advanced' } as const
+ * );
+ * const thumbnail: Buffer = await resizer.resize(sourceBuffer, 200, 200);
+ * ```
+ *
+ * @category Core
+ * @see {@link procxy} — factory function that creates this proxy
+ * @see {@link ProcxyOptions} — configuration controlling mode and lifecycle
+ * @see {@link PassableHandle} — types accepted by `$sendHandle`
  */
 export type Procxy<
   T,
@@ -385,22 +482,27 @@ export type Procxy<
       : {});
 
 /**
- * Types that can be passed as handles to child processes.
- * These are transferred (not cloned) to the child.
- *
- * Supported handle types:
- * - net.Socket: TCP/IPC sockets
- * - net.Server: TCP/IPC servers
- * - dgram.Socket: UDP sockets
- * - number: File descriptors (Unix only)
+ * Union of OS-level handle types that can be transferred to the child process via `$sendHandle`.
  *
  * @remarks
- * Handle passing is platform-dependent:
- * - Full support on Unix-like systems (Linux, macOS)
- * - Limited support on Windows
+ * Handles are **transferred**, not cloned. Once sent, the parent process loses ownership:
+ * using the handle in the parent after calling `$sendHandle()` results in undefined behavior.
  *
- * After a handle is sent, the parent process should not use it anymore,
- * as ownership is transferred to the child process.
+ * Supported types:
+ * - `net.Socket` — TCP or IPC stream socket
+ * - `net.Server` — TCP or IPC server (passes the listening descriptor)
+ * - `dgram.Socket` — UDP datagram socket
+ * - `number` — raw POSIX file descriptor (Unix only)
+ *
+ * Platform notes:
+ * - Full support on Linux and macOS via `SCM_RIGHTS` (Unix domain socket ancillary data)
+ * - Limited support on Windows; `net.Socket` transfer works but `dgram.Socket` and raw fd do not
+ *
+ * Handle passing requires `supportHandles: true` in {@link ProcxyOptions} **and**
+ * `serialization: 'advanced'`. A warning is logged when `supportHandles: true` is set on Windows.
+ *
+ * @category Types
+ * @see {@link Procxy} — proxy type whose `$sendHandle` method accepts this type
  */
 export type PassableHandle =
   | import('net').Socket

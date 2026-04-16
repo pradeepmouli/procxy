@@ -1,19 +1,47 @@
 import type { Jsonifiable } from 'type-fest';
 
 /**
- * Serialization mode for IPC messages.
- * - 'json': JSON serialization (default, backward compatible)
- * - 'advanced': V8 structured clone algorithm (supports Buffer, Map, Set, BigInt, etc.)
+ * Serialization mode for IPC messages exchanged between parent and child processes.
+ *
+ * @remarks
+ * Choosing the right mode is a performance and capability trade-off:
+ * - `'json'`: Uses `JSON.stringify` / `JSON.parse`. Fast for plain objects and primitives.
+ *   Silent data loss for `undefined`, `NaN`, `Infinity`, `Date`, `Map`, `Set`, functions,
+ *   and Buffer — these are coerced or dropped by JSON encoding.
+ * - `'advanced'`: Uses Node.js V8 structured clone (the same algorithm as `postMessage`).
+ *   Preserves binary types, collections, and special primitives at the cost of slightly
+ *   higher serialization overhead. Required for Buffer, TypedArray, Map, Set, BigInt, Date,
+ *   RegExp, and Error values that must survive the IPC boundary intact.
+ *
+ * @category Configuration
  */
 export type SerializationMode = 'json' | 'advanced';
 
 /**
- * Configuration options for procxy() function.
+ * Configuration for the `procxy()` function.
  *
- * Allows fine-grained control over child process creation, timeouts, and module resolution.
+ * Controls child process spawning, IPC serialization, timeouts, retries, environment
+ * isolation, and optional handle-passing support.
  *
- * @template Mode - Serialization mode: 'json' | 'advanced'
- * @template SupportHandles - Whether handle passing is enabled (literal boolean)
+ * @remarks
+ * Most options have sensible defaults; only `modulePath` is ever strictly required,
+ * and even that is optional when automatic module resolution succeeds. Pass the object
+ * as the second or third argument to `procxy()`:
+ *
+ * ```typescript
+ * // Inline — TypeScript infers Mode from `serialization`
+ * await procxy(MyClass, './my-class.js', { timeout: 10_000 });
+ *
+ * // Named — use `as const` so `serialization` literal is preserved for type narrowing
+ * const opts = { serialization: 'advanced', supportHandles: true } as const;
+ * await procxy(MyClass, './my-class.js', opts);
+ * ```
+ *
+ * @typeParam Mode - Serialization mode: `'json'` (default) or `'advanced'`
+ * @typeParam SupportHandles - Literal boolean controlling whether `$sendHandle` appears on the proxy
+ *
+ * @config
+ * @category Configuration
  */
 export type ProcxyOptions<
   Mode extends SerializationMode = 'json',
