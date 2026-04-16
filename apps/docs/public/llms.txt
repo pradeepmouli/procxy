@@ -1,0 +1,58 @@
+# procxy-docs
+
+> Documentation site for procxy
+
+### API
+
+- `procxy`: Spawn a class instance in an isolated child process and return a transparent async proxy.
+- `sanitizeForV8`: Strip non-V8-serializable properties from a value, returning a deep-cloned plain version.
+- `sanitizeForV8Array`: Apply sanitizeForV8 to each element of an array, returning a new sanitized array.
+- `isProcxy`: Runtime type guard that returns `true` when `obj` is a live Procxy proxy.
+- `isAdvancedMode`: Narrow a proxy's type to `Procxy<T, 'advanced', H>` at runtime.
+- `isHandleSupported`: Narrow a proxy's type to `Procxy<T, 'advanced', true>` when handle passing is enabled.
+- `ProcxyError`: Base class for all errors thrown by Procxy.
+- `TimeoutError`: Thrown when a proxied method call or the INIT handshake exceeds the configured timeout.
+- `ModuleResolutionError`: Thrown when procxy cannot determine the file path of the class's module.
+- `ChildCrashedError`: Thrown when the child process exits or is killed while the proxy is active.
+- `SerializationError`: Thrown when a constructor argument, method argument, or return value cannot be serialized across the IPC boundary.
+- `OptionsValidationError`: Thrown when a value in ProcxyOptions fails validation before the child process is spawned.
+
+## Optional
+
+### Types
+
+- `Procxy`: The proxy type returned by `procxy()` — a transparent async mirror of a remote class instance.
+- `ProcxyOptions`: Configuration for the `procxy()` function.
+- `SerializationMode`: Serialization mode for IPC messages exchanged between parent and child processes.
+- `V8Serializable`: Union of all types that survive Node.js V8 structured-clone serialization across an IPC boundary.
+- `Procxiable`: The serializable type constraint for a given IPC mode.
+- `IsProcxiable`: Conditional type that resolves to `true` when `T` can cross the IPC boundary in the given mode.
+- `SerializableConstructorArgs`: Constrain constructor argument types to be serializable under the given mode.
+- `PassableHandle`: Union of OS-level handle types that can be transferred to the child process via `$sendHandle`.
+- `InitMessage`: Initialization message sent from parent to child on startup.
+Contains module path, class name, constructor arguments, and serialization mode.
+- `Request`: Method invocation request sent from parent to child.
+Includes unique ID for request/response correlation.
+- `Response`: Method invocation response sent from child to parent.
+Either contains return value (RESULT) or error information (ERROR).
+- `ErrorInfo`: Error information serialized in Response messages.
+Preserves error message, stack trace, name, and optional code.
+- `EventMessage`: Event message sent from child to parent for EventEmitter events.
+Forwards events emitted in child to listeners in parent.
+- `ParentToChildMessage`: Union type of all IPC messages sent from parent to child.
+- `ChildToParentMessage`: Union type of all IPC messages sent from child to parent.
+- `HandleMessage`: Handle transmission message sent from parent to child.
+- `HandleAck`: Handle acknowledgment sent from child to parent after handle is received.
+- `UnwrapProcxy`: Extract the original type `T` from `Procxy<T, Mode, SupportHandles>`.
+- `IsProcxy`: Conditional type that resolves to `true` when `P` is a `Procxy` type.
+- `IsProcxyIsomorphic`: Conditional type that resolves to `true` when `T <-> Procxy<T>` form a consistent isomorphism.
+- `GetProcxyMode`: Extract the serialization mode from a `Procxy` type.
+- `HasHandleSupport`: Conditional type that resolves to `true` when `P` has `$sendHandle` support.
+- `ChangeProcxyMode`: Produce a new `Procxy` type identical to `P` except with a different serialization mode.
+- `ToggleProcxyHandles`: Produce a new `Procxy` type identical to `P` except with a different `SupportHandles` flag.
+- `ProcxyIsomorphism`: Describes the bidirectional type mapping between `T` and `Procxy<T>`.
+- `VerifyIsomorphism`: Compile-time assertion that `T` round-trips through `Procxy<T>` without loss.
+- `GetProcxyMethods`: Extract the union of user-defined method names available on a `Procxy` type.
+- `GetProcxyLifecycleMethods`: Extract the lifecycle method and property names from a `Procxy` type.
+- `MaybeProxy`: A value that is either the original type `T` or a `Procxy<T>` proxy for it.
+- `Procxify`: Extract only the serializable, non-method properties from a type — the "data shape" of a class.

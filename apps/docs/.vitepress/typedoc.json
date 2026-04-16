@@ -5,7 +5,7 @@
   "out": "../api",
   "plugin": ["typedoc-plugin-markdown", "typedoc-vitepress-theme", "typedoc-plugin-to-skills"],
   "llmsTxt": true,
-  "llmsTxtOutDir": "../public",
+  "llmsTxtOutDir": "../../public",
   "excludeInternal": true,
   "excludePrivate": true,
   "readme": "none",
