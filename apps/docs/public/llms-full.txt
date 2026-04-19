@@ -1,0 +1,839 @@
+# procxy-docs
+
+> Documentation site for procxy
+
+### procxy
+
+Spawn a class instance in an isolated child process and return a transparent async proxy.
+
+```ts
+procxy<T, C, M, SH>(className: keyof T, modulePathOrOptions?: string | ProcxyOptions<M, SH>, options?: ProcxyOptions<M, SH>, constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never): Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>
+```
+
+**Parameters:**
+- `className: keyof T` — 
+- `modulePathOrOptions: string | ProcxyOptions<M, SH>` (optional) — Path to the module file that exports the class, or a ProcxyOptions object when omitting a separate path
+- `options: ProcxyOptions<M, SH>` (optional) — ProcxyOptions when the second argument is a module path string
+- `constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never` — Arguments forwarded to the class constructor; must be JSON-serializable in `'json'` mode or V8-serializable in `'advanced'` mode
+
+**Returns:** `Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>`
+
+```typescript
+// Basic usage — automatic module path detection
+import { procxy } from 'procxy';
+import { Calculator } from './calculator.js';
+
+await using calc = await procxy(Calculator);
+const result = await calc.add(5, 7); // 12
+// Child terminates automatically when the block exits
+```
+```typescript
+// CPU-intensive worker with constructor args and custom options
+import { procxy } from 'procxy';
+import { ImageProcessor } from './image-processor.js';
+
+const processor = await procxy(
+  ImageProcessor,
+  './image-processor.js',
+  { timeout: 60_000, retries: 1, serialization: 'advanced' } as const,
+  { quality: 80, format: 'webp' }  // constructor arg — plain object, no functions
+);
+
+const thumbnail = await processor.resize(imageBuffer, 200, 200);
+await processor.$terminate();
+```
+```typescript
+// EventEmitter forwarding
+import { procxy } from 'procxy';
+import { LogWatcher } from './log-watcher.js';
+
+const watcher = await procxy(LogWatcher, './log-watcher.js');
+watcher.on('line', (text: string) => console.log('[child]', text));
+await watcher.start('/var/log/syslog');
+// Lines emitted by the child arrive here via IPC event bridge
+```
+
+### sanitizeForV8
+
+Strip non-V8-serializable properties from a value, returning a deep-cloned plain version.
+
+```ts
+sanitizeForV8(value: unknown, seen: WeakSet<object>): any
+```
+
+**Parameters:**
+- `value: unknown` — The value to sanitize; primitives are returned as-is
+- `seen: WeakSet<object>` — Internal `WeakSet` used for circular-reference tracking; callers should omit this
+
+**Returns:** `any`
+
+```typescript
+import { sanitizeForV8 } from 'procxy';
+
+const config = {
+  data: 'hello',
+  handler: () => {},       // dropped — function
+  nested: {
+    value: 42,
+    method: () => {}       // dropped — function
+  }
+};
+
+const sanitized = sanitizeForV8(config);
+// Result: { data: 'hello', nested: { value: 42 } }
+```
+
+### sanitizeForV8Array
+
+Apply sanitizeForV8 to each element of an array, returning a new sanitized array.
+
+```ts
+sanitizeForV8Array(values: unknown[], seen: WeakSet<object>): any[]
+```
+
+**Parameters:**
+- `values: unknown[]` — Array of values to sanitize; each element is processed independently
+- `seen: WeakSet<object>` — Internal `WeakSet` for circular-reference tracking; callers should omit this
+
+**Returns:** `any[]`
+
+```typescript
+import { sanitizeForV8Array } from 'procxy';
+
+const args = [
+  { config: true, handler: () => {} },
+  { value: 42 }
+];
+const sanitized = sanitizeForV8Array(args);
+// Result: [{ config: true }, { value: 42 }]
+```
+
+### isProcxy
+
+Runtime type guard that returns `true` when `obj` is a live Procxy proxy.
+
+```ts
+isProcxy<T>(obj: MaybeProxy<T>): obj is Procxy<T, any, any>
+```
+
+**Parameters:**
+- `obj: MaybeProxy<T>` — A value that is either the original type `T` or a `Procxy<T>`
+
+**Returns:** `obj is Procxy<T, any, any>`
+
+```typescript
+import { procxy, isProcxy } from 'procxy';
+import { Calculator } from './calculator.js';
+
+function processWorker(worker: Calculator | Procxy<Calculator>) {
+  if (isProcxy(worker)) {
+    console.log('Remote proxy, PID:', worker.$process.pid);
+  } else {
+    console.log('Local instance');
+  }
+}
+```
+
+### isAdvancedMode
+
+Narrow a proxy's type to `Procxy<T, 'advanced', H>` at runtime.
+
+```ts
+isAdvancedMode<T, H>(proxy: Procxy<T, any, H>): proxy is Procxy<T, "advanced", H>
+```
+
+**Parameters:**
+- `proxy: Procxy<T, any, H>` — Any `Procxy` instance
+
+**Returns:** `proxy is Procxy<T, "advanced", H>`
+
+```typescript
+import { procxy, isAdvancedMode } from 'procxy';
+import { Worker } from './worker.js';
+
+const w = await procxy(Worker, { serialization: 'advanced' } as const);
+if (isAdvancedMode(w)) {
+  // TypeScript now knows w is Procxy<Worker, 'advanced', false>
+  console.log('Can send Buffers');
+}
+```
+
+### isHandleSupported
+
+Narrow a proxy's type to `Procxy<T, 'advanced', true>` when handle passing is enabled.
+
+```ts
+isHandleSupported<T, H>(proxy: Procxy<T, any, H>): proxy is Procxy<T, "advanced", true>
+```
+
+**Parameters:**
+- `proxy: Procxy<T, any, H>` — Any `Procxy` instance
+
+**Returns:** `proxy is Procxy<T, "advanced", true>`
+
+```typescript
+import { procxy, isHandleSupported } from 'procxy';
+import net from 'net';
+import { SocketHandler } from './socket-handler.js';
+
+const handler = await procxy(SocketHandler, {
+  serialization: 'advanced',
+  supportHandles: true
+} as const);
+
+if (isHandleSupported(handler)) {
+  // TypeScript knows $sendHandle is available
+  const socket = new net.Socket();
+  socket.connect(8080, 'localhost');
+  await handler.$sendHandle(socket);
+}
+```
+
+### ProcxyError
+
+Base class for all errors thrown by Procxy.
+
+```ts
+constructor(message: string, context?: Record<string, unknown>): ProcxyError
+```
+
+**Properties:**
+- `stackTraceLimit: number` — The `Error.stackTraceLimit` property specifies the number of stack frames
+collected by a stack trace (whether generated by `new Error().stack` or
+`Error.captureStackTrace(obj)`).
+
+The default value is `10` but may be set to any valid JavaScript number. Changes
+will affect any stack trace captured _after_ the value has been changed.
+
+If set to a non-number value, or set to a negative number, stack traces will
+not capture any frames.
+- `context: Record<string, unknown>` — 
+- `name: string` — 
+- `message: string` — 
+- `stack: string` — 
+- `cause: unknown` — 
+
+**Methods:**
+- `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
+a string representing the location in the code at which
+`Error.captureStackTrace()` was called.
+
+```js
+const myObject = {};
+Error.captureStackTrace(myObject);
+myObject.stack;  // Similar to `new Error().stack`
+```
+
+The first line of the trace will be prefixed with
+`${myObject.name}: ${myObject.message}`.
+
+The optional `constructorOpt` argument accepts a function. If given, all frames
+above `constructorOpt`, including `constructorOpt`, will be omitted from the
+generated stack trace.
+
+The `constructorOpt` argument is useful for hiding implementation
+details of error generation from the user. For instance:
+
+```js
+function a() {
+  b();
+}
+
+function b() {
+  c();
+}
+
+function c() {
+  // Create an error without stack trace to avoid calculating the stack trace twice.
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 0;
+  const error = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+
+  // Capture the stack trace above function b
+  Error.captureStackTrace(error, b); // Neither function c, nor b is included in the stack trace
+  throw error;
+}
+
+a();
+```
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+
+### TimeoutError
+
+Thrown when a proxied method call or the INIT handshake exceeds the configured timeout.
+
+```ts
+constructor(methodName: string, timeoutMs: number, context?: Record<string, unknown>): TimeoutError
+```
+
+**Properties:**
+- `stackTraceLimit: number` — The `Error.stackTraceLimit` property specifies the number of stack frames
+collected by a stack trace (whether generated by `new Error().stack` or
+`Error.captureStackTrace(obj)`).
+
+The default value is `10` but may be set to any valid JavaScript number. Changes
+will affect any stack trace captured _after_ the value has been changed.
+
+If set to a non-number value, or set to a negative number, stack traces will
+not capture any frames.
+- `methodName: string` — Name of the method or phase (e.g. `'init'`) that timed out
+- `timeoutMs: number` — Timeout threshold in milliseconds as configured via the `timeout` field in ProcxyOptions
+- `context: Record<string, unknown>` — 
+- `name: string` — 
+- `message: string` — 
+- `stack: string` — 
+- `cause: unknown` — 
+
+**Methods:**
+- `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
+a string representing the location in the code at which
+`Error.captureStackTrace()` was called.
+
+```js
+const myObject = {};
+Error.captureStackTrace(myObject);
+myObject.stack;  // Similar to `new Error().stack`
+```
+
+The first line of the trace will be prefixed with
+`${myObject.name}: ${myObject.message}`.
+
+The optional `constructorOpt` argument accepts a function. If given, all frames
+above `constructorOpt`, including `constructorOpt`, will be omitted from the
+generated stack trace.
+
+The `constructorOpt` argument is useful for hiding implementation
+details of error generation from the user. For instance:
+
+```js
+function a() {
+  b();
+}
+
+function b() {
+  c();
+}
+
+function c() {
+  // Create an error without stack trace to avoid calculating the stack trace twice.
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 0;
+  const error = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+
+  // Capture the stack trace above function b
+  Error.captureStackTrace(error, b); // Neither function c, nor b is included in the stack trace
+  throw error;
+}
+
+a();
+```
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+
+### ModuleResolutionError
+
+Thrown when procxy cannot determine the file path of the class's module.
+
+```ts
+constructor(className: string, reason: string, context?: Record<string, unknown>): ModuleResolutionError
+```
+
+**Properties:**
+- `stackTraceLimit: number` — The `Error.stackTraceLimit` property specifies the number of stack frames
+collected by a stack trace (whether generated by `new Error().stack` or
+`Error.captureStackTrace(obj)`).
+
+The default value is `10` but may be set to any valid JavaScript number. Changes
+will affect any stack trace captured _after_ the value has been changed.
+
+If set to a non-number value, or set to a negative number, stack traces will
+not capture any frames.
+- `className: string` — Name of the class whose module path could not be resolved
+- `reason: string` — Human-readable explanation of why resolution failed
+- `context: Record<string, unknown>` — 
+- `name: string` — 
+- `message: string` — 
+- `stack: string` — 
+- `cause: unknown` — 
+
+**Methods:**
+- `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
+a string representing the location in the code at which
+`Error.captureStackTrace()` was called.
+
+```js
+const myObject = {};
+Error.captureStackTrace(myObject);
+myObject.stack;  // Similar to `new Error().stack`
+```
+
+The first line of the trace will be prefixed with
+`${myObject.name}: ${myObject.message}`.
+
+The optional `constructorOpt` argument accepts a function. If given, all frames
+above `constructorOpt`, including `constructorOpt`, will be omitted from the
+generated stack trace.
+
+The `constructorOpt` argument is useful for hiding implementation
+details of error generation from the user. For instance:
+
+```js
+function a() {
+  b();
+}
+
+function b() {
+  c();
+}
+
+function c() {
+  // Create an error without stack trace to avoid calculating the stack trace twice.
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 0;
+  const error = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+
+  // Capture the stack trace above function b
+  Error.captureStackTrace(error, b); // Neither function c, nor b is included in the stack trace
+  throw error;
+}
+
+a();
+```
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+
+### ChildCrashedError
+
+Thrown when the child process exits or is killed while the proxy is active.
+
+```ts
+constructor(exitCode?: number | null, signal?: string | null, context?: Record<string, unknown>): ChildCrashedError
+```
+
+**Properties:**
+- `stackTraceLimit: number` — The `Error.stackTraceLimit` property specifies the number of stack frames
+collected by a stack trace (whether generated by `new Error().stack` or
+`Error.captureStackTrace(obj)`).
+
+The default value is `10` but may be set to any valid JavaScript number. Changes
+will affect any stack trace captured _after_ the value has been changed.
+
+If set to a non-number value, or set to a negative number, stack traces will
+not capture any frames.
+- `exitCode: number | null` — Process exit code, or `null` if the process was terminated by a signal
+- `signal: string | null` — Signal name (e.g. `'SIGTERM'`) that terminated the process, or `null` if it exited normally
+- `context: Record<string, unknown>` — 
+- `name: string` — 
+- `message: string` — 
+- `stack: string` — 
+- `cause: unknown` — 
+
+**Methods:**
+- `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
+a string representing the location in the code at which
+`Error.captureStackTrace()` was called.
+
+```js
+const myObject = {};
+Error.captureStackTrace(myObject);
+myObject.stack;  // Similar to `new Error().stack`
+```
+
+The first line of the trace will be prefixed with
+`${myObject.name}: ${myObject.message}`.
+
+The optional `constructorOpt` argument accepts a function. If given, all frames
+above `constructorOpt`, including `constructorOpt`, will be omitted from the
+generated stack trace.
+
+The `constructorOpt` argument is useful for hiding implementation
+details of error generation from the user. For instance:
+
+```js
+function a() {
+  b();
+}
+
+function b() {
+  c();
+}
+
+function c() {
+  // Create an error without stack trace to avoid calculating the stack trace twice.
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 0;
+  const error = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+
+  // Capture the stack trace above function b
+  Error.captureStackTrace(error, b); // Neither function c, nor b is included in the stack trace
+  throw error;
+}
+
+a();
+```
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+
+### SerializationError
+
+Thrown when a constructor argument, method argument, or return value cannot be serialized across the IPC boundary.
+
+```ts
+constructor(value: unknown, context_: string, context?: Record<string, unknown>): SerializationError
+```
+
+**Properties:**
+- `stackTraceLimit: number` — The `Error.stackTraceLimit` property specifies the number of stack frames
+collected by a stack trace (whether generated by `new Error().stack` or
+`Error.captureStackTrace(obj)`).
+
+The default value is `10` but may be set to any valid JavaScript number. Changes
+will affect any stack trace captured _after_ the value has been changed.
+
+If set to a non-number value, or set to a negative number, stack traces will
+not capture any frames.
+- `value: unknown` — The value that failed serialization
+- `context_: string` — Description of where in the call the failure occurred (e.g. `"constructor arguments[0]"`)
+- `context: Record<string, unknown>` — 
+- `name: string` — 
+- `message: string` — 
+- `stack: string` — 
+- `cause: unknown` — 
+
+**Methods:**
+- `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
+a string representing the location in the code at which
+`Error.captureStackTrace()` was called.
+
+```js
+const myObject = {};
+Error.captureStackTrace(myObject);
+myObject.stack;  // Similar to `new Error().stack`
+```
+
+The first line of the trace will be prefixed with
+`${myObject.name}: ${myObject.message}`.
+
+The optional `constructorOpt` argument accepts a function. If given, all frames
+above `constructorOpt`, including `constructorOpt`, will be omitted from the
+generated stack trace.
+
+The `constructorOpt` argument is useful for hiding implementation
+details of error generation from the user. For instance:
+
+```js
+function a() {
+  b();
+}
+
+function b() {
+  c();
+}
+
+function c() {
+  // Create an error without stack trace to avoid calculating the stack trace twice.
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 0;
+  const error = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+
+  // Capture the stack trace above function b
+  Error.captureStackTrace(error, b); // Neither function c, nor b is included in the stack trace
+  throw error;
+}
+
+a();
+```
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+
+### OptionsValidationError
+
+Thrown when a value in ProcxyOptions fails validation before the child process is spawned.
+
+```ts
+constructor(optionName: string, optionValue: unknown, reason: string, context?: Record<string, unknown>): OptionsValidationError
+```
+
+**Properties:**
+- `stackTraceLimit: number` — The `Error.stackTraceLimit` property specifies the number of stack frames
+collected by a stack trace (whether generated by `new Error().stack` or
+`Error.captureStackTrace(obj)`).
+
+The default value is `10` but may be set to any valid JavaScript number. Changes
+will affect any stack trace captured _after_ the value has been changed.
+
+If set to a non-number value, or set to a negative number, stack traces will
+not capture any frames.
+- `optionName: string` — The name of the option that failed validation (e.g. `'timeout'`, `'cwd'`)
+- `optionValue: unknown` — The invalid value that was provided
+- `reason: string` — Human-readable explanation of what constraint was violated
+- `context: Record<string, unknown>` — 
+- `name: string` — 
+- `message: string` — 
+- `stack: string` — 
+- `cause: unknown` — 
+
+**Methods:**
+- `captureStackTrace(targetObject: object, constructorOpt?: Function): void` — Creates a `.stack` property on `targetObject`, which when accessed returns
+a string representing the location in the code at which
+`Error.captureStackTrace()` was called.
+
+```js
+const myObject = {};
+Error.captureStackTrace(myObject);
+myObject.stack;  // Similar to `new Error().stack`
+```
+
+The first line of the trace will be prefixed with
+`${myObject.name}: ${myObject.message}`.
+
+The optional `constructorOpt` argument accepts a function. If given, all frames
+above `constructorOpt`, including `constructorOpt`, will be omitted from the
+generated stack trace.
+
+The `constructorOpt` argument is useful for hiding implementation
+details of error generation from the user. For instance:
+
+```js
+function a() {
+  b();
+}
+
+function b() {
+  c();
+}
+
+function c() {
+  // Create an error without stack trace to avoid calculating the stack trace twice.
+  const { stackTraceLimit } = Error;
+  Error.stackTraceLimit = 0;
+  const error = new Error();
+  Error.stackTraceLimit = stackTraceLimit;
+
+  // Capture the stack trace above function b
+  Error.captureStackTrace(error, b); // Neither function c, nor b is included in the stack trace
+  throw error;
+}
+
+a();
+```
+- `prepareStackTrace(err: Error, stackTraces: CallSite[]): any` — 
+
+### Procxy
+
+The proxy type returned by `procxy()` — a transparent async mirror of a remote class instance.
+
+```ts
+type Procxy = { [K in keyof ProcxiableMethods<T, Mode>]: ProcxiableMethods<T, Mode>[K] extends (args: infer A) => infer R ? (args: A) => Promise<Awaited<R>> : never } & ReadonlyProperties<T, Mode> & { $terminate: any; $process: ChildProcess; [dispose]: any; [asyncDispose]: any } & (SupportHandles extends true ? { $sendHandle: any } : {}) & (T extends EventEmitter<infer E> ? E extends Record<string | symbol, any[]> ? { on: any; once: any; off: any; removeListener: any } : { on: any; once: any; off: any; removeListener: any } : T extends EventEmitter ? { on: any; once: any; off: any; removeListener: any } : {})
+```
+
+### ProcxyOptions
+
+Configuration for the `procxy()` function.
+
+Controls child process spawning, IPC serialization, timeouts, retries, environment
+isolation, and optional handle-passing support.
+
+```ts
+type ProcxyOptions = { modulePath?: string; args?: [...Jsonifiable[]]; env?: Record<string, string>; cwd?: string; timeout?: number; retries?: number; interleaveOutput?: boolean } & (Mode extends "advanced" ? { serialization: "advanced"; supportHandles?: SupportHandles; sanitizeV8?: boolean } : { serialization?: "json" })
+```
+
+### SerializationMode
+
+Serialization mode for IPC messages exchanged between parent and child processes.
+
+```ts
+type SerializationMode = "json" | "advanced"
+```
+
+### V8Serializable
+
+Union of all types that survive Node.js V8 structured-clone serialization across an IPC boundary.
+
+```ts
+type V8Serializable = Jsonifiable | Buffer | ArrayBuffer | DataView | Int8Array | Uint8Array | Uint8ClampedArray | Int16Array | Uint16Array | Int32Array | Uint32Array | Float32Array | Float64Array | BigInt64Array | BigUint64Array | Map<any, any> | Set<any> | Error | RegExp | bigint | Date | { [key: string]: V8Serializable | undefined } | ReadonlyArray<V8Serializable>
+```
+
+### Procxiable
+
+The serializable type constraint for a given IPC mode.
+
+```ts
+type Procxiable = Mode extends "advanced" ? V8Serializable : Jsonifiable
+```
+
+### IsProcxiable
+
+Conditional type that resolves to `true` when `T` can cross the IPC boundary in the given mode.
+
+```ts
+type IsProcxiable = T extends Procxiable<Mode> | void | undefined | Function ? true : false
+```
+
+### SerializableConstructorArgs
+
+Constrain constructor argument types to be serializable under the given mode.
+
+```ts
+type SerializableConstructorArgs = ConstructorParameters<Constructor<T>> extends infer Args extends readonly any[] ? { [K in keyof Args]: ValidateProcxiable<Args[K], Mode> } : never
+```
+
+### PassableHandle
+
+Union of OS-level handle types that can be transferred to the child process via `$sendHandle`.
+
+```ts
+type PassableHandle = Socket | Server | Socket | number
+```
+
+### InitMessage
+
+Initialization message sent from parent to child on startup.
+Contains module path, class name, constructor arguments, and serialization mode.
+
+### Request
+
+Method invocation request sent from parent to child.
+Includes unique ID for request/response correlation.
+
+### Response
+
+Method invocation response sent from child to parent.
+Either contains return value (RESULT) or error information (ERROR).
+
+### ErrorInfo
+
+Error information serialized in Response messages.
+Preserves error message, stack trace, name, and optional code.
+
+### EventMessage
+
+Event message sent from child to parent for EventEmitter events.
+Forwards events emitted in child to listeners in parent.
+
+### ParentToChildMessage
+
+Union type of all IPC messages sent from parent to child.
+
+```ts
+type ParentToChildMessage = InitMessage | Request | DisposeRequest | EventSubscribe | EventUnsubscribe | CallbackResult | CallbackError | PropertyResult | HandleMessage
+```
+
+### ChildToParentMessage
+
+Union type of all IPC messages sent from child to parent.
+
+```ts
+type ChildToParentMessage = Response | EventMessage | InitSuccess | InitProperties | InitFailure | DisposeResponse | CallbackInvoke | PropertyGet | PropertySet | HandleAck | ChildDispose
+```
+
+### HandleMessage
+
+Handle transmission message sent from parent to child.
+Notifies child that a handle (socket, server, file descriptor) is being sent.
+The actual handle is passed separately via Node.js child.send(message, handle).
+
+### HandleAck
+
+Handle acknowledgment sent from child to parent after handle is received.
+
+### UnwrapProcxy
+
+Extract the original type `T` from `Procxy<T, Mode, SupportHandles>`.
+
+```ts
+type UnwrapProcxy = P extends Procxy<infer T, any, any> ? T : never
+```
+
+### IsProcxy
+
+Conditional type that resolves to `true` when `P` is a `Procxy` type.
+
+```ts
+type IsProcxy = P extends Procxy<any, any, any> ? true : false
+```
+
+### IsProcxyIsomorphic
+
+Conditional type that resolves to `true` when `T <-> Procxy<T>` form a consistent isomorphism.
+
+```ts
+type IsProcxyIsomorphic = UnwrapProcxy<Procxy<T, Mode, SH>> extends T ? Procxy<T, Mode, SH> extends Procxy<UnwrapProcxy<Procxy<T, Mode, SH>>, Mode, SH> ? true : false : false
+```
+
+### GetProcxyMode
+
+Extract the serialization mode from a `Procxy` type.
+
+```ts
+type GetProcxyMode = P extends Procxy<any, infer Mode, any> ? Mode : never
+```
+
+### HasHandleSupport
+
+Conditional type that resolves to `true` when `P` has `$sendHandle` support.
+
+```ts
+type HasHandleSupport = P extends Procxy<any, any, infer SH> ? SH extends true ? true : false : false
+```
+
+### ChangeProcxyMode
+
+Produce a new `Procxy` type identical to `P` except with a different serialization mode.
+
+```ts
+type ChangeProcxyMode = P extends Procxy<infer T, any, infer SH> ? Procxy<T, NewMode, SH> : never
+```
+
+### ToggleProcxyHandles
+
+Produce a new `Procxy` type identical to `P` except with a different `SupportHandles` flag.
+
+```ts
+type ToggleProcxyHandles = P extends Procxy<infer T, infer Mode, any> ? Procxy<T, Mode, NewSH> : never
+```
+
+### ProcxyIsomorphism
+
+Describes the bidirectional type mapping between `T` and `Procxy<T>`.
+
+### VerifyIsomorphism
+
+Compile-time assertion that `T` round-trips through `Procxy<T>` without loss.
+
+```ts
+type VerifyIsomorphism = UnwrapProcxy<Procxy<T, Mode, SH>> extends T ? T : never
+```
+
+### GetProcxyMethods
+
+Extract the union of user-defined method names available on a `Procxy` type.
+
+```ts
+type GetProcxyMethods = P extends Procxy<any, any, any> ? Exclude<keyof P, symbol | `$${string}`> : never
+```
+
+### GetProcxyLifecycleMethods
+
+Extract the lifecycle method and property names from a `Procxy` type.
+
+```ts
+type GetProcxyLifecycleMethods = P extends Procxy<any, any, any> ? Extract<keyof P, `$${string}` | symbol> : never
+```
+
+### MaybeProxy
+
+A value that is either the original type `T` or a `Procxy<T>` proxy for it.
+
+```ts
+type MaybeProxy = T | Procxy<T, any, any>
+```
+
+### Procxify
+
+Extract only the serializable, non-method properties from a type — the "data shape" of a class.
+
+```ts
+type Procxify = { [K in keyof T as T[K] extends (args: any[]) => any ? never : IsProcxiable<T[K], Mode> extends true ? K : never]: T[K] }
+```
