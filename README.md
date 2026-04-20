@@ -20,7 +20,7 @@
 
 Run class instances in isolated child processes while interacting with them as if they were local objects. All method calls become async and are transparently forwarded over IPC with full TypeScript support.
 
-## ✨ Features
+## Features
 
 - **🎯 Type-Safe** - Full TypeScript support with IntelliSense autocomplete
 - **🪄 Automatic Module Resolution** - Zero-config import path detection from your source code
@@ -764,7 +764,7 @@ pnpm test tests/integration/basic-invocation.test.ts
 - **Bundle size**: <50KB minified
 - **Test coverage**: >90%
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Module Resolution Errors
 

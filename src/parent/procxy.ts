@@ -217,6 +217,7 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * skip re-spawning, until the child process terminates.
  *
  * @param classOrClassName - The class constructor, or a string class name when using the module-map overload, whose instance will run in the child process
+ * @param className - String key identifying the class within a module-map object; use this overload when passing a class-name string instead of a constructor reference
  * @param modulePathOrOptions - Path to the module file that exports the class, or a {@link ProcxyOptions} object when omitting a separate path
  * @param options - {@link ProcxyOptions} when the second argument is a module path string
  * @param constructorArgs - Arguments forwarded to the class constructor; must be JSON-serializable in `'json'` mode or V8-serializable in `'advanced'` mode
@@ -241,7 +242,7 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * - Your method return values include class instances with behavior — they are serialized to plain data and arrive without prototype methods
  * - You need the child to call back into parent-side callbacks synchronously inside a proxied method (deadlock risk)
  *
- * @pitfalls
+ * @never
  * - NEVER pass functions as constructor arguments — V8 serialization silently drops them; use `sanitizeV8: true` only as a last resort and accept the data loss
  * - NEVER call `$terminate()` from inside a proxied method's implementation in the child — the IPC response for the current call is never sent, hanging the parent indefinitely
  * - NEVER assume the cached proxy is always fresh — if the child crashes and you hold a reference, subsequent calls throw `ChildCrashedError`; check `$process.exitCode` before reusing across request boundaries
