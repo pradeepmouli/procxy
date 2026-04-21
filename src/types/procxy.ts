@@ -274,7 +274,7 @@ type ReadonlyProperties<T, Mode extends SerializationMode> = {
  * @avoidWhen
  * - You expect property reads to reflect live child state — they don't; properties are snapshotted at the time of each read call
  *
- * @pitfalls
+ * @never
  * - NEVER check `proxy instanceof MyClass` — the proxy is a plain object; instanceof will always be false
  * - NEVER destructure methods off the proxy (`const { add } = proxy`) — the IPC context is lost and calls will throw
  * - NEVER call `$terminate()` and then await another method — the child is gone; the call throws `ChildCrashedError`
