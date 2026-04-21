@@ -56,8 +56,8 @@ importers:
         specifier: ^0.28.17
         version: 0.28.19(typescript@6.0.2)
       typedoc-plugin-to-skills:
-        specifier: 1.0.0
-        version: 1.0.0(typedoc@0.28.19(typescript@6.0.2))
+        specifier: file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc-plugin
+        version: file:../to-skills/packages/typedoc-plugin(typedoc@0.28.19(typescript@6.0.2))
       typescript:
         specifier: ^6.0.2
         version: 6.0.2
@@ -1966,11 +1966,6 @@ packages:
     peerDependencies:
       typedoc: 0.28.x
 
-  typedoc-plugin-to-skills@1.0.0:
-    resolution: {integrity: sha512-fr5DvvTaUrV7jBpGskl95nGWDXXzinuGPN9n++D97SXSXHbSwI0tx+S8sm5LPn6+h1HzzeqKwhVDswjGJV1g0A==}
-    peerDependencies:
-      typedoc: '>=0.28.0'
-
   typedoc-plugin-to-skills@file:../to-skills/packages/typedoc-plugin:
     resolution: {directory: ../to-skills/packages/typedoc-plugin, type: directory}
     peerDependencies:
@@ -3834,11 +3829,6 @@ snapshots:
 
   typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@6.0.2)):
     dependencies:
-      typedoc: 0.28.19(typescript@6.0.2)
-
-  typedoc-plugin-to-skills@1.0.0(typedoc@0.28.19(typescript@6.0.2)):
-    dependencies:
-      '@to-skills/typedoc': file:../to-skills/packages/typedoc(typedoc@0.28.19(typescript@6.0.2))
       typedoc: 0.28.19(typescript@6.0.2)
 
   typedoc-plugin-to-skills@file:../to-skills/packages/typedoc-plugin(typedoc@0.28.19(typescript@6.0.2)):
