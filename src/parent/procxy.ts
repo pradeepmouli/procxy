@@ -230,11 +230,11 @@ async function waitForInitialization(ipcClient: IPCClient, timeoutMs: number): P
  * @throws {TimeoutError} When the INIT handshake does not complete within the configured `timeout`
  *
  * @useWhen
- * - You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop
- * - You want EventEmitter events from a worker class forwarded transparently to the parent process
- * - You need to sandbox third-party code so a crash in the library cannot take down the parent
- * - You have a class with complex stateful initialization and want to reuse one instance across multiple callers (dedup cache)
- * - You need to run the same class concurrently across multiple isolated processes without managing fork logic yourself
+ * - You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop — Node.js is single-threaded; even 50 ms of synchronous compute blocks all in-flight HTTP requests
+ * - You want EventEmitter events from a worker class forwarded transparently to the parent process — the IPC event bridge handles subscribe/unsubscribe automatically; no manual message routing needed
+ * - You need to sandbox third-party code so a crash or uncaught exception in the library cannot take down the parent — the child process dies; the parent gets `ChildCrashedError` and keeps running
+ * - You have a class with complex stateful initialization and want to reuse one instance across multiple callers — the dedup cache coalesces concurrent `procxy()` calls with identical args into a single child process
+ * - You need strict memory isolation between instances — a memory-leaking worker is confined to its own process heap; it cannot OOM the parent or sibling workers the way a shared in-process worker would
  *
  * @avoidWhen
  * - Your class holds non-serializable state: closures captured over parent-side objects, WeakMaps, Symbols, or live streams — they do not survive the IPC boundary
