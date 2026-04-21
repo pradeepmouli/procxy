@@ -17,28 +17,28 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
       '@changesets/cli':
-        specifier: ^2.31.0
+        specifier: ^2.30.0
         version: 2.31.0(@types/node@25.6.0)
       '@to-skills/vitepress':
-        specifier: ^0.2.18
+        specifier: ^0.2.0
         version: 0.2.18
       '@types/node':
-        specifier: ^25.6.0
+        specifier: ^25.5.0
         version: 25.6.0
       '@typescript/native-preview':
         specifier: 7.0.0-dev.20260412.1
         version: 7.0.0-dev.20260412.1
       '@vitest/coverage-v8':
-        specifier: ^4.1.5
+        specifier: ^4.1.0
         version: 4.1.5(vitest@4.1.5)
       lint-staged:
-        specifier: ^16.4.0
+        specifier: ^16.3.3
         version: 16.4.0
       oxfmt:
         specifier: ^0.44.0
         version: 0.44.0
       oxlint:
-        specifier: ^1.61.0
+        specifier: ^1.55.0
         version: 1.61.0
       simple-git-hooks:
         specifier: ^2.13.1
@@ -50,19 +50,19 @@ importers:
         specifier: ^4.21.0
         version: 4.21.0
       type-fest:
-        specifier: ^5.6.0
+        specifier: ^5.4.4
         version: 5.6.0
       typedoc:
-        specifier: ^0.28.19
+        specifier: ^0.28.17
         version: 0.28.19(typescript@6.0.3)
       typedoc-plugin-to-skills:
         specifier: file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc-plugin
         version: file:../to-skills/packages/typedoc-plugin(typedoc@0.28.19(typescript@6.0.3))
       typescript:
-        specifier: ^6.0.3
+        specifier: ^6.0.2
         version: 6.0.3
       vitest:
-        specifier: ^4.1.5
+        specifier: ^4.1.0
         version: 4.1.5(@types/node@25.6.0)(@vitest/coverage-v8@4.1.5)(vite@7.3.1(@types/node@25.6.0)(tsx@4.21.0)(yaml@2.8.3))
     optionalDependencies:
       debug:
