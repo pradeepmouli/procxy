@@ -11,11 +11,16 @@ import type { SerializationMode } from '../types/options.js';
  * Contains module path, class name, constructor arguments, and serialization mode.
  */
 export interface InitMessage {
+  /** Discriminant: always `'INIT'` */
   type: 'INIT';
-  modulePath: string; // Path to module to import (absolute or relative)
-  className: string; // Name of class to instantiate
-  constructorArgs: [...Jsonifiable[]]; // Constructor arguments (rest parameter style)
-  serialization?: SerializationMode; // Serialization mode ('json' or 'advanced')
+  /** Absolute path to the module file to `import()` in the child process */
+  modulePath: string;
+  /** Name of the exported class to instantiate in the child process */
+  className: string;
+  /** Positional constructor arguments forwarded verbatim to `new ClassName(...args)` */
+  constructorArgs: [...Jsonifiable[]];
+  /** Serialization algorithm to use for subsequent IPC messages; defaults to `'json'` */
+  serialization?: SerializationMode;
 }
 
 /**
@@ -23,10 +28,14 @@ export interface InitMessage {
  * Includes unique ID for request/response correlation.
  */
 export interface Request {
-  id: string; // UUID v4 for correlation
-  type: 'CALL'; // Only CALL supported in v1
-  prop: string; // Method name to invoke
-  args: [...Jsonifiable[]]; // Method arguments (rest parameter style)
+  /** UUID v4 that pairs this request with its {@link Response} */
+  id: string;
+  /** Discriminant: always `'CALL'` (only CALL is supported in v1) */
+  type: 'CALL';
+  /** Name of the method to invoke on the remote class instance */
+  prop: string;
+  /** Positional arguments forwarded to the method call */
+  args: [...Jsonifiable[]];
 }
 
 /**
@@ -125,10 +134,14 @@ export interface DisposeResponse {
  * Either contains return value (RESULT) or error information (ERROR).
  */
 export interface Response {
-  id: string; // Matches Request.id for correlation
+  /** UUID that matches the originating {@link Request.id} */
+  id: string;
+  /** `'RESULT'` on success, `'ERROR'` on thrown exception */
   type: 'RESULT' | 'ERROR';
-  value?: Jsonifiable; // Return value (if type === 'RESULT')
-  error?: ErrorInfo; // Error details (if type === 'ERROR')
+  /** Serialized return value; present only when `type === 'RESULT'` */
+  value?: Jsonifiable;
+  /** Serialized error details; present only when `type === 'ERROR'` */
+  error?: ErrorInfo;
 }
 
 /**
@@ -136,10 +149,14 @@ export interface Response {
  * Preserves error message, stack trace, name, and optional code.
  */
 export interface ErrorInfo {
-  message: string; // Error message
-  stack?: string; // Stack trace from child process
-  name: string; // Error name (e.g., 'TypeError', 'RangeError')
-  code?: string; // Optional error code (e.g., 'ENOENT', 'EACCES')
+  /** Human-readable error description, copied from `Error.message` */
+  message: string;
+  /** Full stack trace captured in the child process; absent for non-Error throws */
+  stack?: string;
+  /** Error class name (e.g., `'TypeError'`, `'RangeError'`), copied from `Error.name` */
+  name: string;
+  /** Optional error code (e.g., `'ENOENT'`, `'EACCES'`) for Node.js system errors */
+  code?: string;
 }
 
 /**
@@ -147,9 +164,12 @@ export interface ErrorInfo {
  * Forwards events emitted in child to listeners in parent.
  */
 export interface EventMessage {
+  /** Discriminant: always `'EVENT'` */
   type: 'EVENT';
-  eventName: string; // Name of the event emitted
-  args: [...Jsonifiable[]]; // Event arguments (rest parameter style)
+  /** Name of the EventEmitter event that was emitted in the child */
+  eventName: string;
+  /** Positional arguments from the `emit(eventName, ...args)` call */
+  args: [...Jsonifiable[]];
 }
 
 /**
@@ -183,19 +203,26 @@ export interface InitFailure {
  * The actual handle is passed separately via Node.js child.send(message, handle).
  */
 export interface HandleMessage {
+  /** Discriminant: always `'HANDLE'` */
   type: 'HANDLE';
-  handleId: string; // Unique identifier for the handle
-  handleType: 'socket' | 'server' | 'dgram' | 'fd'; // Type of handle for validation
+  /** Unique identifier used to pair this message with the subsequent {@link HandleAck} */
+  handleId: string;
+  /** Runtime type of the transferred handle, used by the child to route it correctly */
+  handleType: 'socket' | 'server' | 'dgram' | 'fd';
 }
 
 /**
  * Handle acknowledgment sent from child to parent after handle is received.
  */
 export interface HandleAck {
+  /** Discriminant: always `'HANDLE_ACK'` */
   type: 'HANDLE_ACK';
-  handleId: string; // Matches HandleMessage.handleId
-  received: boolean; // Whether handle was successfully received
-  error?: string; // Error message if handle reception failed
+  /** Matches {@link HandleMessage.handleId} of the handle being acknowledged */
+  handleId: string;
+  /** `true` if the child successfully received and registered the handle */
+  received: boolean;
+  /** Human-readable error description when `received` is `false` */
+  error?: string;
 }
 
 /**

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  typedoc-plugin-to-skills: file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc-plugin
+  '@to-skills/typedoc': file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc
+  '@to-skills/core': file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/core
+
 importers:
 
   .:
@@ -51,8 +56,8 @@ importers:
         specifier: ^0.28.17
         version: 0.28.19(typescript@6.0.2)
       typedoc-plugin-to-skills:
-        specifier: ^0.6.0
-        version: 0.6.6(typedoc@0.28.19(typescript@6.0.2))
+        specifier: file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc-plugin
+        version: file:../to-skills/packages/typedoc-plugin(typedoc@0.28.19(typescript@6.0.2))
       typescript:
         specifier: ^6.0.2
         version: 6.0.2
@@ -79,8 +84,8 @@ importers:
         specifier: ^4.11.0
         version: 4.11.0(typedoc@0.28.19(typescript@6.0.2))
       typedoc-plugin-to-skills:
-        specifier: ^0.6.0
-        version: 0.6.6(typedoc@0.28.19(typescript@6.0.2))
+        specifier: file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc-plugin
+        version: file:../to-skills/packages/typedoc-plugin(typedoc@0.28.19(typescript@6.0.2))
       typedoc-vitepress-theme:
         specifier: ^1.1.2
         version: 1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@6.0.2)))
@@ -961,14 +966,11 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@to-skills/core@0.10.0':
-    resolution: {integrity: sha512-GVcwK3wzp62idDti7asNMHSr+kaeqWXuVXTKvncUkbDr5jGgDVTlgV+GUPgcCO/7qyV9XEKEPk7EUiAdxnEmlA==}
+  '@to-skills/core@file:../to-skills/packages/core':
+    resolution: {directory: ../to-skills/packages/core, type: directory}
 
-  '@to-skills/core@0.10.3':
-    resolution: {integrity: sha512-xPQsfY30rrIZThu13d/AFzUnXNySPC1hG+6xbnvEe3Z1ZZZgHc4u8KP+IcrAa/YX1gKbkr4x9Bog2tZTDrYYxw==}
-
-  '@to-skills/typedoc@0.11.4':
-    resolution: {integrity: sha512-FFGhyx/tEtzbQQxNFGGdbLO8tNXtwwL1O9izTBaElwrzDPJHa12SsLIakD5NlyeKn+YOOKLGnKFKjxy+5eNVPw==}
+  '@to-skills/typedoc@file:../to-skills/packages/typedoc':
+    resolution: {directory: ../to-skills/packages/typedoc, type: directory}
     peerDependencies:
       typedoc: '>=0.28.0'
 
@@ -1964,8 +1966,8 @@ packages:
     peerDependencies:
       typedoc: 0.28.x
 
-  typedoc-plugin-to-skills@0.6.6:
-    resolution: {integrity: sha512-iusBTiIW4HuSq3qhDSVZGc9feNq1N7cI4L03n8g63JRG4pJQdg9ZRWe/ZE4OnSLt/m2+Mn2+jHayAr+ArxHzwQ==}
+  typedoc-plugin-to-skills@file:../to-skills/packages/typedoc-plugin:
+    resolution: {directory: ../to-skills/packages/typedoc-plugin, type: directory}
     peerDependencies:
       typedoc: '>=0.28.0'
 
@@ -2783,18 +2785,16 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@to-skills/core@0.10.0': {}
+  '@to-skills/core@file:../to-skills/packages/core': {}
 
-  '@to-skills/core@0.10.3': {}
-
-  '@to-skills/typedoc@0.11.4(typedoc@0.28.19(typescript@6.0.2))':
+  '@to-skills/typedoc@file:../to-skills/packages/typedoc(typedoc@0.28.19(typescript@6.0.2))':
     dependencies:
-      '@to-skills/core': 0.10.3
+      '@to-skills/core': file:../to-skills/packages/core
       typedoc: 0.28.19(typescript@6.0.2)
 
   '@to-skills/vitepress@0.2.0':
     dependencies:
-      '@to-skills/core': 0.10.0
+      '@to-skills/core': file:../to-skills/packages/core
 
   '@types/chai@5.2.3':
     dependencies:
@@ -3831,9 +3831,9 @@ snapshots:
     dependencies:
       typedoc: 0.28.19(typescript@6.0.2)
 
-  typedoc-plugin-to-skills@0.6.6(typedoc@0.28.19(typescript@6.0.2)):
+  typedoc-plugin-to-skills@file:../to-skills/packages/typedoc-plugin(typedoc@0.28.19(typescript@6.0.2)):
     dependencies:
-      '@to-skills/typedoc': 0.11.4(typedoc@0.28.19(typescript@6.0.2))
+      '@to-skills/typedoc': file:../to-skills/packages/typedoc(typedoc@0.28.19(typescript@6.0.2))
       typedoc: 0.28.19(typescript@6.0.2)
 
   typedoc-vitepress-theme@1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@6.0.2))):

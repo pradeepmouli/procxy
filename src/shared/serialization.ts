@@ -315,7 +315,7 @@ export function validateV8SerializableArray(
  * - The dropped properties are load-bearing — sanitization silently loses data with no warning
  * - You control the data shape — fix the type instead of sanitizing
  *
- * @pitfalls
+ * @never
  * - NEVER rely on sanitized output for equality checks — keys may be missing compared to input
  * - NEVER use on `Map` or `Set` values that contain functions as keys — those entries are recursively sanitized but not removed
  *
