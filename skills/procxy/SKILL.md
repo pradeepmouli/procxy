@@ -1,6 +1,6 @@
 ---
 name: procxy
-description: "Type-safe process-based proxy for Node.js - Run class instances in isolated child processes with full TypeScript support Procxy - A TypeScript library for transparent process-based proxy of class instances. Use when: You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop; You want EventEmitter events from a worker class forwarded transparently to the parent process; You need to sandbox third-party code so a crash in the library cannot take down the parent."
+description: "Type-safe process-based proxy for Node.js - Run class instances in isolated child processes with full TypeScript support Use when: You need CPU-intensive work (parsing, compression, ML inference, image.... Also: proxy, ipc, child-process, process, isolation, worker, eventemitter, type-safe, async, rpc, concurrency."
 license: MIT
 ---
 
@@ -23,8 +23,6 @@ Type-safe process-based proxy for Node.js - Run class instances in isolated chil
 
 ## Quick Start
 
-### Basic Usage
-
 ```typescript
 import { procxy } from 'procxy';
 import { Calculator } from './calculator.js';
@@ -43,73 +41,28 @@ await calc.$terminate();
 const calc2 = await procxy(Calculator, './calculator.js');
 ```
 
-### Using Disposables (Recommended)
-
-```typescript
-import { procxy } from 'procxy';
-import { Calculator } from './calculator.js';
-
-// Automatic cleanup with await using
-await using calc = await procxy(Calculator);
-const result = await calc.add(5, 3);
-// Automatically terminated when scope exits
-```
-
-### Constructor Arguments
-
-```typescript
-import { procxy } from 'procxy';
-import { Worker } from './worker.js';
-
-// Worker class (in worker.ts):
-// class Worker {
-//   constructor(public name: string, public threads: number) {}
-//
-//   async process(data: string[]): Promise<string[]> {
-//     return data.map(s => s.toUpperCase());
-//   }
-// }
-
-// Pass constructor arguments after options
-const worker = await procxy(
-  Worker,
-  undefined,      // options (or omit entirely)
-  'MyWorker',     // name argument
-  4               // threads argument
-);
-
-const result = await worker.process(['hello', 'world']);
-// ['HELLO', 'WORLD']
-
-await worker.$terminate();
-```
-
 ## When to Use
 
+**Use this skill when:**
+- You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop → use `procxy` — Node.js is single-threaded; even 50 ms of synchronous compute blocks all in-flight HTTP requests
+- You want EventEmitter events from a worker class forwarded transparently to the parent process → use `procxy` — the IPC event bridge handles subscribe/unsubscribe automatically; no manual message routing needed
+- You need to sandbox third-party code so a crash or uncaught exception in the library cannot take down the parent → use `procxy` — the child process dies; the parent gets `ChildCrashedError` and keeps running
+- You have a class with complex stateful initialization and want to reuse one instance across multiple callers → use `procxy` — the dedup cache coalesces concurrent `procxy()` calls with identical args into a single child process
+- You need strict memory isolation between instances → use `procxy` — a memory-leaking worker is confined to its own process heap; it cannot OOM the parent or sibling workers the way a shared in-process worker would
+- You are passing a third-party config object as a constructor argument and cannot guarantee it contains no functions → use `sanitizeForV8`
+- You need a quick workaround for objects with hidden getters/setters that fail V8 validation → use `sanitizeForV8`
 
-| Task | Use |
-|------|-----|
-| You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop | `procxy` |
-| You want EventEmitter events from a worker class forwarded transparently to the parent process | `procxy` |
-| You need to sandbox third-party code so a crash in the library cannot take down the parent | `procxy` |
-| You have a class with complex stateful initialization and want to reuse one instance across multiple callers (dedup cache) | `procxy` |
-| You need to run the same class concurrently across multiple isolated processes without managing fork logic yourself | `procxy` |
-| You are passing a third-party config object as a constructor argument and cannot guarantee it contains no functions | `sanitizeForV8` |
-| You need a quick workaround for objects with hidden getters/setters that fail V8 validation | `sanitizeForV8` |
+**Do NOT use when:**
+- Your class holds non-serializable state: closures captured over parent-side objects, WeakMaps, Symbols, or live streams — they do not survive the IPC boundary (`procxy`)
+- Sub-millisecond latency is required; IPC adds ~1 ms per round-trip even for trivial calls (`procxy`)
+- Your method return values include class instances with behavior — they are serialized to plain data and arrive without prototype methods (`procxy`)
+- You need the child to call back into parent-side callbacks synchronously inside a proxied method (deadlock risk) (`procxy`)
+- The dropped properties are load-bearing — sanitization silently loses data with no warning (`sanitizeForV8`)
+- You control the data shape — fix the type instead of sanitizing (`sanitizeForV8`)
 
-**Avoid when:**
+API surface: 6 functions, 6 classes, 29 types
 
-| Don't Use | When | Use Instead |
-|-----------|------|-------------|
-| `procxy` | Your class holds non-serializable state: closures captured over parent-side objects, WeakMaps, Symbols, or live streams | they do not survive the IPC boundary |
-| `procxy` | Sub-millisecond latency is required; IPC adds ~1 ms per round-trip even for trivial calls | — |
-| `procxy` | Your method return values include class instances with behavior | they are serialized to plain data and arrive without prototype methods |
-| `procxy` | You need the child to call back into parent-side callbacks synchronously inside a proxied method (deadlock risk) | — |
-| `sanitizeForV8` | The dropped properties are load-bearing | sanitization silently loses data with no warning |
-| `sanitizeForV8` | You control the data shape | fix the type instead of sanitizing |
-- API surface: 6 functions, 6 classes, 29 types
-
-**NEVER:**
+## NEVER
 
 - NEVER pass functions as constructor arguments — V8 serialization silently drops them; use `sanitizeV8: true` only as a last resort and accept the data loss
 - NEVER call `$terminate()` from inside a proxied method's implementation in the child — the IPC response for the current call is never sent, hanging the parent indefinitely
