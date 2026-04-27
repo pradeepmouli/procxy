@@ -74,7 +74,7 @@
     "@typescript/native-preview": "7.0.0-dev.20260412.1",
     "@vitest/coverage-v8": "^4.1.0",
     "lint-staged": "^16.3.3",
-    "oxfmt": "^0.44.0",
+    "oxfmt": "^0.46.0",
     "oxlint": "^1.55.0",
     "simple-git-hooks": "^2.13.1",
     "tinypool": "^2.1.0",
