@@ -90,15 +90,13 @@
     "pre-push": "pnpm run type-check"
   },
   "engines": {
-    "node": ">=20.0.0",
+    "node": "^20.19.0 || >=22.12.0",
     "pnpm": ">=10.32.0"
   },
   "packageManager": "pnpm@10.32.0",
   "pnpm": {
     "overrides": {
-      "typedoc-plugin-to-skills": "file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc-plugin",
-      "@to-skills/typedoc": "file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/typedoc",
-      "@to-skills/core": "file:/Users/pmouli/GitHub.nosync/active/ts/to-skills/packages/core"
+      "vite": "^8.0.0"
     }
   }
 }
