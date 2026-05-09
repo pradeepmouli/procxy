@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- [#81](https://github.com/pradeepmouli/procxy/pull/81) [`c7bbc8d`](https://github.com/pradeepmouli/procxy/commit/c7bbc8d35105ed561bc57b7ab1fdd770db67e55f) Thanks [@copilot-swe-agent](https://github.com/apps/copilot-swe-agent)! - - chore: pin vite to ^8.0.0 and update engines.node for Vite 8 compatibility
+  - fix: remove local file: overrides, add vite security pin, update actions + deps
+
 ## 0.1.1
 
 ### Patch Changes
