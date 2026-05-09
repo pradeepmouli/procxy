@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolve } from 'path';
 import { tmpdir } from 'os';
-import { mkdtempSync, rmSync, writeFileSync, realpathSync } from 'fs';
+import { mkdtempSync, writeFileSync, realpathSync } from 'fs';
 import { join } from 'path';
 import { procxy } from '../../src/index.js';
 import { ProcessOptionsWorker } from '../fixtures/process-options-worker.js';
@@ -14,7 +14,6 @@ const PROCESS_OPTIONS_WORKER_PATH = resolve(
 );
 
 describe('Custom Child Process Options', () => {
-  const activeProxies: Array<{ $terminate: () => Promise<void> }> = [];
   let tempDirs: string[] = [];
 
   describe('custom environment variables', () => {

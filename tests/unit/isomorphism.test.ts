@@ -14,7 +14,6 @@ import type {
   MaybeProxy
 } from '../../src/types/isomorphism.js';
 import { isProcxy, isAdvancedMode, isHandleSupported } from '../../src/types/isomorphism.js';
-import { procxy } from '../../src/index.js';
 
 // Test classes
 class Calculator {
