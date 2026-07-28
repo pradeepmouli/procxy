@@ -4,3 +4,5 @@ packages:
 allowBuilds:
   esbuild: true
   simple-git-hooks: true
+overrides:
+  vite: "^8.0.0"
