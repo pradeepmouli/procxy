@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+### Patch Changes
+
+- [#111](https://github.com/pradeepmouli/procxy/pull/111) [`b0a148b`](https://github.com/pradeepmouli/procxy/commit/b0a148b7060fedda623e814301ada1958448efd2) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - - chore: also drop .github/agents, prompts, skills, copilot from master
+  - chore: also drop specs/, .speckit-prompts/ from master
+  - chore: drop AI tooling files from master
+
 ## 0.1.2
 
 ### Patch Changes
