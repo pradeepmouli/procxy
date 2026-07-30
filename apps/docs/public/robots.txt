@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://pradeepmouli.github.io/procxy/sitemap.xml

@@ -10,15 +10,6 @@ The proxy type returned by `procxy()` — a transparent async mirror of a remote
 
 ## Configuration
 
-### `ProcxyOptions`
-Configuration for the `procxy()` function.
-
-Controls child process spawning, IPC serialization, timeouts, retries, environment
-isolation, and optional handle-passing support.
-```ts
-{ modulePath?: string; args?: [...Jsonifiable[]]; env?: Record<string, string>; cwd?: string; timeout?: number; retries?: number; interleaveOutput?: boolean } & (Mode extends "advanced" ? { serialization: "advanced"; supportHandles?: SupportHandles; sanitizeV8?: boolean } : { serialization?: "json" })
-```
-
 ### `SerializationMode`
 Serialization mode for IPC messages exchanged between parent and child processes.
 ```ts
@@ -60,7 +51,7 @@ Socket | Server | Socket | number
 ```
 
 ### `MaybeProxy`
-A value that is either the original type `T` or a `Procxy<T>` proxy for it.
+A value that is either the original type `T` or a `Procxy&lt;T&gt;` proxy for it.
 ```ts
 T | Procxy<T, any, any>
 ```
@@ -71,52 +62,52 @@ Extract only the serializable, non-method properties from a type — the "data s
 { [K in keyof T as T[K] extends (args: any[]) => any ? never : IsProcxiable<T[K], Mode> extends true ? K : never]: T[K] }
 ```
 
-## protocol
+## shared
 
 ### `InitMessage`
 Initialization message sent from parent to child on startup.
 Contains module path, class name, constructor arguments, and serialization mode.
 **Properties:**
-- `type: "INIT"`
-- `modulePath: string`
-- `className: string`
-- `constructorArgs: Jsonifiable[]`
-- `serialization: SerializationMode` (optional)
+- `type: "INIT"` — Discriminant: always `'INIT'`
+- `modulePath: string` — Absolute path to the module file to `import()` in the child process
+- `className: string` — Name of the exported class to instantiate in the child process
+- `constructorArgs: Jsonifiable[]` — Positional constructor arguments forwarded verbatim to `new ClassName(...args)`
+- `serialization: SerializationMode` (optional) — Serialization algorithm to use for subsequent IPC messages; defaults to `'json'`
 
 ### `Request`
 Method invocation request sent from parent to child.
 Includes unique ID for request/response correlation.
 **Properties:**
-- `id: string`
-- `type: "CALL"`
-- `prop: string`
-- `args: Jsonifiable[]`
+- `id: string` — UUID v4 that pairs this request with its Response
+- `type: "CALL"` — Discriminant: always `'CALL'` (only CALL is supported in v1)
+- `prop: string` — Name of the method to invoke on the remote class instance
+- `args: Jsonifiable[]` — Positional arguments forwarded to the method call
 
 ### `Response`
 Method invocation response sent from child to parent.
 Either contains return value (RESULT) or error information (ERROR).
 **Properties:**
-- `id: string`
-- `type: "RESULT" | "ERROR"`
-- `value: Jsonifiable` (optional)
-- `error: ErrorInfo` (optional)
+- `id: string` — UUID that matches the originating Request.id
+- `type: "RESULT" | "ERROR"` — `'RESULT'` on success, `'ERROR'` on thrown exception
+- `value: Jsonifiable` (optional) — Serialized return value; present only when `type === 'RESULT'`
+- `error: ErrorInfo` (optional) — Serialized error details; present only when `type === 'ERROR'`
 
 ### `ErrorInfo`
 Error information serialized in Response messages.
 Preserves error message, stack trace, name, and optional code.
 **Properties:**
-- `message: string`
-- `stack: string` (optional)
-- `name: string`
-- `code: string` (optional)
+- `message: string` — Human-readable error description, copied from `Error.message`
+- `stack: string` (optional) — Full stack trace captured in the child process; absent for non-Error throws
+- `name: string` — Error class name (e.g., `'TypeError'`, `'RangeError'`), copied from `Error.name`
+- `code: string` (optional) — Optional error code (e.g., `'ENOENT'`, `'EACCES'`) for Node.js system errors
 
 ### `EventMessage`
 Event message sent from child to parent for EventEmitter events.
 Forwards events emitted in child to listeners in parent.
 **Properties:**
-- `type: "EVENT"`
-- `eventName: string`
-- `args: Jsonifiable[]`
+- `type: "EVENT"` — Discriminant: always `'EVENT'`
+- `eventName: string` — Name of the EventEmitter event that was emitted in the child
+- `args: Jsonifiable[]` — Positional arguments from the `emit(eventName, ...args)` call
 
 ### `ParentToChildMessage`
 Union type of all IPC messages sent from parent to child.
@@ -135,22 +126,22 @@ Handle transmission message sent from parent to child.
 Notifies child that a handle (socket, server, file descriptor) is being sent.
 The actual handle is passed separately via Node.js child.send(message, handle).
 **Properties:**
-- `type: "HANDLE"`
-- `handleId: string`
-- `handleType: "socket" | "server" | "dgram" | "fd"`
+- `type: "HANDLE"` — Discriminant: always `'HANDLE'`
+- `handleId: string` — Unique identifier used to pair this message with the subsequent HandleAck
+- `handleType: "socket" | "server" | "dgram" | "fd"` — Runtime type of the transferred handle, used by the child to route it correctly
 
 ### `HandleAck`
 Handle acknowledgment sent from child to parent after handle is received.
 **Properties:**
-- `type: "HANDLE_ACK"`
-- `handleId: string`
-- `received: boolean`
-- `error: string` (optional)
+- `type: "HANDLE_ACK"` — Discriminant: always `'HANDLE_ACK'`
+- `handleId: string` — Matches HandleMessage.handleId of the handle being acknowledged
+- `received: boolean` — `true` if the child successfully received and registered the handle
+- `error: string` (optional) — Human-readable error description when `received` is `false`
 
 ## Type Utilities
 
 ### `UnwrapProcxy`
-Extract the original type `T` from `Procxy<T, Mode, SupportHandles>`.
+Extract the original type `T` from `Procxy&lt;T, Mode, SupportHandles&gt;`.
 ```ts
 P extends Procxy<infer T, any, any> ? T : never
 ```
@@ -162,7 +153,7 @@ P extends Procxy<any, any, any> ? true : false
 ```
 
 ### `IsProcxyIsomorphic`
-Conditional type that resolves to `true` when `T <-> Procxy<T>` form a consistent isomorphism.
+Conditional type that resolves to `true` when `T &lt;-&gt; Procxy&lt;T&gt;` form a consistent isomorphism.
 ```ts
 UnwrapProcxy<Procxy<T, Mode, SH>> extends T ? Procxy<T, Mode, SH> extends Procxy<UnwrapProcxy<Procxy<T, Mode, SH>>, Mode, SH> ? true : false : false
 ```
@@ -192,10 +183,10 @@ P extends Procxy<infer T, infer Mode, any> ? Procxy<T, Mode, NewSH> : never
 ```
 
 ### `ProcxyIsomorphism`
-Describes the bidirectional type mapping between `T` and `Procxy<T>`.
+Describes the bidirectional type mapping between `T` and `Procxy&lt;T&gt;`.
 
 ### `VerifyIsomorphism`
-Compile-time assertion that `T` round-trips through `Procxy<T>` without loss.
+Compile-time assertion that `T` round-trips through `Procxy&lt;T&gt;` without loss.
 ```ts
 UnwrapProcxy<Procxy<T, Mode, SH>> extends T ? T : never
 ```
