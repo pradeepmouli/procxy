@@ -308,22 +308,7 @@ git push origin feat/your-feature-name
 
 ## Release Process
 
-Releases are managed by maintainers using semantic versioning:
-
-- **Major** (1.0.0 → 2.0.0): Breaking changes
-- **Minor** (1.0.0 → 1.1.0): New features (backward compatible)
-- **Patch** (1.0.0 → 1.0.1): Bug fixes
-
-### Version Bumping
-
-We use [Changesets](https://github.com/changesets/changesets) for version management:
-
-1. Run `pnpm changeset` after making changes
-2. Select the version bump type (major/minor/patch)
-3. Write a description of the changes
-4. Commit the changeset file
-
-Maintainers will release when ready.
+Releases are managed by maintainers using semantic versioning (major/minor/patch) via [Changesets](https://github.com/changesets/changesets). See [DEVELOPMENT.md](./DEVELOPMENT.md) for the full branch model and release automation details.
 
 ## Getting Help
 
