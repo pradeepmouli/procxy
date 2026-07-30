@@ -14,9 +14,6 @@ importers:
       '@changesets/cli':
         specifier: ^2.31.0
         version: 2.31.0(@types/node@25.9.1)
-      '@to-skills/vitepress':
-        specifier: ^0.2.26
-        version: 0.2.26
       '@types/node':
         specifier: ^25.9.1
         version: 25.9.1
@@ -44,12 +41,6 @@ importers:
       type-fest:
         specifier: ^5.6.0
         version: 5.6.0
-      typedoc:
-        specifier: ^0.28.19
-        version: 0.28.19(typescript@7.0.2)
-      typedoc-plugin-to-skills:
-        specifier: 1.3.1
-        version: 1.3.1(typedoc@0.28.19(typescript@7.0.2))
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
@@ -71,24 +62,89 @@ importers:
     devDependencies:
       typedoc:
         specifier: ^0.28.19
-        version: 0.28.19(typescript@7.0.2)
+        version: 0.28.19(typescript@6.0.3)
       typedoc-plugin-markdown:
         specifier: ^4.11.0
-        version: 4.11.0(typedoc@0.28.19(typescript@7.0.2))
-      typedoc-plugin-to-skills:
-        specifier: ^1.3.1
-        version: 1.3.1(typedoc@0.28.19(typescript@7.0.2))
+        version: 4.11.0(typedoc@0.28.19(typescript@6.0.3))
+      typedoc-plugin-skillit:
+        specifier: ^2.0.3
+        version: 2.0.3(typedoc@0.28.19(typescript@6.0.3))
       typedoc-vitepress-theme:
         specifier: ^1.1.2
-        version: 1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@7.0.2)))
+        version: 1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@6.0.3)))
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
       vitepress:
         specifier: 2.0.0-alpha.17
-        version: 2.0.0-alpha.17(@types/node@25.9.1)(lightningcss@1.32.0)(postcss@8.5.15)(tsx@4.22.3)(typescript@7.0.2)(yaml@2.9.0)
+        version: 2.0.0-alpha.17(@types/node@25.9.1)(lightningcss@1.32.0)(postcss@8.5.15)(tsx@4.22.3)(typescript@6.0.3)(yaml@2.9.0)
       vue:
         specifier: ^3.5.34
-        version: 3.5.34(typescript@7.0.2)
+        version: 3.5.34(typescript@6.0.3)
 
 packages:
+
+  '@ast-grep/napi-darwin-arm64@0.43.0':
+    resolution: {integrity: sha512-JBWYRNJsQ/8yfcMDARFxcl1fVZ6+kv3sHB+ClKgSCe9DNoLvGQfqGr9UGRrNOModvXY6cX+c87iAPqPGftUUiw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@ast-grep/napi-darwin-x64@0.43.0':
+    resolution: {integrity: sha512-oqE/bC/uAEctnAbzqobplidExsPym4CQq7JDVD9HpkHpDHzMzPBF69whv/Qu0ZwrkXr48GCMKO5G6p+OB5n+kQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@ast-grep/napi-linux-arm64-gnu@0.43.0':
+    resolution: {integrity: sha512-yJSRPxwwrvVW94J2rtaatcixSAGWcSaHNbAh6soXD6HXgq6I7uMc+cyMnJstFL789yd6Pu3QIhTlpD9VY0oYhw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@ast-grep/napi-linux-arm64-musl@0.43.0':
+    resolution: {integrity: sha512-mknXLDsf66HvT/JEl18ZQSvR7/qWgWfqh3eHuVRqD2lE6cKBDXRnAzx9ZNZkUnL2Z5ph54Yk8dKVu09k45cegA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@ast-grep/napi-linux-x64-gnu@0.43.0':
+    resolution: {integrity: sha512-KM6M5KKFsHG9Y7VKCKnMsWQQ1sYwj/SPdyr91SKp66AeFJ5xMtXb13WVQ3Joe9NEsi84dzzOBIJgMddz+UMvQw==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@ast-grep/napi-linux-x64-musl@0.43.0':
+    resolution: {integrity: sha512-NfjI74m7CEEOsLi7ZkYwcxY10CfKIHPHRrr9aqMulmnrC4FGvxQMk1qpDrTqkjmEd8LdZt3PsPrmBa8AZCErew==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@ast-grep/napi-win32-arm64-msvc@0.43.0':
+    resolution: {integrity: sha512-8qwXz3oogh834bXmNLtgsQYsuQi4ZDu4e1He/q+ENhVfjIr4IZRAUc1CoKZgWn+ZSE+B0NJJIxT8Vre2l0Q1Lg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@ast-grep/napi-win32-ia32-msvc@0.43.0':
+    resolution: {integrity: sha512-wUI/B9QNPzi0K7LlyO7eWvwhqFChM6+O4r5dfBfnOlkP1s/AZ04FdYaC9KAZiODE4FCWbeHbfO03RYOdWeF6eg==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@ast-grep/napi-win32-x64-msvc@0.43.0':
+    resolution: {integrity: sha512-GsGIwYiThKiK9XPGBEguZAs4aIBgv6+DgosBs6ve2a3L390AaLqitoc+bbRz4Eu51URlFKmNP7TtvnAJbMi8QQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@ast-grep/napi@0.43.0':
+    resolution: {integrity: sha512-dPugC04xwgk3gJl17jJvTjVjx1IXtWI9EcEQ0szlh0jg1UfvGDdZJo9/S9Pk7gzGBNd2bW8hIL3dG6K4T8PEJA==}
+    engines: {node: '>= 10'}
 
   '@babel/helper-string-parser@7.27.1':
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
@@ -912,26 +968,16 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@standard-schema/spec@1.1.0':
-    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+  '@skillit/core@4.0.2':
+    resolution: {integrity: sha512-7GRgON6JQutayciKsEo1DkpLqs1UArMuKnDImwPuWYeO8eat6f+xlRh/rya6AkEKtRd9fS19MoY675/L01k1Zg==}
 
-  '@to-skills/core@1.4.0':
-    resolution: {integrity: sha512-ghjERcvCk+uEusAJeu8ThRXxbeBX0rIm6sWxO1doePVrjuM43yYgiEMDnYP5tfAdgQEZ3cRUFDmySh1NRfFydg==}
-
-  '@to-skills/typedoc@1.0.9':
-    resolution: {integrity: sha512-gR1FpCvi4Ppi7KmUpBy3MKJ6E6o8V7n6+t8xq1A1sCmeO8HzfIRELtbiFBbi0DOwBcfH6AZ/EJXS7/BCZJb2hA==}
-    deprecated: Renamed to @skillit/typedoc — install @skillit/typedoc instead.
+  '@skillit/typedoc@2.0.3':
+    resolution: {integrity: sha512-3E90MYVHXO+vZbkGqYBxNkazb5dQN+rYbY1QW3EH35YEB+y/QJusy5FUYAu43JEOER8jVcWfN9100tpJkknvxg==}
     peerDependencies:
       typedoc: '>=0.28.0'
 
-  '@to-skills/vitepress@0.2.26':
-    resolution: {integrity: sha512-4l51qLdntaKZPygceYtHvvHndAGA2zUAtXSP9zBhyqDTMpOBml89chW7QmxnVamOWGHuNuMPgqQsQFp0r6Cfag==}
-    deprecated: Renamed to @skillit/vitepress — install @skillit/vitepress instead.
-    peerDependencies:
-      vitepress: '>=1.0.0'
-    peerDependenciesMeta:
-      vitepress:
-        optional: true
+  '@standard-schema/spec@1.1.0':
+    resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
   '@tybys/wasm-util@0.10.2':
     resolution: {integrity: sha512-RoBvJ2X0wuKlWFIjrwffGw1IqZHKQqzIchKaadZZfnNpsAYp2mM0h36JtPCjNDAHGgYez/15uMBpfGwchhiMgg==}
@@ -2077,8 +2123,8 @@ packages:
     peerDependencies:
       typedoc: 0.28.x
 
-  typedoc-plugin-to-skills@1.3.1:
-    resolution: {integrity: sha512-iAnov5xX8UByu7OI6YDQQ3tPOmk59NW9eUb6hbNKW1kGSng5n7pd7nDnUwGmd7DpEhvAKHikhy1IL86VIBOjhA==}
+  typedoc-plugin-skillit@2.0.3:
+    resolution: {integrity: sha512-A+vNMJbef6SJ79cpPAFdQpZtWbY8V36JhjrNDZIOfgu8DOoXAuln2d4HN2ECvJ1nqIr1Tnwg9kJtgUmm43x0tQ==}
     peerDependencies:
       typedoc: '>=0.28.0'
 
@@ -2093,6 +2139,11 @@ packages:
     hasBin: true
     peerDependencies:
       typescript: 5.0.x || 5.1.x || 5.2.x || 5.3.x || 5.4.x || 5.5.x || 5.6.x || 5.7.x || 5.8.x || 5.9.x || 6.0.x
+
+  typescript@6.0.3:
+    resolution: {integrity: sha512-y2TvuxSZPDyQakkFRPZHKFm+KKVqIisdg9/CZwm9ftvKXLP8NRWj38/ODjNbr43SsoXqNuAisEf1GdCxqWcdBw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
 
   typescript@7.0.2:
     resolution: {integrity: sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA==}
@@ -2313,6 +2364,45 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@ast-grep/napi-darwin-arm64@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-darwin-x64@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-arm64-gnu@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-arm64-musl@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-x64-gnu@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-x64-musl@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-win32-arm64-msvc@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-win32-ia32-msvc@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-win32-x64-msvc@0.43.0':
+    optional: true
+
+  '@ast-grep/napi@0.43.0':
+    optionalDependencies:
+      '@ast-grep/napi-darwin-arm64': 0.43.0
+      '@ast-grep/napi-darwin-x64': 0.43.0
+      '@ast-grep/napi-linux-arm64-gnu': 0.43.0
+      '@ast-grep/napi-linux-arm64-musl': 0.43.0
+      '@ast-grep/napi-linux-x64-gnu': 0.43.0
+      '@ast-grep/napi-linux-x64-musl': 0.43.0
+      '@ast-grep/napi-win32-arm64-msvc': 0.43.0
+      '@ast-grep/napi-win32-ia32-msvc': 0.43.0
+      '@ast-grep/napi-win32-x64-msvc': 0.43.0
 
   '@babel/helper-string-parser@7.27.1': {}
 
@@ -2937,20 +3027,17 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@standard-schema/spec@1.1.0': {}
-
-  '@to-skills/core@1.4.0':
+  '@skillit/core@4.0.2':
     dependencies:
+      '@ast-grep/napi': 0.43.0
       yaml: 2.9.0
 
-  '@to-skills/typedoc@1.0.9(typedoc@0.28.19(typescript@7.0.2))':
+  '@skillit/typedoc@2.0.3(typedoc@0.28.19(typescript@6.0.3))':
     dependencies:
-      '@to-skills/core': 1.4.0
-      typedoc: 0.28.19(typescript@7.0.2)
+      '@skillit/core': 4.0.2
+      typedoc: 0.28.19(typescript@6.0.3)
 
-  '@to-skills/vitepress@0.2.26':
-    dependencies:
-      '@to-skills/core': 1.4.0
+  '@standard-schema/spec@1.1.0': {}
 
   '@tybys/wasm-util@0.10.2':
     dependencies:
@@ -3055,11 +3142,11 @@ snapshots:
 
   '@ungap/structured-clone@1.3.1': {}
 
-  '@vitejs/plugin-vue@6.0.7(vite@7.3.6(@types/node@25.9.1)(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0))(vue@3.5.34(typescript@7.0.2))':
+  '@vitejs/plugin-vue@6.0.7(vite@7.3.6(@types/node@25.9.1)(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0))(vue@3.5.34(typescript@6.0.3))':
     dependencies:
       '@rolldown/pluginutils': 1.0.1
       vite: 7.3.6(@types/node@25.9.1)(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0)
-      vue: 3.5.34(typescript@7.0.2)
+      vue: 3.5.34(typescript@6.0.3)
 
   '@vitest/coverage-v8@4.1.7(vitest@4.1.7)':
     dependencies:
@@ -3175,34 +3262,34 @@ snapshots:
       '@vue/shared': 3.5.34
       csstype: 3.2.3
 
-  '@vue/server-renderer@3.5.34(vue@3.5.34(typescript@7.0.2))':
+  '@vue/server-renderer@3.5.34(vue@3.5.34(typescript@6.0.3))':
     dependencies:
       '@vue/compiler-ssr': 3.5.34
       '@vue/shared': 3.5.34
-      vue: 3.5.34(typescript@7.0.2)
+      vue: 3.5.34(typescript@6.0.3)
 
   '@vue/shared@3.5.34': {}
 
-  '@vueuse/core@14.3.0(vue@3.5.34(typescript@7.0.2))':
+  '@vueuse/core@14.3.0(vue@3.5.34(typescript@6.0.3))':
     dependencies:
       '@types/web-bluetooth': 0.0.21
       '@vueuse/metadata': 14.3.0
-      '@vueuse/shared': 14.3.0(vue@3.5.34(typescript@7.0.2))
-      vue: 3.5.34(typescript@7.0.2)
+      '@vueuse/shared': 14.3.0(vue@3.5.34(typescript@6.0.3))
+      vue: 3.5.34(typescript@6.0.3)
 
-  '@vueuse/integrations@14.3.0(focus-trap@8.2.1)(vue@3.5.34(typescript@7.0.2))':
+  '@vueuse/integrations@14.3.0(focus-trap@8.2.1)(vue@3.5.34(typescript@6.0.3))':
     dependencies:
-      '@vueuse/core': 14.3.0(vue@3.5.34(typescript@7.0.2))
-      '@vueuse/shared': 14.3.0(vue@3.5.34(typescript@7.0.2))
-      vue: 3.5.34(typescript@7.0.2)
+      '@vueuse/core': 14.3.0(vue@3.5.34(typescript@6.0.3))
+      '@vueuse/shared': 14.3.0(vue@3.5.34(typescript@6.0.3))
+      vue: 3.5.34(typescript@6.0.3)
     optionalDependencies:
       focus-trap: 8.2.1
 
   '@vueuse/metadata@14.3.0': {}
 
-  '@vueuse/shared@14.3.0(vue@3.5.34(typescript@7.0.2))':
+  '@vueuse/shared@14.3.0(vue@3.5.34(typescript@6.0.3))':
     dependencies:
-      vue: 3.5.34(typescript@7.0.2)
+      vue: 3.5.34(typescript@6.0.3)
 
   ansi-colors@4.1.3: {}
 
@@ -4054,27 +4141,29 @@ snapshots:
     dependencies:
       tagged-tag: 1.0.0
 
-  typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@7.0.2)):
+  typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@6.0.3)):
     dependencies:
-      typedoc: 0.28.19(typescript@7.0.2)
+      typedoc: 0.28.19(typescript@6.0.3)
 
-  typedoc-plugin-to-skills@1.3.1(typedoc@0.28.19(typescript@7.0.2)):
+  typedoc-plugin-skillit@2.0.3(typedoc@0.28.19(typescript@6.0.3)):
     dependencies:
-      '@to-skills/typedoc': 1.0.9(typedoc@0.28.19(typescript@7.0.2))
-      typedoc: 0.28.19(typescript@7.0.2)
+      '@skillit/typedoc': 2.0.3(typedoc@0.28.19(typescript@6.0.3))
+      typedoc: 0.28.19(typescript@6.0.3)
 
-  typedoc-vitepress-theme@1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@7.0.2))):
+  typedoc-vitepress-theme@1.1.2(typedoc-plugin-markdown@4.11.0(typedoc@0.28.19(typescript@6.0.3))):
     dependencies:
-      typedoc-plugin-markdown: 4.11.0(typedoc@0.28.19(typescript@7.0.2))
+      typedoc-plugin-markdown: 4.11.0(typedoc@0.28.19(typescript@6.0.3))
 
-  typedoc@0.28.19(typescript@7.0.2):
+  typedoc@0.28.19(typescript@6.0.3):
     dependencies:
       '@gerrit0/mini-shiki': 3.23.0
       lunr: 2.3.9
       markdown-it: 14.1.1
       minimatch: 10.2.5
-      typescript: 7.0.2
+      typescript: 6.0.3
       yaml: 2.9.0
+
+  typescript@6.0.3: {}
 
   typescript@7.0.2:
     optionalDependencies:
@@ -4167,7 +4256,7 @@ snapshots:
       tsx: 4.22.3
       yaml: 2.9.0
 
-  vitepress@2.0.0-alpha.17(@types/node@25.9.1)(lightningcss@1.32.0)(postcss@8.5.15)(tsx@4.22.3)(typescript@7.0.2)(yaml@2.9.0):
+  vitepress@2.0.0-alpha.17(@types/node@25.9.1)(lightningcss@1.32.0)(postcss@8.5.15)(tsx@4.22.3)(typescript@6.0.3)(yaml@2.9.0):
     dependencies:
       '@docsearch/css': 4.6.3
       '@docsearch/js': 4.6.3
@@ -4177,17 +4266,17 @@ snapshots:
       '@shikijs/transformers': 3.23.0
       '@shikijs/types': 3.23.0
       '@types/markdown-it': 14.1.2
-      '@vitejs/plugin-vue': 6.0.7(vite@7.3.6(@types/node@25.9.1)(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0))(vue@3.5.34(typescript@7.0.2))
+      '@vitejs/plugin-vue': 6.0.7(vite@7.3.6(@types/node@25.9.1)(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0))(vue@3.5.34(typescript@6.0.3))
       '@vue/devtools-api': 8.1.2
       '@vue/shared': 3.5.34
-      '@vueuse/core': 14.3.0(vue@3.5.34(typescript@7.0.2))
-      '@vueuse/integrations': 14.3.0(focus-trap@8.2.1)(vue@3.5.34(typescript@7.0.2))
+      '@vueuse/core': 14.3.0(vue@3.5.34(typescript@6.0.3))
+      '@vueuse/integrations': 14.3.0(focus-trap@8.2.1)(vue@3.5.34(typescript@6.0.3))
       focus-trap: 8.2.1
       mark.js: 8.11.1
       minisearch: 7.2.0
       shiki: 3.23.0
       vite: 7.3.6(@types/node@25.9.1)(lightningcss@1.32.0)(tsx@4.22.3)(yaml@2.9.0)
-      vue: 3.5.34(typescript@7.0.2)
+      vue: 3.5.34(typescript@6.0.3)
     optionalDependencies:
       postcss: 8.5.15
     transitivePeerDependencies:
@@ -4243,15 +4332,15 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
-  vue@3.5.34(typescript@7.0.2):
+  vue@3.5.34(typescript@6.0.3):
     dependencies:
       '@vue/compiler-dom': 3.5.34
       '@vue/compiler-sfc': 3.5.34
       '@vue/runtime-dom': 3.5.34
-      '@vue/server-renderer': 3.5.34(vue@3.5.34(typescript@7.0.2))
+      '@vue/server-renderer': 3.5.34(vue@3.5.34(typescript@6.0.3))
       '@vue/shared': 3.5.34
     optionalDependencies:
-      typescript: 7.0.2
+      typescript: 6.0.3
 
   webidl-conversions@3.0.1: {}
 

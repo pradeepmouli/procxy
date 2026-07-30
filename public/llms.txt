@@ -22,7 +22,6 @@
 ### Types
 
 - `Procxy`: The proxy type returned by `procxy()` — a transparent async mirror of a remote class instance.
-- `ProcxyOptions`: Configuration for the `procxy()` function.
 - `SerializationMode`: Serialization mode for IPC messages exchanged between parent and child processes.
 - `V8Serializable`: Union of all types that survive Node.js V8 structured-clone serialization across an IPC boundary.
 - `Procxiable`: The serializable type constraint for a given IPC mode.

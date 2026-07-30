@@ -17,32 +17,12 @@ skip re-spawning, until the child process terminates.
 procxy<T, C, M, SH>(className: keyof T, modulePathOrOptions?: string | ProcxyOptions<M, SH>, options?: ProcxyOptions<M, SH>, constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never): Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>
 ```
 **Parameters:**
-- `className: keyof T`
+- `className: keyof T` — String key identifying the class within a module-map object; use this overload when passing a class-name string instead of a constructor reference
 - `modulePathOrOptions: string | ProcxyOptions<M, SH>` (optional) — Path to the module file that exports the class, or a ProcxyOptions object when omitting a separate path
 - `options: ProcxyOptions<M, SH>` (optional) — ProcxyOptions when the second argument is a module path string
 - `constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never` — Arguments forwarded to the class constructor; must be JSON-serializable in `'json'` mode or V8-serializable in `'advanced'` mode
-**Returns:** `Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>` — A `Procxy<T>` proxy whose methods are all async and whose read-only properties mirror the child instance
+**Returns:** `Promise<T[C] extends Constructor<U> ? Procxy<U, M, SH> : never>` — A `Procxy&lt;T&gt;` proxy whose methods are all async and whose read-only properties mirror the child instance
 **Throws:** When the INIT handshake does not complete within the configured `timeout`
-
-
-- You need CPU-intensive work (parsing, compression, ML inference, image processing) isolated from the main event loop
-- You want EventEmitter events from a worker class forwarded transparently to the parent process
-- You need to sandbox third-party code so a crash in the library cannot take down the parent
-- You have a class with complex stateful initialization and want to reuse one instance across multiple callers (dedup cache)
-- You need to run the same class concurrently across multiple isolated processes without managing fork logic yourself
-
-
-- Your class holds non-serializable state: closures captured over parent-side objects, WeakMaps, Symbols, or live streams — they do not survive the IPC boundary
-- Sub-millisecond latency is required; IPC adds ~1 ms per round-trip even for trivial calls
-- Your method return values include class instances with behavior — they are serialized to plain data and arrive without prototype methods
-- You need the child to call back into parent-side callbacks synchronously inside a proxied method (deadlock risk)
-
-
-- NEVER pass functions as constructor arguments — V8 serialization silently drops them; use `sanitizeV8: true` only as a last resort and accept the data loss
-- NEVER call `$terminate()` from inside a proxied method's implementation in the child — the IPC response for the current call is never sent, hanging the parent indefinitely
-- NEVER assume the cached proxy is always fresh — if the child crashes and you hold a reference, subsequent calls throw `ChildCrashedError`; check `$process.exitCode` before reusing across request boundaries
-- NEVER mix `'json'` and `'advanced'` mode on the same class across different `procxy()` calls — they produce separate child processes with separate dedup keys; use one mode consistently
-- NEVER set `retries` to a high value for non-idempotent methods — each retry re-sends the full IPC call; the method may execute multiple times if the child is slow but alive
 **See:** - Procxy — proxy type returned by this function
  - ProcxyOptions — full configuration reference
 **Overloads:**
@@ -117,18 +97,6 @@ sanitizeForV8(value: unknown, seen: WeakSet<object>): any
 - `value: unknown` — The value to sanitize; primitives are returned as-is
 - `seen: WeakSet<object>` — default: `...` — Internal `WeakSet` used for circular-reference tracking; callers should omit this
 **Returns:** `any` — A new, plain-object copy of `value` with all non-serializable properties removed
-
-
-- You are passing a third-party config object as a constructor argument and cannot guarantee it contains no functions
-- You need a quick workaround for objects with hidden getters/setters that fail V8 validation
-
-
-- The dropped properties are load-bearing — sanitization silently loses data with no warning
-- You control the data shape — fix the type instead of sanitizing
-
-
-- NEVER rely on sanitized output for equality checks — keys may be missing compared to input
-- NEVER use on `Map` or `Set` values that contain functions as keys — those entries are recursively sanitized but not removed
 **See:** - sanitizeForV8Array — sanitize an array of values in one call
  - V8Serializable — the type constraint sanitization produces
 ```typescript
@@ -184,7 +152,7 @@ could yield a false positive for hand-crafted objects that happen to have those 
 isProcxy<T>(obj: MaybeProxy<T>): obj is Procxy<T, any, any>
 ```
 **Parameters:**
-- `obj: MaybeProxy<T>` — A value that is either the original type `T` or a `Procxy<T>`
+- `obj: MaybeProxy<T>` — A value that is either the original type `T` or a `Procxy&lt;T&gt;`
 **Returns:** `obj is Procxy<T, any, any>` — `true` when `obj` has the Procxy lifecycle interface
 **See:** isAdvancedMode — check whether a proxy uses advanced serialization
 ```typescript
@@ -201,11 +169,11 @@ function processWorker(worker: Calculator | Procxy<Calculator>) {
 ```
 
 ### `isAdvancedMode`
-Narrow a proxy's type to `Procxy<T, 'advanced', H>` at runtime.
+Narrow a proxy's type to `Procxy&lt;T, 'advanced', H&gt;` at runtime.
 
 Calls the internal `$getSerializationMode()` method that every proxy exposes.
 If the proxy was created with `serialization: 'advanced'`, this returns `true` and
-the TypeScript type is narrowed accordingly — useful when you receive a `Procxy<T, any, H>`
+the TypeScript type is narrowed accordingly — useful when you receive a `Procxy&lt;T, any, H&gt;`
 and need to call a method that only accepts advanced-mode proxies.
 ```ts
 isAdvancedMode<T, H>(proxy: Procxy<T, any, H>): proxy is Procxy<T, "advanced", H>
@@ -227,7 +195,7 @@ if (isAdvancedMode(w)) {
 ```
 
 ### `isHandleSupported`
-Narrow a proxy's type to `Procxy<T, 'advanced', true>` when handle passing is enabled.
+Narrow a proxy's type to `Procxy&lt;T, 'advanced', true&gt;` when handle passing is enabled.
 
 Calls the internal `$isHandleSupported()` method. Returns `true` only when the proxy
 was created with both `serialization: 'advanced'` and `supportHandles: true`. After

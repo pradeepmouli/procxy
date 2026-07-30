@@ -11,7 +11,7 @@ procxy<T, C, M, SH>(className: keyof T, modulePathOrOptions?: string | ProcxyOpt
 ```
 
 **Parameters:**
-- `className: keyof T` — 
+- `className: keyof T` — String key identifying the class within a module-map object; use this overload when passing a class-name string instead of a constructor reference
 - `modulePathOrOptions: string | ProcxyOptions<M, SH>` (optional) — Path to the module file that exports the class, or a ProcxyOptions object when omitting a separate path
 - `options: ProcxyOptions<M, SH>` (optional) — ProcxyOptions when the second argument is a module path string
 - `constructorArgs: T[keyof T] extends Constructor<any> ? ValidateProcxiable<any, M>[] : never` — Arguments forwarded to the class constructor; must be JSON-serializable in `'json'` mode or V8-serializable in `'advanced'` mode
@@ -626,17 +626,6 @@ The proxy type returned by `procxy()` — a transparent async mirror of a remote
 
 ```ts
 type Procxy = { [K in keyof ProcxiableMethods<T, Mode>]: ProcxiableMethods<T, Mode>[K] extends (args: infer A) => infer R ? (args: A) => Promise<Awaited<R>> : never } & ReadonlyProperties<T, Mode> & { $terminate: any; $process: ChildProcess; [dispose]: any; [asyncDispose]: any } & (SupportHandles extends true ? { $sendHandle: any } : {}) & (T extends EventEmitter<infer E> ? E extends Record<string | symbol, any[]> ? { on: any; once: any; off: any; removeListener: any } : { on: any; once: any; off: any; removeListener: any } : T extends EventEmitter ? { on: any; once: any; off: any; removeListener: any } : {})
-```
-
-### ProcxyOptions
-
-Configuration for the `procxy()` function.
-
-Controls child process spawning, IPC serialization, timeouts, retries, environment
-isolation, and optional handle-passing support.
-
-```ts
-type ProcxyOptions = { modulePath?: string; args?: [...Jsonifiable[]]; env?: Record<string, string>; cwd?: string; timeout?: number; retries?: number; interleaveOutput?: boolean } & (Mode extends "advanced" ? { serialization: "advanced"; supportHandles?: SupportHandles; sanitizeV8?: boolean } : { serialization?: "json" })
 ```
 
 ### SerializationMode
