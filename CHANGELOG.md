@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+### Patch Changes
+
+- [#121](https://github.com/pradeepmouli/procxy/pull/121) [`b676016`](https://github.com/pradeepmouli/procxy/commit/b676016b049df6abe4bdf6ab0bf3bf4089d0d276) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - - chore: upgrade to TypeScript 7 native tsc, drop @typescript/native-preview
+  - chore: rename typedoc-plugin-to-skills -> typedoc-plugin-skillit
+  - chore: pnpm update --latest across the workspace
+
 ## 0.1.3
 
 ### Patch Changes
