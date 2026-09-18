@@ -12,8 +12,11 @@ permissions:
 jobs:
   update:
     runs-on: ubuntu-latest
+    env:
+      # `prepare` installs a pre-push hook that breaks create-pull-request's git push
+      SKIP_INSTALL_SIMPLE_GIT_HOOKS: '1'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
