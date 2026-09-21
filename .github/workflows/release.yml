@@ -46,11 +46,11 @@ jobs:
         uses: changesets/action@v2
         with:
           version-script: pnpm changeset:version
+          github-token: ${{ secrets.RELEASE_TOKEN }}
           publish-script: pnpm changeset:publish
           commit-message: 'chore: version packages'
           pr-title: 'chore: version packages'
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Enable auto-merge on version PR
