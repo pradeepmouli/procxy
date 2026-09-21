@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5
+
+### Patch Changes
+
+- [#136](https://github.com/pradeepmouli/procxy/pull/136) [`59b812d`](https://github.com/pradeepmouli/procxy/commit/59b812d6040757436e2d2ea6ab826e66328c58a5) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - - fix(ci): skip simple-git-hooks install in dep-update workflow
+
 ## 0.1.4
 
 ### Patch Changes
