@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+### Patch Changes
+
+- [#157](https://github.com/pradeepmouli/procxy/pull/157) [`df45469`](https://github.com/pradeepmouli/procxy/commit/df45469647207daafee2e9398cf614bb9446b867) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - Bump `vitest` and `@vitest/coverage-v8` to ^5.0.1.
+
 ## 0.1.5
 
 ### Patch Changes
