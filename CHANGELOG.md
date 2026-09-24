@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.7
+
+### Patch Changes
+
+- - chore(deps): update runtime dependencies
+
+- [#156](https://github.com/pradeepmouli/procxy/pull/156) [`f5ee607`](https://github.com/pradeepmouli/procxy/commit/f5ee607d87bd5e6d8d14f48d5904250c26d3df03) Thanks [@github-actions](https://github.com/apps/github-actions)! - - chore(deps): update dependencies to latest
+
 ## 0.1.6
 
 ### Patch Changes
