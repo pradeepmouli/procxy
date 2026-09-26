@@ -69,9 +69,9 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.3",
     "@vitest/coverage-v8": "^5.0.2",
-    "lint-staged": "^17.5.1",
+    "lint-staged": "^17.6.0",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
     "simple-git-hooks": "^2.14.0",
