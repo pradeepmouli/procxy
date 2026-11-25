@@ -44,7 +44,7 @@ export class ChildProxy {
 
   constructor(
     private readonly target: any,
-    private readonly send: (message: ChildToParentMessage) => void,
+    private readonly send: (message: ChildToParentMessage<unknown>) => void,
     private readonly serializationMode: SerializationMode = 'json'
   ) {
     // Create a proxy that intercepts property access
@@ -283,8 +283,8 @@ export class ChildProxy {
 
         this.send(response);
       } else {
-        // Advanced mode - Node.js will handle V8 serialization
-        const response: Response = {
+        // The agent sends the raw result through Node.js V8 serialization.
+        const response: Response<unknown> = {
           type: 'RESULT',
           id,
           value: valueToSerialize

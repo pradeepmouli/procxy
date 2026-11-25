@@ -162,11 +162,13 @@ type ExtractEventMap<T> =
  * ```
  */
 type JsonifiableEventMap<E extends Record<string | symbol, (...args: any[]) => any>> = {
-  [K in keyof E as E[K] extends (...args: infer A) => any
-    ? AreParamsJsonifiable<A> extends true
-      ? K
+  [
+    K in keyof E as E[K] extends (...args: infer A) => any
+      ? AreParamsJsonifiable<A> extends true
+        ? K
+        : never
       : never
-    : never]: E[K];
+  ]: E[K];
 };
 
 /**
@@ -215,11 +217,13 @@ type ProcxiablePropertyKeys<T, Mode extends SerializationMode> = {
  * @category Types
  */
 export type Procxify<T, Mode extends SerializationMode = 'json'> = {
-  [K in keyof T as T[K] extends (...args: any[]) => any
-    ? never
-    : IsProcxiable<T[K], Mode> extends true
-      ? K
-      : never]: T[K];
+  [
+    K in keyof T as T[K] extends (...args: any[]) => any
+      ? never
+      : IsProcxiable<T[K], Mode> extends true
+        ? K
+        : never
+  ]: T[K];
 };
 
 /**
