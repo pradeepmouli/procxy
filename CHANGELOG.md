@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.9
+
+### Patch Changes
+
+- - chore(deps): update runtime dependencies
+
+- [#199](https://github.com/pradeepmouli/procxy/pull/199) [`b81fc76`](https://github.com/pradeepmouli/procxy/commit/b81fc76f57d54e4c6176433df3f4ae270312fb52) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - Update the optional Pino and Zod dependency ranges. Keep raw IPC response typing compatible with advanced Node.js serialization.
+
 ## 0.1.8
 
 ### Patch Changes
