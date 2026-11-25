@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.8
+
+### Patch Changes
+
+- [#161](https://github.com/pradeepmouli/procxy/pull/161) [`2272834`](https://github.com/pradeepmouli/procxy/commit/2272834528d08528190612dc496ef57b8ab03b7e) Thanks [@github-actions](https://github.com/apps/github-actions)! - - chore(deps): update dependencies to latest
+
+## 0.1.7
+
+### Patch Changes
+
+- - chore(deps): update runtime dependencies
+
+- [#156](https://github.com/pradeepmouli/procxy/pull/156) [`f5ee607`](https://github.com/pradeepmouli/procxy/commit/f5ee607d87bd5e6d8d14f48d5904250c26d3df03) Thanks [@github-actions](https://github.com/apps/github-actions)! - - chore(deps): update dependencies to latest
+
+## 0.1.6
+
+### Patch Changes
+
+- [#157](https://github.com/pradeepmouli/procxy/pull/157) [`df45469`](https://github.com/pradeepmouli/procxy/commit/df45469647207daafee2e9398cf614bb9446b867) Thanks [@pradeepmouli](https://github.com/pradeepmouli)! - Bump `vitest` and `@vitest/coverage-v8` to ^5.0.1.
+
 ## 0.1.5
 
 ### Patch Changes

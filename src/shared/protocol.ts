@@ -133,13 +133,13 @@ export interface DisposeResponse {
  * Method invocation response sent from child to parent.
  * Either contains return value (RESULT) or error information (ERROR).
  */
-export interface Response {
+export interface Response<Value = Jsonifiable> {
   /** UUID that matches the originating {@link Request.id} */
   id: string;
   /** `'RESULT'` on success, `'ERROR'` on thrown exception */
   type: 'RESULT' | 'ERROR';
   /** Serialized return value; present only when `type === 'RESULT'` */
-  value?: Jsonifiable;
+  value?: Value;
   /** Serialized error details; present only when `type === 'ERROR'` */
   error?: ErrorInfo;
 }
@@ -251,8 +251,8 @@ export type ParentToChildMessage =
 /**
  * Union type of all IPC messages sent from child to parent.
  */
-export type ChildToParentMessage =
-  | Response
+export type ChildToParentMessage<ResponseValue = Jsonifiable> =
+  | Response<ResponseValue>
   | EventMessage
   | InitSuccess
   | InitProperties

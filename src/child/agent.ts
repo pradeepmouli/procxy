@@ -28,7 +28,9 @@ let serializationMode: SerializationMode = 'json'; // Default to json mode
 let sendFailureCount = 0;
 let sanitizeRetryCount = 0;
 
-function sanitizeMessageForParent(message: ChildToParentMessage): ChildToParentMessage {
+function sanitizeMessageForParent(
+  message: ChildToParentMessage<unknown>
+): ChildToParentMessage<unknown> {
   const seen = new WeakSet<object>();
 
   switch (message.type) {
@@ -39,13 +41,13 @@ function sanitizeMessageForParent(message: ChildToParentMessage): ChildToParentM
     case 'CALLBACK_INVOKE':
       return { ...message, args: sanitizeForV8Array(message.args, seen) };
     case 'RESULT':
-      return { ...message, value: sanitizeForV8(message.value, seen) as any };
+      return { ...message, value: sanitizeForV8(message.value, seen) };
     default:
       return message;
   }
 }
 
-function sendToParent(message: ChildToParentMessage): void {
+function sendToParent(message: ChildToParentMessage<unknown>): void {
   if (!process.send) return;
 
   try {
