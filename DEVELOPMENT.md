@@ -19,17 +19,17 @@ This is a single-package repo, so the prompt just asks for a bump type (patch/mi
 
 If you forget, the "Auto-generate Changeset" workflow (`.github/workflows/changeset.yml`) will synthesize one from your commit messages when your PR opens/updates — but a hand-written changeset with a real summary is always better for the CHANGELOG.
 
-## Release automation (fully automatic once a changeset lands)
+## Release automation
 
-The `Release` workflow (`.github/workflows/release.yml`) runs on every push to `develop` or `master`. When it finds pending changesets, it:
+The [Release workflow](.github/workflows/release.yml) runs on pushes to `master`. When Changesets finds pending changesets, it:
 
-1. Opens or updates a **"chore: version packages"** PR from `changeset-release/<branch>` targeting that same branch. This PR contains the version bump + CHANGELOG update — don't edit it by hand, just let it accumulate changesets.
-2. Attempts to enable GitHub's native auto-merge on that PR (needs "Allow auto-merge" on in repo settings — if it's off, the PR just sits there and needs a manual merge).
-3. When that Version Packages PR merges, the *next* run of the Release workflow (triggered by that merge) runs `pnpm changeset:publish`, which publishes the bumped package to npm with provenance (`NPM_CONFIG_PROVENANCE: true`).
+1. Opens or updates the **chore: version packages** PR from `changeset-release/master`. Changesets manages the version and changelog edits in this PR.
+2. Waits for CI, CodeQL, and the security audit to pass on that PR's current commit. It merges that commit after GitHub reports a clean merge state and review threads are resolved.
+3. Publishes the bumped packages to npm with provenance on the resulting push to `master`.
 
-So: merge your PR to `develop` → Version Packages PR appears → merge it (or let auto-merge do it) → package publishes. No manual `npm publish` ever.
+For release changes, merge the feature PR into `develop`, then promote `develop` to `master`. The release workflow handles versioning and publishing.
 
-The `Release` job uses **Node 22** specifically — keep this in sync with any other repo's release.yml if you copy the workflow around; a stale Node version here is a real way to break the Release build without CI (which runs on 24.x/26.x) ever noticing.
+The Release job uses Node 22. Pull request CI runs on Node 24 and 26.
 
 ## CI
 
