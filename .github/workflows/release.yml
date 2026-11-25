@@ -74,29 +74,60 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: true
 
-      - name: Enable auto-merge on version PR
-        if: steps.changesets.outputs.hasChangesets == 'true'
-        uses: actions/github-script@v9
-        with:
-          github-token: ${{ secrets.RELEASE_TOKEN }}
-          script: |
-            const { data: pulls } = await github.rest.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-              head: `${context.repo.owner}:changeset-release/${context.ref.replace('refs/heads/', '')}`
-            });
-            if (pulls.length === 0) { console.log('No version PR found'); return; }
-            const pr = pulls[0];
-            try {
-              await github.graphql(`
-                mutation($id: ID!) {
-                  enablePullRequestAutoMerge(input: { pullRequestId: $id, mergeMethod: MERGE }) {
-                    pullRequest { number }
+      - name: Merge version PR after checks pass
+        if: steps.changesets.outputs['has-changesets'] == 'true' && steps.changesets.outputs['pr-number'] != ''
+        timeout-minutes: 20
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VERSION_PR: ${{ steps.changesets.outputs['pr-number'] }}
+        run: |
+          version_branch=changeset-release/master
+          status=$(gh pr view "$VERSION_PR" --repo "$GITHUB_REPOSITORY" --json headRefOid,state)
+          [[ $(jq -r '.state' <<< "$status") != MERGED ]] || exit 0
+          head=$(jq -er '.headRefOid' <<< "$status")
+
+          while true; do
+            status=$(gh pr view "$VERSION_PR" --repo "$GITHUB_REPOSITORY" \
+              --json state,isDraft,isCrossRepository,baseRefName,headRefName,headRefOid,mergeable,mergeStateStatus,reviewDecision,statusCheckRollup)
+            [[ $(jq -r '.state' <<< "$status") != MERGED ]] || exit 0
+            jq -e --arg head "$head" --arg branch "$version_branch" '
+              .state == "OPEN" and (.isDraft | not) and (.isCrossRepository | not)
+              and .baseRefName == "master" and .headRefName == $branch and .headRefOid == $head
+              and .reviewDecision != "CHANGES_REQUESTED" and .mergeable != "CONFLICTING"
+            ' <<< "$status" > /dev/null || { echo "Version PR changed or needs review."; exit 1; }
+            if jq -e 'any(.statusCheckRollup[];
+              (.status == "COMPLETED" and (.conclusion | IN("SUCCESS", "SKIPPED", "NEUTRAL") | not))
+              or (.state | IN("ERROR", "FAILURE")))' <<< "$status" > /dev/null; then
+              echo "A version PR check failed or was cancelled."
+              exit 1
+            fi
+
+            runs=$(gh run list --repo "$GITHUB_REPOSITORY" --event pull_request \
+              --branch "$version_branch" --commit "$head" --limit 100 --json workflowName,status,conclusion)
+            if jq -e --argjson runs "$runs" '
+              .mergeStateStatus == "CLEAN" and .reviewDecision != "REVIEW_REQUIRED"
+              and (["CI", "CodeQL", "Security Audit"] | all(.[]; . as $workflow |
+                any($runs[]; .workflowName == $workflow and .status == "completed" and .conclusion == "success")))
+              and (.statusCheckRollup | length > 0 and all(.[]; .status == "COMPLETED" or .state == "SUCCESS"))
+            ' <<< "$status" > /dev/null; then
+              unresolved=$(gh api graphql --paginate -f query='
+                query($owner: String!, $repo: String!, $number: Int!, $endCursor: String) {
+                  repository(owner: $owner, name: $repo) {
+                    pullRequest(number: $number) {
+                      reviewThreads(first: 100, after: $endCursor) {
+                        nodes { id isResolved }
+                        pageInfo { hasNextPage endCursor }
+                      }
+                    }
                   }
-                }
-              `, { id: pr.node_id });
-              console.log(`Auto-merge enabled on PR #${pr.number}`);
-            } catch(e) {
-              console.log('Auto-merge not available:', e.message);
-            }
+                }' -f owner="$GITHUB_REPOSITORY_OWNER" -f repo="${GITHUB_REPOSITORY#*/}" -F number="$VERSION_PR" \
+                --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved | not) | .id')
+              [[ -z "$unresolved" ]] || { echo "The version PR has unresolved review threads."; exit 1; }
+              master=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/master" --jq .object.sha)
+              [[ "$master" == "$GITHUB_SHA" ]] || { echo "Master moved while checks were running."; exit 1; }
+              gh pr merge "$VERSION_PR" --repo "$GITHUB_REPOSITORY" --merge --match-head-commit "$head"
+              exit 0
+            fi
+            sleep 15
+          done
