@@ -69,8 +69,8 @@
   "devDependencies": {
     "@changesets/changelog-github": "^1.0.1",
     "@changesets/cli": "^3.0.3",
-    "@types/node": "^26.6.7",
-    "@vitest/coverage-v8": "^5.1.1",
+    "@types/node": "^26.6.11",
+    "@vitest/coverage-v8": "^5.1.2",
     "lint-staged": "^17.6.2",
     "oxfmt": "^0.80.0",
     "oxlint": "^1.95.0",
@@ -79,7 +79,7 @@
     "tsx": "^4.23.15",
     "type-fest": "^6.0.3",
     "typescript": "^7.0.2",
-    "vitest": "^5.1.1"
+    "vitest": "^5.1.2"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged",
