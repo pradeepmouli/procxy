@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.10
+
+### Patch Changes
+
+- [#163](https://github.com/pradeepmouli/procxy/pull/163) [`a4d91c7`](https://github.com/pradeepmouli/procxy/commit/a4d91c74d581e8a3f0629036ad17ed6b11943bcc) Thanks [@github-actions](https://github.com/apps/github-actions)! - - chore(deps): update dependencies to latest
+
 ## 0.1.9
 
 ### Patch Changes
